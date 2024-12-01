@@ -199,6 +199,18 @@ export default function ChatPage() {
     }
   }, [messages, isTyping]);
 
+  useEffect(() => {
+    // Handle viewport height changes (for keyboard)
+    const setAppHeight = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+
+    setAppHeight();
+    window.addEventListener('resize', setAppHeight);
+    return () => window.removeEventListener('resize', setAppHeight);
+  }, []);
+
   return (
     <AnimatePresence mode="wait">
       {isLoading ? (
@@ -208,7 +220,8 @@ export default function ChatPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="relative min-h-screen bg-black"
+          className="relative bg-black"
+          style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
         >
           {/* Background Image */}
           <motion.div 
@@ -228,8 +241,18 @@ export default function ChatPage() {
           <Header {...character} />
 
           {/* Main Content Area */}
-          <div className="relative z-10 h-screen pt-[68px] pb-[80px]">
-            <div ref={scrollRef} className="h-full overflow-y-auto">
+          <div 
+            className="relative z-10 flex flex-col h-full pt-[68px]"
+            style={{ 
+              paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+              height: 'calc(var(--vh, 1vh) * 100)'
+            }}
+          >
+            <div 
+              ref={scrollRef} 
+              className="flex-1 overflow-y-auto"
+              style={{ paddingBottom: '80px' }}
+            >
               <div className="flex flex-col justify-end min-h-full">
                 <div className="p-4 space-y-4">
                   {messages.map((msg, index) => (
@@ -251,14 +274,23 @@ export default function ChatPage() {
                 </div>
               </div>
             </div>
-          </div>
 
-          <InputBar
-            message={message}
-            onChange={setMessage}
-            onSend={handleSendMessage}
-            placeholder={`Message ${character.name}`}
-          />
+            {/* Input Bar with safe area padding */}
+            <div 
+              className="fixed bottom-0 left-0 right-0 z-20"
+              style={{ 
+                paddingBottom: 'env(safe-area-inset-bottom, 16px)',
+                background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.8))'
+              }}
+            >
+              <InputBar
+                message={message}
+                onChange={setMessage}
+                onSend={handleSendMessage}
+                placeholder={`Message ${character.name}`}
+              />
+            </div>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

@@ -91,11 +91,11 @@ export default function ChatPage() {
       setIsTyping(true);
 
       try {
-        // Simulate API call with 50% chance of failure
+        // Simulate API call with 10% chance of failure
         await new Promise((resolve, reject) => {
           setTimeout(() => {
-            // Randomly fail 50% of the time
-            if (Math.random() < 0.5) {
+            // Randomly fail 10% of the time
+            if (Math.random() < 0.1) {
               reject(new Error('Failed to send message'));
             } else {
               resolve(true);
@@ -199,18 +199,6 @@ export default function ChatPage() {
     }
   }, [messages, isTyping]);
 
-  useEffect(() => {
-    // Handle viewport height changes (for keyboard)
-    const setAppHeight = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-
-    setAppHeight();
-    window.addEventListener('resize', setAppHeight);
-    return () => window.removeEventListener('resize', setAppHeight);
-  }, []);
-
   return (
     <AnimatePresence mode="wait">
       {isLoading ? (
@@ -220,8 +208,7 @@ export default function ChatPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="relative bg-black"
-          style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+          className="relative bg-black h-screen fixed inset-0"
         >
           {/* Background Image */}
           <motion.div 
@@ -241,17 +228,10 @@ export default function ChatPage() {
           <Header {...character} />
 
           {/* Main Content Area */}
-          <div 
-            className="relative z-10 flex flex-col h-full pt-[68px]"
-            style={{ 
-              paddingBottom: 'env(safe-area-inset-bottom, 16px)',
-              height: 'calc(var(--vh, 1vh) * 100)'
-            }}
-          >
+          <div className="relative z-10 flex flex-col h-full pt-[68px] pb-[60px]">
             <div 
               ref={scrollRef} 
               className="flex-1 overflow-y-auto"
-              style={{ paddingBottom: '80px' }}
             >
               <div className="flex flex-col justify-end min-h-full">
                 <div className="p-4 space-y-4">
@@ -275,13 +255,9 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* Input Bar with safe area padding */}
+            {/* Input Bar */}
             <div 
-              className="fixed bottom-0 left-0 right-0 z-20"
-              style={{ 
-                paddingBottom: 'env(safe-area-inset-bottom, 16px)',
-                background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.8))'
-              }}
+              className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent"
             >
               <InputBar
                 message={message}

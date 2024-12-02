@@ -53,10 +53,10 @@ export function ChatBubble({
       {isUser && onRetry && (
         <motion.div 
           whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center w-6 h-6 rounded-full bg-red-500/70 backdrop-blur-md border border-red-500/50 shadow-lg cursor-pointer"
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
           onClick={() => onRetry(index)}
         >
-          <IoWarning className="w-4 h-4 text-white" />
+          <IoWarning className="w-10 h-10 text-white" />
         </motion.div>
       )}
 
@@ -121,8 +121,8 @@ export function ChatBubble({
         </div>
       </div>
       {status === 'error' && (
-        <div className="error-indicator">
-          <IoWarning className="h-5 w-5 text-red-500" />
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg">
+          <IoWarning className="w-5 h-5 text-white" />
         </div>
       )}
     </motion.div>

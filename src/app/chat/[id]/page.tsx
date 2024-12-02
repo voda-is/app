@@ -108,7 +108,7 @@ export default function ChatPage() {
             {/* Description */}
             <div className="flex justify-center mb-4">
               <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
-                <div className="text-lg font-semibold mb-2 text-center text-purple-300">
+                <div className="text-lg font-semibold mb-2 text-center text-pink-300">
                   Description
                 </div>
                 <div className="text-sm leading-relaxed text-gray-100">

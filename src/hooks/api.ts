@@ -143,7 +143,6 @@ export function useSendChatMessage(characterId: string) {
     },
     onError: (error, text, context) => {
       // Mark the message as error instead of removing it
-      console.log('onError', error, text, context);
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
@@ -207,7 +206,6 @@ export function useRetryChatMessage(characterId: string) {
     },
     onError: (error, text, context) => {
       // Mark the message as error instead of removing it
-      console.log('onError', error, text, context);
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
@@ -260,7 +258,6 @@ export function useRegenerateLastMessage(characterId: string) {
     },
     onError: (error, text, context) => {
       // Mark the message as error instead of removing it
-      console.log('onError', error, text, context);
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {

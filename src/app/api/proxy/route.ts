@@ -64,7 +64,6 @@ export async function POST(request: NextRequest) {
     });
 
     const responseData = await response.json();
-    console.log('responseData', responseData);
     return NextResponse.json(responseData);
   } catch (error) {
     console.error('API Proxy Error:', error);

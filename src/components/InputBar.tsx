@@ -7,9 +7,10 @@ interface InputBarProps {
   onChange: (value: string) => void;
   onSend: () => void;
   placeholder: string;
+  disabled?: boolean;
 }
 
-export function InputBar({ message, onChange, onSend, placeholder }: InputBarProps) {
+export function InputBar({ message, onChange, onSend, placeholder, disabled }: InputBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea only when content exceeds one line
@@ -25,7 +26,7 @@ export function InputBar({ message, onChange, onSend, placeholder }: InputBarPro
   }, [message]);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !disabled) {
       e.preventDefault();
       onSend();
     }
@@ -38,7 +39,7 @@ export function InputBar({ message, onChange, onSend, placeholder }: InputBarPro
       transition={{ delay: 0.4 }}
       className="fixed bottom-0 left-0 right-0 p-4 backdrop-blur-md bg-black/20 z-20"
     >
-      <div className="flex items-center gap-2 backdrop-blur-md bg-white/10 rounded-full px-4 py-2">
+      <div className={`flex items-center gap-2 backdrop-blur-md bg-white/10 rounded-full px-4 py-2 ${disabled ? 'opacity-50' : ''}`}>
         <button className="text-gray-400">
           <IoMic size={20} />
         </button>

@@ -1,22 +1,13 @@
-import { AnimatePresence } from 'framer-motion';
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Chat with a character",
-  description: "Chat with a character",
+  title: "Fine",
+  description: "Fine AI Characters",
 };
 
 export default function RootLayout({
@@ -26,14 +17,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <AnimatePresence mode="wait">
-          <body
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          >
+      <body className={`${inter.className} bg-black text-white`}>
+        <Providers>
+          <main className="min-h-screen">
             {children}
-          </body>
-        </AnimatePresence>
+          </main>
+        </Providers>
       </body>
     </html>
   );

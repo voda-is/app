@@ -1,14 +1,9 @@
+import { Character } from '@/lib/validations';
 import { motion } from 'framer-motion';
 import Image from "next/image";
 import Link from "next/link";
-import { IoCheckmarkCircle } from "react-icons/io5";
-
-interface Character {
-  name: string;
-  age: number;
-  traits: string;
-  verified?: boolean;
-}
+import { IoCheckmarkCircle, IoTime, IoBag } from "react-icons/io5";
+import { formatDistance } from 'date-fns';
 
 interface CharacterCardProps {
   character: Character;
@@ -24,21 +19,43 @@ export function CharacterCard({ character, index }: CharacterCardProps) {
     >
       <div className="relative rounded-md overflow-hidden">
         <Image
-        src="/bg2.png"
-        alt={character.name}
-        width={200}
-        height={300}
-        className="w-full h-[240px] object-cover"
+          src="/bg2.png"
+          alt={character.name}
+          width={200}
+          height={300}
+          className="w-full h-[240px] object-cover"
         />
         <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-          <div className="flex items-center gap-1">
-              <span className="font-medium text-sm">{character.name}</span>
-              {character.verified && (
-              <IoCheckmarkCircle className="text-blue-400 text-base" />
-              )}
+          <div className="flex items-center gap-1 mb-1">
+            <span className="font-medium text-sm">{character.name}</span>
+            <IoCheckmarkCircle className="text-blue-400 text-base" />
           </div>
-          <div className="text-xs text-gray-300">
-              {character.age} / {character.traits}
+          
+          <p className="text-xs text-gray-300 line-clamp-2 mb-1">
+            {character.description}
+          </p>
+
+          {/* Tags */}
+          <div className="flex flex-wrap gap-1 mb-1">
+            {character.tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="px-1.5 py-0.5 bg-white/10 rounded-sm text-xs text-gray-300"
+              >
+                {tag}
+              </span>
+            ))}
+            {character.tags.length > 2 && (
+              <span className="text-xs text-gray-400">
+                +{character.tags.length - 2}
+              </span>
+            )}
+          </div>
+
+          {/* Created at */}
+          <div className="flex items-center gap-1 text-xs text-gray-400">
+            <IoBag className="text-xs" />
+            {formatDistance(character.created_at * 1000, new Date(), { addSuffix: true })}
           </div>
         </div>
       </div>

@@ -1,109 +1,128 @@
-import { motion } from "framer-motion";
-import { IoWarning, IoRefresh, IoStar, IoStarOutline } from "react-icons/io5";
-import { useState } from "react";
+'use client';
 
-interface ChatBubbleProps {
-  text: string;
-  type: 'narrative' | 'dialogue' | 'user';
-  timestamp?: string;
+import { motion } from "framer-motion";
+import { IoRefresh, IoWarning } from "react-icons/io5";
+import { HistoryMessage } from "@/lib/validations";
+import { FormattedText } from "@/components/FormattedText";
+import { useState } from 'react';
+
+interface ChatBubbleProps extends HistoryMessage {
   index: number;
-  status?: 'error' | 'sent';
   isLatestReply?: boolean;
-  onRetry?: () => void;
+  onRetry?: (index: number) => void;
   onRegenerate?: () => void;
   onRate?: (rating: number) => void;
 }
 
 export function ChatBubble({ 
-  text, 
-  type, 
-  timestamp, 
-  index, 
-  status, 
+  role,
+  text,
+  created_at,
+  index,
   isLatestReply,
   onRetry,
   onRegenerate,
-  onRate 
+  onRate,
+  status = 'sent'
 }: ChatBubbleProps) {
-  const [hoveredStar, setHoveredStar] = useState(0);
-  const [selectedStars, setSelectedStars] = useState(0);
+  const isUser = role === 'user';
+  const isAssistant = role === 'assistant';
+  const timestamp = new Date(created_at).toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
 
-  const handleStarClick = (rating: number) => {
-    setSelectedStars(rating);
-    onRate?.(rating);
+  // Determine bubble style based on role
+  const getBubbleStyle = () => {
+    if (isUser) return 'bg-[#FDB777] text-black';
+    if (isAssistant) return 'bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white';
+    return 'bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white'; // default style
   };
 
+  // State to track the current rating
+  const [currentRating, setCurrentRating] = useState(0);
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={`flex ${type === 'user' ? 'justify-end' : 'justify-start'} w-full`}
+      transition={{ delay: index * 0.1 }}
+      className={`flex items-center gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
-      <div className={`flex items-center gap-3 ${type === 'user' ? 'flex-row-reverse' : ''}`}>
-        {type === 'user' && status === 'error' && (
-          <button 
-            onClick={onRetry}
-            className="bg-red-500/20 p-2 rounded-full hover:bg-red-500/30 transition-colors"
-          >
-            <IoWarning className="w-5 h-5 text-red-500" />
-          </button>
-        )}
-        <div 
-          className={`min-w-[120px] max-w-[85%] rounded-2xl px-4 py-3 backdrop-blur-md ${
-            type === 'narrative' 
-              ? 'bg-black/40 text-gray-300 italic'
-              : type === 'user'
-              ? 'bg-[#FDB777]/90 text-black'
-              : 'bg-black/40 text-white'
-          }`}
+      {/* Retry indicator - only show for failed user messages */}
+      {isUser && onRetry && (
+        <motion.div 
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center justify-center w-6 h-6 rounded-full bg-red-500/70 backdrop-blur-md border border-red-500/50 shadow-lg cursor-pointer"
+          onClick={() => onRetry(index)}
         >
-          <p className={`break-all ${type === 'narrative' ? 'opacity-90' : 'opacity-100'}`}>
-            {text}
-          </p>
-          {timestamp && (
-            <p className="text-xs opacity-70 mt-1 whitespace-nowrap">
-              {timestamp}
-            </p>
-          )}
-          
-          {/* Action buttons for latest system reply */}
-          {isLatestReply && type !== 'user' && (
-            <>
-              <div className="h-[1px] bg-white/10 my-3" />
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={onRegenerate}
-                  className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors"
-                >
-                  <IoRefresh className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm break-all">Regenerate response</span>
-                </button>
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-sm text-gray-300 whitespace-nowrap">Rate this response:</span>
-                  <div className="flex gap-1 flex-shrink-0">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        onClick={() => handleStarClick(star)}
-                        onMouseEnter={() => setHoveredStar(star)}
-                        onMouseLeave={() => setHoveredStar(0)}
-                        className="text-gray-400 hover:text-[#FDB777] transition-colors"
-                      >
-                        {star <= (hoveredStar || selectedStars) ? (
-                          <IoStar className="w-4 h-4 text-[#FDB777]" />
-                        ) : (
-                          <IoStarOutline className="w-4 h-4" />
-                        )}
-                      </button>
-                    ))}
+          <IoWarning className="w-4 h-4 text-white" />
+        </motion.div>
+      )}
+
+      <div className={`max-w-[90%] ${isUser ? 'items-end' : 'items-start'}`}>
+        <div className={`rounded-2xl px-4 py-2 text-sm ${getBubbleStyle()}`}>
+          {/* Message content */}
+          <div className="mb-2">
+            <FormattedText 
+              text={text}
+              skipFormatting={isUser}
+            />
+          </div>
+
+          {/* Timestamp and controls container */}
+          <div className="border-t border-white/10 mt-2 pt-2">
+            {/* Timestamp */}
+            <div className="flex items-center gap-2">
+              <span className={`text-xs ${isUser ? 'text-black/70' : 'text-white/70'}`}>
+                {timestamp}
+              </span>
+            </div>
+
+            {/* Controls for assistant messages */}
+            {isLatestReply && !isUser && (
+              <div className="flex flex-col gap-2 mt-2">
+                {/* Regenerate button */}
+                {onRegenerate && (
+                  <button
+                    onClick={onRegenerate}
+                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+                  >
+                    <IoRefresh className="w-4 h-4" />
+                    Regenerate
+                  </button>
+                )}
+
+                {/* Rating stars with text */}
+                {onRate && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-400">Rate this response:</span>
+                      {[1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          onClick={() => {
+                            setCurrentRating(rating);
+                            onRate(rating);
+                          }}
+                          className={`transition-colors ${rating <= currentRating ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
+      {status === 'error' && (
+        <div className="error-indicator">
+          <IoWarning className="h-5 w-5 text-red-500" />
+        </div>
+      )}
     </motion.div>
   );
 } 

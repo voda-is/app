@@ -4,27 +4,21 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { CharacterCard } from '@/components/CharacterCard';
 import { TopNav } from '@/components/Navigation/TopNav';
-import { BottomNav } from '@/components/Navigation/BottomNav';
+// import { BottomNav } from '@/components/Navigation/BottomNav';
 import Link from 'next/link';
-
-interface Character {
-  name: string;
-  age: number;
-  traits: string;
-  verified?: boolean;
-}
+import { useCharacters, useTelegramUser } from '@/hooks/api';
+import { LoadingScreen } from '@/components/LoadingScreen';
+import { Character } from '@/lib/validations';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'featured' | 'popular'>('featured');
-  const [activeNavTab, setActiveNavTab] = useState('home');
 
-  // Sample character data
-  const characters: Character[] = [
-    { name: "Kai", age: 21, traits: "Mysterious / Dominant", verified: true },
-    { name: "Xavier", age: 26, traits: "Vengeful / Goal-oriented", verified: true },
-    { name: "Rex", age: 21, traits: "Curious / Adventurous", verified: true },
-    { name: "Alex", age: 18, traits: "Curious / Cute", verified: true },
-  ];
+  // const { data: user, isLoading: userLoading } = useTelegramUser();
+  const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
+
+  if (charactersLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <motion.div
@@ -37,8 +31,8 @@ export default function Home() {
 
       {/* Character Grid */}
       <div className="grid grid-cols-2 gap-2">
-        {characters.map((character, index) => (
-          <Link key={character.name} href={`/character/${character.name}`}>
+        {(characters as Character[])?.map((character, index) => (
+          <Link key={character._id} href={`/character/${character._id}`}>
             <CharacterCard 
               character={character} 
               index={index} 

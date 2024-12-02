@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { TelegramDebug } from "@/components/TelegramDebug";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
           <main className="min-h-screen">
             {children}
           </main>
+          <TelegramDebug />
         </Providers>
       </body>
     </html>

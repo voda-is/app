@@ -13,7 +13,7 @@ import { Character } from '@/lib/validations';
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'featured' | 'popular'>('featured');
 
-  const { data: _, isLoading: userLoading } = useTelegramUser();
+  const { data: user, isLoading: userLoading } = useTelegramUser();
   const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
 
   if (charactersLoading || userLoading) {

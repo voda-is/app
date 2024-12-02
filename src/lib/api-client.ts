@@ -33,22 +33,22 @@ export const apiProxy = axios.create({
 });
 
 // telegram user data
-// export function getTelegramUser(): TelegramUser {
-//   // @ts-ignore
-//   const telegramData = window.Telegram.WebApp.initDataUnsafe.user;
-//   if (!telegramData) {
-//     throw new Error('Telegram user data not found');
-//   }
-//   const validatedTelegramData = TelegramUserSchema.parse(telegramData);
-//   return validatedTelegramData;
-// }
-
 export function getTelegramUser(): TelegramUser {
-  return {
-    id: 7699268464,
-    first_name: 'Sam',
-  };
+  // @ts-ignore
+  const telegramData = window.Telegram.WebApp.initDataUnsafe.user;
+  if (!telegramData) {
+    throw new Error('Telegram user data not found');
+  }
+  const validatedTelegramData = TelegramUserSchema.parse(telegramData);
+  return validatedTelegramData;
 }
+
+// export function getTelegramUser(): TelegramUser {
+//   return {
+//     id: 7699268464,
+//     first_name: 'Sam',
+//   };
+// }
 
 
 // Add telegram user data to every request

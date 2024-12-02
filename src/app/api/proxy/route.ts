@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = 'http://localhost:3033';
+const API_URL = process.env.API_BASE_URL;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
 
 if (!ADMIN_TOKEN) {

@@ -19,18 +19,8 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
-  position: fixed;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-}
-
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
-}
-
-.scroll-smooth {
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
 }

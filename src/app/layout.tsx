@@ -28,7 +28,7 @@ export default function RootLayout({
           <main className="min-h-screen">
             {children}
           </main>
-          <TelegramDebug />
+          {/* <TelegramDebug /> */}
         </Providers>
       </body>
     </html>

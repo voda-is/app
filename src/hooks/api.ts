@@ -106,7 +106,9 @@ export function useSendChatMessage(characterId: string) {
   return useMutation<HistoryMessage, Error, string>({
     mutationFn: (text: string) => api.chat.sendMessage(characterId, text),
     onMutate: async (text) => {
-      // Create message with 'sending' status
+      // Cancel any outgoing refetches to avoid overwriting our optimistic update
+      await queryClient.cancelQueries({ queryKey: ['chatHistory', characterId] });
+
       const userMessage: HistoryMessage = {
         role: 'user',
         type: 'text',
@@ -115,52 +117,54 @@ export function useSendChatMessage(characterId: string) {
         status: 'sending'
       };
 
+      // Get the previous messages
+      const previousMessages = queryClient.getQueryData<HistoryMessage[]>(['chatHistory', characterId]) || [];
+
+      // Update with the new message
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
-          if (!old) throw new Error('No chat history found');
+          if (!old) return [userMessage];
+          // Check if this message already exists
+          const messageExists = old.some(msg => 
+            msg.text === text && 
+            msg.role === 'user' && 
+            Date.now() - msg.created_at < 5000
+          );
+          if (messageExists) return old;
           return [...old, userMessage];
         }
       );
 
-      return { userMessage };
+      return { previousMessages, userMessage };
+    },
+    onError: (err, text, context) => {
+      // Revert to previous messages on error
+      queryClient.setQueryData(['chatHistory', characterId], context?.previousMessages);
     },
     onSuccess: (responseMessage, text, context) => {
-      // Update the user message status to 'sent'
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
-          if (!old) throw new Error('No chat history found');
-          const history = old.map(msg => 
+          if (!old) return [responseMessage];
+          const updatedMessages = old.map(msg => 
             msg === context?.userMessage 
               ? { ...msg, status: 'sent' as const }
               : msg
           );
-
-          return [...history, responseMessage];
-        }
-      );
-    },
-    onError: (error, text, context) => {
-      // Mark the message as error instead of removing it
-      queryClient.setQueryData<HistoryMessage[]>(
-        ['chatHistory', characterId],
-        (old) => {
-          if (!old) throw new Error('No chat history found');
-          
-          const history = old.map(msg => 
-            msg === context?.userMessage 
-              ? { ...msg, status: 'error' as const }
-              : msg
+          // Check if response already exists
+          const responseExists = updatedMessages.some(msg => 
+            msg.text === responseMessage.text && 
+            msg.role === 'assistant' &&
+            Date.now() - msg.created_at < 5000
           );
-
-          return history;
+          if (responseExists) return updatedMessages;
+          return [...updatedMessages, responseMessage];
         }
       );
     },
   });
 }
-
 
 export function useRetryChatMessage(characterId: string) {
   const queryClient = useQueryClient();
@@ -229,47 +233,44 @@ export function useRegenerateLastMessage(characterId: string) {
 
   return useMutation<HistoryMessage, Error>({
     mutationFn: () => api.chat.regenerateLastMessage(characterId),
-    onMutate: () => {
-      // Mark the last user message as 'sending'
-      queryClient.setQueryData<HistoryMessage[]>(
-        ['chatHistory', characterId],
-        (old) => {
-          if (!old) throw new Error('No chat history found');
-          old.pop();
-          return old;
-        }
-      );
-    },
-    onSuccess: (responseMessage, text, context) => {
-      // Update the user message status to 'sent'
-      queryClient.setQueryData<HistoryMessage[]>(
-        ['chatHistory', characterId],
-        (old) => {
-          if (!old) throw new Error('No chat history found');
-          const history = old.map(msg => 
-            msg === context?.userMessage 
-              ? { ...msg, status: 'sent' as const }
-              : msg
-          );
+    onMutate: async () => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['chatHistory', characterId] });
 
-          return [...history, responseMessage];
+      // Get the previous messages
+      const previousMessages = queryClient.getQueryData<HistoryMessage[]>(['chatHistory', characterId]);
+
+      if (previousMessages) {
+        // Remove only the last assistant message
+        const newMessages = [...previousMessages];
+        for (let i = newMessages.length - 1; i >= 0; i--) {
+          if (newMessages[i].role === 'assistant') {
+            newMessages.splice(i, 1);
+            break;
+          }
         }
-      );
+        queryClient.setQueryData(['chatHistory', characterId], newMessages);
+      }
+
+      return { previousMessages };
     },
-    onError: (error, text, context) => {
-      // Mark the message as error instead of removing it
+    onError: (err, _, context) => {
+      // Revert to previous messages on error
+      queryClient.setQueryData(['chatHistory', characterId], context?.previousMessages);
+    },
+    onSuccess: (responseMessage, _, context) => {
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
-          if (!old) throw new Error('No chat history found');
-          
-          const history = old.map(msg => 
-            msg === context?.userMessage 
-              ? { ...msg, status: 'error' as const }
-              : msg
+          if (!old) return [responseMessage];
+          // Check if this regenerated message already exists
+          const messageExists = old.some(msg => 
+            msg.text === responseMessage.text && 
+            msg.role === 'assistant' &&
+            Date.now() - msg.created_at < 5000
           );
-
-          return history;
+          if (messageExists) return old;
+          return [...old, responseMessage];
         }
       );
     },

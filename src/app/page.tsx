@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { CharacterCard } from '@/components/CharacterCard';
 import { TopNav } from '@/components/Navigation/TopNav';
 import { BottomNav } from '@/components/Navigation/BottomNav';
+import Link from 'next/link';
 
 interface Character {
   name: string;
@@ -37,15 +38,16 @@ export default function Home() {
       {/* Character Grid */}
       <div className="grid grid-cols-2 gap-2">
         {characters.map((character, index) => (
-          <CharacterCard 
-            key={character.name} 
-            character={character} 
-            index={index} 
-          />
+          <Link key={character.name} href={`/character/${character.name}`}>
+            <CharacterCard 
+              character={character} 
+              index={index} 
+            />
+          </Link>
         ))}
       </div>
 
-      <BottomNav activeTab={activeNavTab} onTabChange={setActiveNavTab} />
+      {/* <BottomNav activeTab={activeNavTab} onTabChange={setActiveNavTab} /> */}
     </motion.div>
   );
 }

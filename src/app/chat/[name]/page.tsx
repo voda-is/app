@@ -208,7 +208,7 @@ export default function ChatPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="relative bg-black h-screen fixed inset-0"
+          className="fixed inset-0 bg-black"
         >
           {/* Background Image */}
           <motion.div 
@@ -228,10 +228,11 @@ export default function ChatPage() {
           <Header {...character} />
 
           {/* Main Content Area */}
-          <div className="relative z-10 flex flex-col h-full pt-[68px] pb-[60px]">
+          <div className="absolute inset-0 z-10 flex flex-col">
+            {/* Messages Container with proper padding for header and input */}
             <div 
               ref={scrollRef} 
-              className="flex-1 overflow-y-auto"
+              className="flex-1 overflow-y-auto pt-[68px] pb-[90px]" // Increased bottom padding
             >
               <div className="flex flex-col justify-end min-h-full">
                 <div className="p-4 space-y-4">
@@ -256,15 +257,16 @@ export default function ChatPage() {
             </div>
 
             {/* Input Bar */}
-            <div 
-              className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent"
-            >
-              <InputBar
-                message={message}
-                onChange={setMessage}
-                onSend={handleSendMessage}
-                placeholder={`Message ${character.name}`}
-              />
+            <div className="absolute bottom-0 left-0 right-0 z-20">
+              <div className="h-20 bg-gradient-to-t from-black/80 to-transparent" />
+              <div className="absolute bottom-2 left-0 right-0">
+                <InputBar
+                  message={message}
+                  onChange={setMessage}
+                  onSend={handleSendMessage}
+                  placeholder={`Message ${character.name}`}
+                />
+              </div>
             </div>
           </div>
         </motion.div>

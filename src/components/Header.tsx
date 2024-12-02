@@ -7,9 +7,10 @@ interface HeaderProps {
   name: string;
   image: string;
   notificationCount?: number;
+  className?: string;
 }
 
-export function Header({ name, image, notificationCount }: HeaderProps) {
+export function Header({ name, image, notificationCount, className }: HeaderProps) {
   const router = useRouter();
 
   return (
@@ -17,7 +18,7 @@ export function Header({ name, image, notificationCount }: HeaderProps) {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.2 }}
-      className="fixed top-0 left-0 right-0 backdrop-blur-md bg-black/20 z-20"
+      className={`fixed top-0 left-0 right-0 backdrop-blur-md bg-black/20 z-20 ${className}`}
     >          
       <div className="flex items-center px-4 py-3">
         <div className="flex items-center gap-3">

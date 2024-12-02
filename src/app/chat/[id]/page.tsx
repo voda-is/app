@@ -44,7 +44,7 @@ export default function ChatPage() {
   // Initial scroll when chat loads
   useEffect(() => {
     if (messages.length > 0) {
-      scrollToBottom('instant');
+      scrollToBottom();
     }
   }, []);
 
@@ -89,7 +89,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-black">
+    <main className="flex flex-col h-screen w-full bg-black">
       {/* Background Image */}
       <div className="fixed inset-0 z-0">
         <Image
@@ -102,17 +102,19 @@ export default function ChatPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/90" />
       </div>
 
-      {/* Content Layer */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      {/* Content Container */}
+      <div className="relative z-10 flex flex-col h-dvh">
+        {/* Header */}
         <Header 
           name={character?.name as string}
           image={'/bg2.png'}
+          className="flex-shrink-0 h-16"
         />
 
         {/* Messages Container */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto pt-[68px] pb-[90px] scroll-smooth"
+          className="flex-1 overflow-y-auto pt-20"
         >
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
@@ -127,7 +129,7 @@ export default function ChatPage() {
               </div>
             </div>
 
-            {/* Message History */}
+            {/* Messages */}
             {messages.map((msg, index) => (
               <ChatBubble 
                 index={index}
@@ -136,7 +138,8 @@ export default function ChatPage() {
                 isLatestReply={index === messages.length - 1 && msg.role !== 'user' && messages.length > 1}
                 onRegenerate={handleRegenerate}
                 onRetry={handleRetry}
-                onRate={handleRate} />
+                onRate={handleRate} 
+              />
             ))}
 
             {/* Typing Indicator */}
@@ -146,15 +149,14 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* Invisible element to scroll to */}
-            <div ref={messagesEndRef} />
+            {/* Responsive bottom spacing using Tailwind breakpoints and Safari-specific CSS */}
+            <div ref={messagesEndRef} className="h-16" />
           </div>
         </div>
 
-        {/* Input Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-20">
-          <div className="h-20 bg-gradient-to-t from-black/80 to-transparent" />
-          <div className="absolute bottom-2 left-0 right-0 px-4">
+        {/* Input Container */}
+        <div className="relative mt-auto bg-gradient-to-t from-black to-transparent">
+          <div className="px-4 pb-4 md:pb-6">
             <InputBar
               message={inputMessage}
               onChange={setInputMessage}
@@ -165,6 +167,6 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

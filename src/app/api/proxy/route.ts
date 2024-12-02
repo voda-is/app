@@ -30,6 +30,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { path, method, data } = body.data;
 
+    console.log('path', path);
+    console.log('method', method);
+    console.log('data', data);
+
     let authHeader = {};
     if (!data.ignoreToken) {
       // Get access token first
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest) {
     });
 
     const responseData = await response.json();
-    console.log(responseData);
+    console.log('responseData', responseData);
     return NextResponse.json(responseData);
   } catch (error) {
     console.error('API Proxy Error:', error);

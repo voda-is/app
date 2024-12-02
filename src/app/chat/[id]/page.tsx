@@ -14,8 +14,6 @@ import { ConversationHistory, HistoryMessage } from "@/lib/validations";
 
 export default function ChatPage() {
   const params = useParams();
-  const router = useRouter();
-
   const id = params?.id as string;
   
   const { data: character, isLoading: characterLoading } = useCharacter(id);
@@ -29,7 +27,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // @ts-ignore
-  const messages: HistoryMessage[] = chatHistory?.history || [];
+  const messages: HistoryMessage[] = chatHistory || [];
 
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
@@ -107,6 +105,18 @@ export default function ChatPage() {
           className="flex-1 overflow-y-auto pt-[68px] pb-[90px] scroll-smooth"
         >
           <div className="flex flex-col space-y-4 p-4">
+            {/* Description */}
+            <div className="flex justify-center mb-4">
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
+                <div className="text-lg font-semibold mb-2 text-center text-purple-300">
+                  Description
+                </div>
+                <div className="text-sm leading-relaxed text-gray-100">
+                  {character?.description}
+                </div>
+              </div>
+            </div>
+
             {/* Message History */}
             {messages.map((msg, index) => (
               <ChatBubble 
@@ -115,7 +125,7 @@ export default function ChatPage() {
                 {...msg}
                 isLatestReply={index === messages.length - 1 && msg.role !== 'user'}
                 onRegenerate={handleRegenerate}
-                onRate={handleRate}              />
+                onRate={handleRate} />
             ))}
 
             {/* Typing Indicator */}

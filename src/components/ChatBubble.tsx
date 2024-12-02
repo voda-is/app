@@ -64,10 +64,12 @@ export function ChatBubble({
         <div className={`rounded-2xl px-4 py-2 text-sm ${getBubbleStyle()}`}>
           {/* Message content */}
           <div className="mb-2">
-            <FormattedText 
-              text={text}
-              skipFormatting={isUser}
-            />
+            {text && (
+              <FormattedText 
+                text={text}
+                skipFormatting={isUser}
+              />
+            )}
           </div>
 
           {/* Timestamp and controls container */}

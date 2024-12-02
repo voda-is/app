@@ -9,7 +9,6 @@ export function formatResponse(response: string): string {
   
   // Remove asterisks and trim
   const cleanResponse = response.replace(/\*/g, '').trim();
-  
   let startPos = 0;
   let inQuotes = false;
   

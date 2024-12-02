@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
 import type { Character, ConversationHistory, User, HistoryMessage } from '@/lib/validations';
+import { replacePlaceholders } from '@/lib/formatText';
 
 // User related hooks
 export function useTelegramUser() {
@@ -65,29 +66,30 @@ export function useCheckPastConversation(characterId: string | undefined) {
 
 export function useChatHistory(characterId: string | undefined) {
   const { data: character } = useCharacter(characterId);
-  const { data: hasPastConversation } = useCheckPastConversation(characterId);
+  const { data: user } = useTelegramUser();
+  const { data: hasPastConversation, isLoading: hasPastConversationLoading } = useCheckPastConversation(characterId);
 
-  return useQuery<ConversationHistory, Error>({
+  return useQuery<HistoryMessage[], Error>({
     queryKey: ['chatHistory', characterId],
     queryFn: async () => {
       if (!characterId) throw new Error('Character ID is required');
-      
+      if (!user) throw new Error('User is required');
+
       if (hasPastConversation) {
-        const history = await api.chat.getConversationHistory(characterId);
+        const history = (await api.chat.getConversationHistory(characterId)).history;
         return history;
       } else if (character) {
-        return {
-          history: [{
+        return [{
             role: 'assistant',
             created_at: Date.now(),
             type: 'text' as const,
-            text: character.prompts.first_message
+            text: replacePlaceholders(character.prompts.first_message, character.name, user?.first_name)
           }]
-        };
+      } else {
+        throw new Error('Unable to fetch chat history');
       }
-      throw new Error('Unable to fetch chat history');
     },
-    enabled: !!characterId && (hasPastConversation !== undefined),
+    enabled: !!characterId && (hasPastConversation !== undefined || hasPastConversationLoading) && !!user,
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity, 
@@ -113,16 +115,11 @@ export function useSendChatMessage(characterId: string) {
         status: 'sending'
       };
 
-      queryClient.setQueryData<ConversationHistory>(
+      queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
-          if (!old) {
-            throw new Error('No chat history found');
-          }
-          return {
-            ...old,
-            history: [...old.history, userMessage]
-          };
+          if (!old) throw new Error('No chat history found');
+          return [...old, userMessage];
         }
       );
 
@@ -132,41 +129,35 @@ export function useSendChatMessage(characterId: string) {
 
       console.log('onSuccess', responseMessage, text, context);
       // Update the user message status to 'sent'
-      queryClient.setQueryData<ConversationHistory>(
+      queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
           if (!old) throw new Error('No chat history found');
-          const history = old.history.map(msg => 
+          const history = old.map(msg => 
             msg === context?.userMessage 
               ? { ...msg, status: 'sent' as const }
               : msg
           );
 
-          return {
-            ...old,
-            history: [...history, responseMessage],
-          };
+          return [...history, responseMessage];
         }
       );
     },
     onError: (error, text, context) => {
       // Mark the message as error instead of removing it
       console.log('onError', error, text, context);
-      queryClient.setQueryData<ConversationHistory>(
+      queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
-          if (!old) return { history: [] };
+          if (!old) throw new Error('No chat history found');
           
-          const history = old.history.map(msg => 
+          const history = old.map(msg => 
             msg === context?.userMessage 
               ? { ...msg, status: 'error' as const }
               : msg
           );
 
-          return {
-            ...old,
-            history,
-          };
+          return history;
         }
       );
     },

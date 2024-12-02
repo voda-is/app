@@ -10,7 +10,7 @@ import { InputBar } from "@/components/InputBar";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useCharacter, useChatHistory, useSendChatMessage, useRegenerateLastMessage } from '@/hooks/api';
-import { ConversationHistory, HistoryMessage } from "@/lib/validations";
+import { HistoryMessage } from "@/lib/validations";
 
 export default function ChatPage() {
   const params = useParams();
@@ -123,7 +123,7 @@ export default function ChatPage() {
                 index={index}
                 key={`${msg.created_at}-${index}`}
                 {...msg}
-                isLatestReply={index === messages.length - 1 && msg.role !== 'user'}
+                isLatestReply={index === messages.length - 1 && msg.role !== 'user' && messages.length > 1}
                 onRegenerate={handleRegenerate}
                 onRate={handleRate} />
             ))}

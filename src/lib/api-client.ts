@@ -77,6 +77,11 @@ apiProxy.interceptors.response.use(
         response.data = validateResponse(genericResponse, z.array(CharacterSchema));
       }
 
+      // if status is not 2xx, throw an error
+      if (genericResponse.status < 200 || genericResponse.status >= 300) {
+        throw new APIError(genericResponse.message, genericResponse.status, 'API_ERROR');
+      }
+
       return response;
     } catch (error) {
       if (error instanceof z.ZodError) {

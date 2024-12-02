@@ -9,7 +9,7 @@ import { useState } from 'react';
 interface ChatBubbleProps extends HistoryMessage {
   index: number;
   isLatestReply?: boolean;
-  onRetry?: (index: number) => void;
+  onRetry?: (text: string) => void;
   onRegenerate?: () => void;
   onRate?: (rating: number) => void;
 }
@@ -50,13 +50,13 @@ export function ChatBubble({
       className={`flex items-center gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
     >
       {/* Retry indicator - only show for failed user messages */}
-      {isUser && onRetry && (
+      {isUser && onRetry && status === 'error' && (
         <motion.div 
           whileTap={{ scale: 0.95 }}
           className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
-          onClick={() => onRetry(index)}
+          onClick={() => onRetry(text)}
         >
-          <IoWarning className="w-10 h-10 text-white" />
+          <IoWarning className="w-5 h-5 text-white" />
         </motion.div>
       )}
 
@@ -120,11 +120,6 @@ export function ChatBubble({
           </div>
         </div>
       </div>
-      {status === 'error' && (
-        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg">
-          <IoWarning className="w-5 h-5 text-white" />
-        </div>
-      )}
     </motion.div>
   );
 } 

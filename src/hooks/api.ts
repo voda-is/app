@@ -126,8 +126,70 @@ export function useSendChatMessage(characterId: string) {
       return { userMessage };
     },
     onSuccess: (responseMessage, text, context) => {
+      // Update the user message status to 'sent'
+      queryClient.setQueryData<HistoryMessage[]>(
+        ['chatHistory', characterId],
+        (old) => {
+          if (!old) throw new Error('No chat history found');
+          const history = old.map(msg => 
+            msg === context?.userMessage 
+              ? { ...msg, status: 'sent' as const }
+              : msg
+          );
 
-      console.log('onSuccess', responseMessage, text, context);
+          return [...history, responseMessage];
+        }
+      );
+    },
+    onError: (error, text, context) => {
+      // Mark the message as error instead of removing it
+      console.log('onError', error, text, context);
+      queryClient.setQueryData<HistoryMessage[]>(
+        ['chatHistory', characterId],
+        (old) => {
+          if (!old) throw new Error('No chat history found');
+          
+          const history = old.map(msg => 
+            msg === context?.userMessage 
+              ? { ...msg, status: 'error' as const }
+              : msg
+          );
+
+          return history;
+        }
+      );
+    },
+  });
+}
+
+
+export function useRetryChatMessage(characterId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<HistoryMessage, Error, string>({
+    mutationFn: (text: string) => api.chat.sendMessage(characterId, text),
+    onMutate: async (text) => {
+      // Create message with 'sending' status
+      const userMessage: HistoryMessage = {
+        role: 'user',
+        type: 'text',
+        text,
+        created_at: Date.now(),
+        status: 'sending'
+      };
+
+      queryClient.setQueryData<HistoryMessage[]>(
+        ['chatHistory', characterId],
+        (old) => {
+          if (!old) throw new Error('No chat history found');
+          old.pop();
+          return [...old, userMessage];
+        }
+      );
+
+      return { userMessage };
+    },
+    onSuccess: (responseMessage, text, context) => {
       // Update the user message status to 'sent'
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
@@ -169,28 +231,50 @@ export function useRegenerateLastMessage(characterId: string) {
 
   return useMutation<HistoryMessage, Error>({
     mutationFn: () => api.chat.regenerateLastMessage(characterId),
-    onSuccess: (newMessage) => {
-      // Replace the last assistant message with the regenerated one
-      queryClient.setQueryData<ConversationHistory>(
+    onMutate: () => {
+      // Mark the last user message as 'sending'
+      queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
-          if (!old) return { history: [newMessage] };
-          const history = [...old.history];
-          for (let i = history.length - 1; i >= 0; i--) {
-            if (history[i].role === 'assistant') {
-              history[i] = newMessage;
-              break;
-            }
-          }
-          return {
-            ...old,
-            history,
-          };
+          if (!old) throw new Error('No chat history found');
+          old.pop();
+          return old;
         }
       );
     },
-    onError: () => {
-      alert('Failed to regenerate message. Please try again.');
+    onSuccess: (responseMessage, text, context) => {
+      // Update the user message status to 'sent'
+      queryClient.setQueryData<HistoryMessage[]>(
+        ['chatHistory', characterId],
+        (old) => {
+          if (!old) throw new Error('No chat history found');
+          const history = old.map(msg => 
+            msg === context?.userMessage 
+              ? { ...msg, status: 'sent' as const }
+              : msg
+          );
+
+          return [...history, responseMessage];
+        }
+      );
+    },
+    onError: (error, text, context) => {
+      // Mark the message as error instead of removing it
+      console.log('onError', error, text, context);
+      queryClient.setQueryData<HistoryMessage[]>(
+        ['chatHistory', characterId],
+        (old) => {
+          if (!old) throw new Error('No chat history found');
+          
+          const history = old.map(msg => 
+            msg === context?.userMessage 
+              ? { ...msg, status: 'error' as const }
+              : msg
+          );
+
+          return history;
+        }
+      );
     },
   });
 }

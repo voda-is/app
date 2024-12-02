@@ -23,6 +23,8 @@ export default function ChatPage() {
   const { mutate: regenerateMessage, isPending: isRegenerating } = useRegenerateLastMessage(id);
 
   const [inputMessage, setInputMessage] = useState("");
+  const [disableActions, setDisableActions] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +38,8 @@ export default function ChatPage() {
   // Scroll when messages change or typing state changes
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isSending]);
+    setDisableActions(false);
+  }, [messages, isSending, isRegenerating]);
 
   // Initial scroll when chat loads
   useEffect(() => {
@@ -46,6 +49,8 @@ export default function ChatPage() {
   }, []);
 
   const handleSendMessage = () => {
+    if (disableActions) return;
+    setDisableActions(true);
     const trimmedMessage = inputMessage.trim();
     if (!trimmedMessage) return;
 
@@ -54,15 +59,20 @@ export default function ChatPage() {
   };
 
   const handleRegenerate = async () => {
-    regenerateMessage(undefined, {
-      onSuccess: (newMessage) => {
-        // @ts-ignore
-        setMessages((prevMessages) => [...prevMessages, newMessage]);
-      },
-      onError: () => {
-        alert('Failed to regenerate message. Please try again.');
-      }
-    });
+    if (disableActions) return;
+    setDisableActions(true);
+    regenerateMessage();
+  };
+
+  const handleRetry = (text: string) => {
+    if (disableActions) return;
+    setDisableActions(true);
+
+    const trimmedMessage = text.trim();
+    if (!trimmedMessage) return;
+
+    setInputMessage(""); // Clear input immediately
+    sendMessage(trimmedMessage);
   };
 
   const handleRate = (rating: number) => {
@@ -125,11 +135,12 @@ export default function ChatPage() {
                 {...msg}
                 isLatestReply={index === messages.length - 1 && msg.role !== 'user' && messages.length > 1}
                 onRegenerate={handleRegenerate}
+                onRetry={handleRetry}
                 onRate={handleRate} />
             ))}
 
             {/* Typing Indicator */}
-            {isSending && (
+            {(isSending || isRegenerating) && (
               <div className="flex items-start gap-2">
                 <TypingIndicator />
               </div>
@@ -149,7 +160,7 @@ export default function ChatPage() {
               onChange={setInputMessage}
               onSend={handleSendMessage}
               placeholder={`Message ${character?.name}`}
-              disabled={isSending}
+              disabled={disableActions}
             />
           </div>
         </div>

@@ -4,15 +4,12 @@ import {
   UserSchema,
   UserPayloadSchema,
   validateResponse,
-  type User,
-  type UserPayload,
-  TelegramUserSchema,
-  TelegramUser,
   CharacterSchema,
   ConversationHistory,
   HistoryMessage,
 } from './validations';
 import { z } from 'zod';
+import { getTelegramUser, notificationOccurred } from '@/lib/telegram';
 
 class APIError extends Error {
   constructor(
@@ -31,24 +28,6 @@ export const apiProxy = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
-// telegram user data
-export function getTelegramUser(): TelegramUser {
-  // @ts-ignore
-  const telegramData = window.Telegram.WebApp.initDataUnsafe.user;
-  if (!telegramData) {
-    throw new Error('Telegram user data not found');
-  }
-  const validatedTelegramData = TelegramUserSchema.parse(telegramData);
-  return validatedTelegramData;
-}
-
-// export function getTelegramUser(): TelegramUser {
-//   return {
-//     id: 7699268464,
-//     first_name: 'Sam',
-//   };
-// }
 
 
 // Add telegram user data to every request
@@ -214,6 +193,7 @@ export const api = {
           stripUserId: true,
         }
       });
+      notificationOccurred('success');
       return response.data.data;
     },
 
@@ -227,6 +207,7 @@ export const api = {
           stripUserId: true,
         }
       });
+      notificationOccurred('success');
       return response.data.data;
     },
   }

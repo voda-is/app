@@ -2,10 +2,10 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { IoArrowBack, IoChatbubble, IoTime, IoBookmark, IoPricetag } from "react-icons/io5";
-import { useRouter } from "next/navigation";
+import { IoChatbubble, IoTime, IoPricetag } from "react-icons/io5";
 import { formatDistance } from 'date-fns';
 import { Character } from "@/lib/validations";
+import { useRouter } from "next/navigation";
 
 interface CharacterDetailsProps {
   character: Character;
@@ -19,7 +19,7 @@ export function CharacterDetails({ character }: CharacterDetailsProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="relative min-h-screen bg-black"
+      className="relative min-h-screen bg-gray-900 pt-32"
     >
       {/* Background Image with Gradient Overlay */}
       <div className="absolute inset-0 z-0">
@@ -34,16 +34,6 @@ export function CharacterDetails({ character }: CharacterDetailsProps) {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col min-h-screen">
-        {/* Header */}
-        <div className="p-4 flex items-center gap-4">
-          <button 
-            onClick={() => router.back()}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-black/40 text-white"
-          >
-            <IoArrowBack className="w-6 h-6" />
-          </button>
-        </div>
-
         {/* Profile Section */}
         <div className="px-4 mb-6">
           <div className="relative w-24 h-24 mb-4 mx-auto">

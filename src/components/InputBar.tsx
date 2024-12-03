@@ -37,7 +37,7 @@ export function InputBar({ message, onChange, onSend, placeholder, disabled }: I
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.4 }}
-      className="fixed bottom-0 left-0 right-0 p-4 backdrop-blur-md bg-black/20 z-20"
+      className="p-4 backdrop-blur-md bg-black/20"
     >
       <div className={`flex items-center gap-2 backdrop-blur-md bg-white/10 rounded-full px-4 py-2 ${disabled ? 'opacity-50' : ''}`}>
         <button className="text-gray-400">

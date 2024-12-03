@@ -1,6 +1,5 @@
 'use client';
 
-import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
@@ -11,11 +10,12 @@ import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useCharacter, useChatHistory, useSendChatMessage, useRegenerateLastMessage } from '@/hooks/api';
 import { HistoryMessage } from "@/lib/validations";
+import { isOnTelegram, notificationOccurred, setupTelegramInterface } from "@/lib/telegram";
 
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
-  
+  const router = useRouter();
   const { data: character, isLoading: characterLoading } = useCharacter(id);
   const { data: chatHistory, isLoading: historyLoading, error: historyError } = useChatHistory(id);
 
@@ -35,6 +35,11 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
   };
 
+  useEffect(() => {
+    if (isOnTelegram()) {
+      setupTelegramInterface(router);
+    }
+  }, []);
   // Scroll when messages change or typing state changes
   useEffect(() => {
     scrollToBottom();
@@ -89,7 +94,7 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="flex flex-col h-screen w-full bg-black">
+    <main className="flex flex-col w-full bg-black">
       {/* Background Image */}
       <div className="fixed inset-0 z-0">
         <Image
@@ -103,22 +108,24 @@ export default function ChatPage() {
       </div>
 
       {/* Content Container */}
-      <div className="relative z-10 flex flex-col h-dvh">
-        {/* Header */}
-        <Header 
-          name={character?.name as string}
-          image={'/bg2.png'}
-          className="flex-shrink-0 h-16"
-        />
+      <div className="relative top-0 left-0 z-10 flex flex-col">
+        {/* Header - adjusted padding */}
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-28">
+          <Header
+            name={character?.name as string}
+            image={'/bg2.png'}
+            className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
+          />
+        </div>
 
         {/* Messages Container */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto pt-20"
+          className="flex-1 pt-28"
         >
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center">
               <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
                 <div className="text-lg font-semibold mb-2 text-center text-pink-300">
                   Description
@@ -155,7 +162,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input Container */}
-        <div className="relative mt-auto bg-gradient-to-t from-black to-transparent">
+        <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-gradient-to-t from-black to-transparent">
           <div className="px-4 pb-4 md:pb-6">
             <InputBar
               message={inputMessage}

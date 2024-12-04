@@ -85,6 +85,28 @@ export function ChatBubble({
     };
   }, [audioUrl]);
 
+  useEffect(() => {
+    if (audioUrl && audioElement) {
+      // Make sure audio is loaded
+      audioElement.load();
+      
+      // Wait for audio to be loaded before playing
+      const playAudio = () => {
+        audioElement.play().catch(error => {
+          console.error('Error auto-playing audio:', error);
+        });
+      };
+
+      // Add event listener for when audio is ready
+      audioElement.addEventListener('canplaythrough', playAudio, { once: true });
+
+      // Cleanup
+      return () => {
+        audioElement.removeEventListener('canplaythrough', playAudio);
+      };
+    }
+  }, [audioUrl, audioElement]);
+
   const handleTTSClick = async () => {
     generateTTS(
       { text: ttsText, characterId },
@@ -97,9 +119,8 @@ export function ChatBubble({
           }
 
           // Try to create a blob with explicit audio type
-          // Common formats: 'audio/mpeg', 'audio/mp3', 'audio/wav'
           const audioBlob = new Blob([entry.audioBlob], { 
-            type: 'audio/mp3' // Try forcing MP3 format
+            type: 'audio/mp3'
           });
           
           setAudioBlob(audioBlob);
@@ -163,7 +184,6 @@ export function ChatBubble({
                   ref={(element) => {
                     if (element && !audioElement) {
                       setAudioElement(element);
-                      element.load();
                     }
                   }}
                   src={audioUrl}
@@ -175,7 +195,6 @@ export function ChatBubble({
                   }}
                   onPlay={() => {
                     setIsPlaying(true);
-                    // Start or resume the progress animation
                     controls.start({ 
                       width: "100%",
                       transition: { 
@@ -188,13 +207,11 @@ export function ChatBubble({
                   onPause={() => {
                     setIsPlaying(false);
                     controls.stop();
-                    // Set the width to current progress immediately when paused
                     controls.set({ width: `${(currentTime / duration) * 100}%` });
                   }}
                   onEnded={() => {
                     setIsPlaying(false);
                     controls.stop();
-                    // Reset the progress bar when audio ends
                     controls.set({ width: 0 });
                   }}
                   onTimeUpdate={() => {
@@ -212,7 +229,6 @@ export function ChatBubble({
                       } else {
                         if (audioElement.ended) {
                           audioElement.currentTime = 0;
-                          // Reset progress bar when starting over
                           controls.set({ width: 0 });
                         }
                         audioElement.play().catch(error => {
@@ -226,14 +242,12 @@ export function ChatBubble({
                     text-white/80 hover:text-white 
                     transition-all duration-200 overflow-hidden"
                 >
-                  {/* Progress bar using Framer Motion */}
                   <motion.div 
                     className="absolute left-0 top-0 bottom-0 bg-white/10"
                     initial={{ width: 0 }}
                     animate={controls}
                   />
                   
-                  {/* Content */}
                   <div className="relative flex items-center gap-2">
                     <GiSoundWaves className={`w-5 h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
                     <span className="text-sm font-medium">
@@ -248,7 +262,7 @@ export function ChatBubble({
             )}
 
             {/* Rest of the message content */}
-            <div className={`${enableVoice ? 'border-t border-white/10 pt-4' : 'pt-4'}`}>
+            <div className={`${enableVoice ? 'border-t border-white/10 pt-4' : isUser ? 'pt-4' : ''}`}>
               {text && (
                 <FormattedText 
                   text={text}

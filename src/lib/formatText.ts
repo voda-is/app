@@ -45,4 +45,33 @@ export function formatResponse(response: string): string {
 
 export function replacePlaceholders(text: string, characterName: string, userName: string): string {
   return text.replace(/{{char}}/g, characterName).replace(/{{user}}/g, userName);
+}
+
+export function extractText(response: string): string[] {
+  const extractedParts: string[] = [];
+  
+  // Remove asterisks and trim
+  const cleanResponse = response.replace(/\*/g, '').trim();
+  let startPos = 0;
+  let inQuotes = false;
+  
+  // Process the string character by character
+  for (let i = 0; i < cleanResponse.length; i++) {
+    if (cleanResponse[i] === '"') {
+      if (inQuotes) {
+        // Extract text within quotes
+        const text = cleanResponse.slice(startPos, i).trim();
+        if (text) {
+          extractedParts.push(text);
+        }
+        startPos = i + 1;
+      } else {
+        // Set start position after the opening quote
+        startPos = i + 1;
+      }
+      inQuotes = !inQuotes;
+    }
+  }
+  
+  return extractedParts;
 } 

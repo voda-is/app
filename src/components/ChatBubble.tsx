@@ -1,10 +1,15 @@
 'use client';
 
-import { motion } from "framer-motion";
+import { motion, useAnimationControls } from "framer-motion";
 import { IoRefresh, IoWarning } from "react-icons/io5";
-import { HistoryMessage } from "@/lib/validations";
+import { GiSoundWaves } from "react-icons/gi";
+import { HistoryMessage, TTSEntry } from "@/lib/validations";
 import { FormattedText } from "@/components/FormattedText";
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useTTS } from '@/hooks/api';
+import { extractText } from '@/lib/formatText';
+import { hashText } from '@/lib/utils';
+import { useQuery } from "@tanstack/react-query";
 
 interface ChatBubbleProps extends HistoryMessage {
   index: number;
@@ -12,6 +17,8 @@ interface ChatBubbleProps extends HistoryMessage {
   onRetry?: (text: string) => void;
   onRegenerate?: () => void;
   onRate?: (rating: number) => void;
+  enableVoice?: boolean;
+  characterId: string;
 }
 
 export function ChatBubble({ 
@@ -23,7 +30,9 @@ export function ChatBubble({
   onRetry,
   onRegenerate,
   onRate,
-  status = 'sent'
+  status = 'sent',
+  enableVoice = false,
+  characterId,
 }: ChatBubbleProps) {
   const isUser = role === 'user';
   const isAssistant = role === 'assistant';
@@ -41,6 +50,68 @@ export function ChatBubble({
 
   // State to track the current rating
   const [currentRating, setCurrentRating] = useState(0);
+
+  const { mutate: generateTTS, isPending: isTTSLoading } = useTTS();
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [hash, setHash] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  
+  // Extract text once and memoize it
+  const ttsText = useMemo(() => extractText(text).join(' '), [text]);
+  
+  // Calculate hash when text changes
+  useEffect(() => {
+    hashText(ttsText).then(setHash);
+  }, [ttsText]);
+  
+  // Get cached result
+  const { data: cachedTTS } = useQuery<TTSEntry>({
+    queryKey: ['tts', hash],
+    enabled: !!hash,
+    staleTime: Infinity,
+  });
+
+  const audioUrl = useMemo(() => audioBlob ? URL.createObjectURL(audioBlob) : null, [audioBlob]);
+
+  // Clean up the URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
+
+  const handleTTSClick = async () => {
+    generateTTS(
+      { text: ttsText, characterId },
+      {
+        onSuccess: (entry) => {
+          // Check if the entry.audioBlob is valid
+          if (!entry.audioBlob || entry.audioBlob.size === 0) {
+            console.error('Received empty audio blob');
+            return;
+          }
+
+          // Try to create a blob with explicit audio type
+          // Common formats: 'audio/mpeg', 'audio/mp3', 'audio/wav'
+          const audioBlob = new Blob([entry.audioBlob], { 
+            type: 'audio/mp3' // Try forcing MP3 format
+          });
+          
+          setAudioBlob(audioBlob);
+        },
+        onError: (error) => {
+          console.error('TTS generation failed:', error);
+        }
+      }
+    );
+  };
+
+  const controls = useAnimationControls();
 
   return (
     <motion.div
@@ -64,12 +135,127 @@ export function ChatBubble({
         <div className={`rounded-2xl px-4 py-2 text-sm ${getBubbleStyle()}`}>
           {/* Message content */}
           <div className="mb-2">
-            {text && (
-              <FormattedText 
-                text={text}
-                skipFormatting={isUser}
-              />
+            {!isUser && enableVoice && !audioBlob && (
+              <button 
+                onClick={handleTTSClick}
+                disabled={isTTSLoading}
+                className={`
+                  flex items-center gap-2 px-3 py-1.5 rounded-lg 
+                  ${isTTSLoading 
+                    ? 'bg-white/5 cursor-not-allowed' 
+                    : 'bg-white/10 hover:bg-white/20 active:scale-95'
+                  }
+                  text-white/80 hover:text-white 
+                  transition-all duration-200 
+                  mb-3
+                `}
+              >
+                <GiSoundWaves className="w-5 h-5" />
+                <span className="text-sm font-medium">
+                  {isTTSLoading ? 'Generating...' : 'Listen'}
+                </span>
+              </button>
             )}
+            
+            {audioBlob && audioUrl && (
+              <div className="flex flex-col gap-2 mb-3">
+                <audio 
+                  ref={(element) => {
+                    if (element && !audioElement) {
+                      setAudioElement(element);
+                      element.load();
+                    }
+                  }}
+                  src={audioUrl}
+                  style={{ display: 'none' }}
+                  onLoadedMetadata={() => {
+                    if (audioElement) {
+                      setDuration(audioElement.duration);
+                    }
+                  }}
+                  onPlay={() => {
+                    setIsPlaying(true);
+                    // Start or resume the progress animation
+                    controls.start({ 
+                      width: "100%",
+                      transition: { 
+                        duration: duration - currentTime,
+                        ease: "linear",
+                        type: "tween"
+                      }
+                    });
+                  }}
+                  onPause={() => {
+                    setIsPlaying(false);
+                    controls.stop();
+                    // Set the width to current progress immediately when paused
+                    controls.set({ width: `${(currentTime / duration) * 100}%` });
+                  }}
+                  onEnded={() => {
+                    setIsPlaying(false);
+                    controls.stop();
+                    // Reset the progress bar when audio ends
+                    controls.set({ width: 0 });
+                  }}
+                  onTimeUpdate={() => {
+                    if (audioElement) {
+                      setCurrentTime(audioElement.currentTime);
+                    }
+                  }}
+                />
+
+                <button 
+                  onClick={() => {
+                    if (audioElement) {
+                      if (isPlaying) {
+                        audioElement.pause();
+                      } else {
+                        if (audioElement.ended) {
+                          audioElement.currentTime = 0;
+                          // Reset progress bar when starting over
+                          controls.set({ width: 0 });
+                        }
+                        audioElement.play().catch(error => {
+                          console.error('Error playing audio:', error);
+                        });
+                      }
+                    }
+                  }}
+                  className="relative flex items-center gap-2 px-3 py-1.5 rounded-lg 
+                    bg-white/10 hover:bg-white/20 active:scale-95
+                    text-white/80 hover:text-white 
+                    transition-all duration-200 overflow-hidden"
+                >
+                  {/* Progress bar using Framer Motion */}
+                  <motion.div 
+                    className="absolute left-0 top-0 bottom-0 bg-white/10"
+                    initial={{ width: 0 }}
+                    animate={controls}
+                  />
+                  
+                  {/* Content */}
+                  <div className="relative flex items-center gap-2">
+                    <GiSoundWaves className={`w-5 h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
+                    <span className="text-sm font-medium">
+                      {isPlaying ? 'Playing...' : 'Play Audio'}
+                    </span>
+                    <span className="text-xs text-white/60">
+                      {Math.ceil(duration)}"
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {/* Rest of the message content */}
+            <div className={`${enableVoice ? 'border-t border-white/10 pt-4' : 'pt-4'}`}>
+              {text && (
+                <FormattedText 
+                  text={text}
+                  skipFormatting={isUser}
+                />
+              )}
+            </div>
           </div>
 
           {/* Timestamp and controls container */}

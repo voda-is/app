@@ -21,6 +21,7 @@ export const CharacterMetadataSchema = z.object({
   creator: z.string(),
   version: z.string(),
   status: z.enum(['initialized', 'active', 'inactive']),
+  enable_voice: z.boolean(),
 });
 
 export const CharacterPromptsSchema = z.object({
@@ -44,6 +45,7 @@ export const CharacterSchema = z.object({
   created_at: TimestampSchema,
   updated_at: TimestampSchema,
   published_at: TimestampSchema,
+  voice_model_id: z.string().optional(),
 });
 
 // Conversation history schemas
@@ -111,3 +113,11 @@ export type ConversationHistory = z.infer<typeof ConversationHistorySchema>;
 export type User = z.infer<typeof UserSchema>;
 export type UserPayload = z.infer<typeof UserPayloadSchema>;
 export type TelegramUser = z.infer<typeof TelegramUserSchema>;
+
+export type TTSStatus = 'generating' | 'complete' | 'error';
+
+export interface TTSEntry {
+  text: string;
+  audioBlob: Blob;
+  status: TTSStatus;
+}

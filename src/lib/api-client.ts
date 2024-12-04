@@ -46,6 +46,15 @@ apiProxy.interceptors.request.use((config) => {
 // Response validation and error handling
 apiProxy.interceptors.response.use(
   (response) => {
+    if (!response.data) {
+      throw new Error('No response data');
+    }
+
+    // if response is an array buffer, return it as is
+    if (response.headers['content-type']?.includes('audio/')) {
+      return response;
+    }
+
     try {
       const genericResponse = GenericResponseSchema.parse(response.data);
       if (response.config.url?.includes('/user') && response.config.method === 'GET') {
@@ -210,5 +219,44 @@ export const api = {
       notificationOccurred('success');
       return response.data.data;
     },
-  }
-}; 
+  },
+
+  tts: {
+    generateSpeech: async (message: string, characterId: string): Promise<Blob> => {
+      const telegramUser = getTelegramUser();
+      
+      // Use fetch directly instead of axios for better binary handling
+      const response = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: {
+            path: `/tts/${characterId}`,
+            method: 'POST',
+            data: {
+              user_id: telegramUser.id.toString(), 
+              stripUserId: true,
+              message,
+              isStream: true,
+            }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch audio');
+      }
+
+      // Get the binary data
+      const arrayBuffer = await response.arrayBuffer();
+      // Create blob from ArrayBuffer
+      const audioBlob = new Blob([arrayBuffer], { 
+        type: response.headers.get('content-type') || 'audio/mp3'
+      });
+
+      return audioBlob;     
+    },
+  },
+};

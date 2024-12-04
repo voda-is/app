@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
 
     let authHeader = {};
     if (!data.ignoreToken) {
-      // Get access token first
       const accessToken = await getAccessToken(data.user_id);
       authHeader = {
         'Authorization': `Bearer ${accessToken}`,
@@ -47,24 +46,51 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const isStream = data.isStream;
+
     delete data.ignoreToken;
     delete data.stripUserId;
+    delete data.isStream;
 
     // Make the actual API request with the access token
     const response = await fetch(`${API_URL}${path}`, {
       method: method,
       headers: {
         ...authHeader,
-        'Content-Type': 'application/json',
+        ...(method !== 'GET' && { 'Content-Type': 'application/json' }),
       },
       ...(method === 'GET' 
-        ? { params: new URLSearchParams(data).toString() }
+        ? { 
+            url: `${API_URL}${path}?${new URLSearchParams(data).toString()}`
+          }
         : { body: JSON.stringify(data) }
       ),
     });
 
-    const responseData = await response.json();
-    return NextResponse.json(responseData);
+    if (isStream) {
+      if (!response.body) {
+        throw new Error('No response body');
+      }
+
+      const contentType = response.headers.get('content-type');
+      const arrayBuffer = await response.arrayBuffer();
+      // Return raw binary data
+      return new Response(arrayBuffer, {
+        headers: {
+          'Content-Type': contentType || 'audio/mp3',
+          'Content-Length': arrayBuffer.byteLength.toString(),
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Content-Transfer-Encoding': 'binary',
+          'x-content-type-options': 'nosniff'
+        },
+      });
+    } else {
+      // Handle as a regular JSON response
+      const responseData = await response.json();
+      return NextResponse.json(responseData);
+    }
   } catch (error) {
     console.error('API Proxy Error:', error);
     return NextResponse.json(

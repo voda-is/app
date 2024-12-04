@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import type { Character, ConversationHistory, User, HistoryMessage } from '@/lib/validations';
+import type { Character, ConversationHistory, User, HistoryMessage, TTSEntry } from '@/lib/validations';
 import { replacePlaceholders } from '@/lib/formatText';
+import { RegenerateContext, RetryMessageContext, SendMessageContext, TTSContext } from './context';
+import { hashText } from '@/lib/utils';
 
 // User related hooks
 export function useTelegramUser() {
@@ -75,16 +77,21 @@ export function useChatHistory(characterId: string | undefined) {
       if (!characterId) throw new Error('Character ID is required');
       if (!user) throw new Error('User is required');
 
-      if (hasPastConversation) {
-        const history = (await api.chat.getConversationHistory(characterId)).history;
-        return history;
-      } else if (character) {
-        return [{
-            role: 'assistant',
-            created_at: Date.now(),
-            type: 'text' as const,
-            text: replacePlaceholders(character.prompts.first_message, character.name, user?.first_name)
-          }]
+      if (character) {
+        const firstMessage: HistoryMessage = {
+          role: 'assistant',
+          created_at: Date.now(),
+          type: 'text',
+          text: replacePlaceholders(character.prompts.first_message, character.name, user?.first_name),
+          status: 'sent'
+        };
+
+        if (hasPastConversation) {
+          const history = (await api.chat.getConversationHistory(characterId)).history;
+          return [firstMessage, ...history];
+        }
+
+        return [firstMessage];
       } else {
         throw new Error('Unable to fetch chat history');
       }
@@ -100,13 +107,13 @@ export function useChatHistory(characterId: string | undefined) {
   });
 }
 
+
 export function useSendChatMessage(characterId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<HistoryMessage, Error, string>({
+  return useMutation<HistoryMessage, Error, string, SendMessageContext>({
     mutationFn: (text: string) => api.chat.sendMessage(characterId, text),
     onMutate: async (text) => {
-      // Cancel any outgoing refetches to avoid overwriting our optimistic update
       await queryClient.cancelQueries({ queryKey: ['chatHistory', characterId] });
 
       const userMessage: HistoryMessage = {
@@ -117,15 +124,12 @@ export function useSendChatMessage(characterId: string) {
         status: 'sending'
       };
 
-      // Get the previous messages
-      const previousMessages = queryClient.getQueryData<HistoryMessage[]>(['chatHistory', characterId]) || [];
+      const previousMessages = queryClient.getQueryData<HistoryMessage[]>(['chatHistory', characterId]);
 
-      // Update with the new message
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
           if (!old) return [userMessage];
-          // Check if this message already exists
           const messageExists = old.some(msg => 
             msg.text === text && 
             msg.role === 'user' && 
@@ -139,8 +143,9 @@ export function useSendChatMessage(characterId: string) {
       return { previousMessages, userMessage };
     },
     onError: (err, text, context) => {
-      // Revert to previous messages on error
-      queryClient.setQueryData(['chatHistory', characterId], context?.previousMessages);
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['chatHistory', characterId], context.previousMessages);
+      }
     },
     onSuccess: (responseMessage, text, context) => {
       queryClient.setQueryData<HistoryMessage[]>(
@@ -152,7 +157,6 @@ export function useSendChatMessage(characterId: string) {
               ? { ...msg, status: 'sent' as const }
               : msg
           );
-          // Check if response already exists
           const responseExists = updatedMessages.some(msg => 
             msg.text === responseMessage.text && 
             msg.role === 'assistant' &&
@@ -169,10 +173,9 @@ export function useSendChatMessage(characterId: string) {
 export function useRetryChatMessage(characterId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<HistoryMessage, Error, string>({
+  return useMutation<HistoryMessage, Error, string, RetryMessageContext>({
     mutationFn: (text: string) => api.chat.sendMessage(characterId, text),
     onMutate: async (text) => {
-      // Create message with 'sending' status
       const userMessage: HistoryMessage = {
         role: 'user',
         type: 'text',
@@ -193,7 +196,6 @@ export function useRetryChatMessage(characterId: string) {
       return { userMessage };
     },
     onSuccess: (responseMessage, text, context) => {
-      // Update the user message status to 'sent'
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
@@ -209,7 +211,6 @@ export function useRetryChatMessage(characterId: string) {
       );
     },
     onError: (error, text, context) => {
-      // Mark the message as error instead of removing it
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
@@ -231,17 +232,14 @@ export function useRetryChatMessage(characterId: string) {
 export function useRegenerateLastMessage(characterId: string) {
   const queryClient = useQueryClient();
 
-  return useMutation<HistoryMessage, Error>({
+  return useMutation<HistoryMessage, Error, void, RegenerateContext>({
     mutationFn: () => api.chat.regenerateLastMessage(characterId),
     onMutate: async () => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['chatHistory', characterId] });
 
-      // Get the previous messages
       const previousMessages = queryClient.getQueryData<HistoryMessage[]>(['chatHistory', characterId]);
 
       if (previousMessages) {
-        // Remove only the last assistant message
         const newMessages = [...previousMessages];
         for (let i = newMessages.length - 1; i >= 0; i--) {
           if (newMessages[i].role === 'assistant') {
@@ -255,15 +253,15 @@ export function useRegenerateLastMessage(characterId: string) {
       return { previousMessages };
     },
     onError: (err, _, context) => {
-      // Revert to previous messages on error
-      queryClient.setQueryData(['chatHistory', characterId], context?.previousMessages);
+      if (context?.previousMessages) {
+        queryClient.setQueryData(['chatHistory', characterId], context.previousMessages);
+      }
     },
-    onSuccess: (responseMessage, _, context) => {
+    onSuccess: (responseMessage) => {
       queryClient.setQueryData<HistoryMessage[]>(
         ['chatHistory', characterId],
         (old) => {
           if (!old) return [responseMessage];
-          // Check if this regenerated message already exists
           const messageExists = old.some(msg => 
             msg.text === responseMessage.text && 
             msg.role === 'assistant' &&
@@ -273,6 +271,59 @@ export function useRegenerateLastMessage(characterId: string) {
           return [...old, responseMessage];
         }
       );
+    },
+  });
+}
+
+export function useTTS() {
+  const queryClient = useQueryClient();
+
+  return useMutation<TTSEntry, Error, { text: string; characterId: string }, TTSContext>({
+    mutationFn: async ({ text, characterId }) => {
+      const hash = await hashText(text);
+      
+      // Check cache first
+      const cached = queryClient.getQueryData<TTSEntry>(['tts', hash]);
+      if (cached) {
+        return cached;
+      }
+
+      // Generate new audio if not cached
+      const audioBlob = await api.tts.generateSpeech(text, characterId);
+      const result = { text, audioBlob, status: 'complete' as const };
+      
+      // Cache the result
+      queryClient.setQueryData(['tts', hash], result);
+      
+      return result;
+    },
+    onMutate: async ({ text }) => {
+      const hash = await hashText(text);
+      const previousTTS = queryClient.getQueryData<TTSEntry[]>(['ttsHistory']);
+      
+      // Check if we already have this in cache
+      const cached = queryClient.getQueryData<TTSEntry>(['tts', hash]);
+      if (!cached) {
+        const newEntry: TTSEntry = { text, audioBlob: new Blob(), status: 'generating' };
+        queryClient.setQueryData(['ttsHistory'], [...(previousTTS || []), newEntry]);
+      }
+      
+      return { previousTTS };
+    },
+    onError: (err, _, context) => {
+      if (context?.previousTTS) {
+        queryClient.setQueryData(['ttsHistory'], context.previousTTS);
+      }
+    },
+    onSuccess: (newEntry) => {
+      queryClient.setQueryData<TTSEntry[]>(['ttsHistory'], (old) => {
+        if (!old) return [newEntry];
+        return old.map(entry =>
+          entry.text === newEntry.text && entry.status === 'generating'
+            ? newEntry
+            : entry
+        );
+      });
     },
   });
 }

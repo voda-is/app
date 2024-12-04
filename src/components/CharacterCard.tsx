@@ -1,9 +1,9 @@
 import { Character } from '@/lib/validations';
 import { motion } from 'framer-motion';
 import Image from "next/image";
-import Link from "next/link";
-import { IoCheckmarkCircle, IoTime, IoBag } from "react-icons/io5";
+import { IoBag } from "react-icons/io5";
 import { formatDistance } from 'date-fns';
+import { GiSoundWaves } from "react-icons/gi";
 
 interface CharacterCardProps {
   character: Character;
@@ -28,7 +28,8 @@ export function CharacterCard({ character, index }: CharacterCardProps) {
         <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
           <div className="flex items-center gap-1 mb-1">
             <span className="font-medium text-sm">{character.name}</span>
-            <IoCheckmarkCircle className="text-blue-400 text-base" />
+            {/* if the character has voice enabled, show the checkmark */}
+            {character.metadata.enable_voice && <GiSoundWaves className="text-white bg-blue-500 rounded-full p-0.5 h-5 w-5" />}
           </div>
           
           <p className="text-xs text-gray-300 line-clamp-2 mb-1">

@@ -121,7 +121,7 @@ export default function ChatPage() {
         {/* Messages Container */}
         <div 
           ref={scrollRef}
-          className="flex-1 pt-28"
+          className="flex-1 pt-28 pb-10"
         >
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
@@ -138,15 +138,18 @@ export default function ChatPage() {
 
             {/* Messages */}
             {messages.map((msg, index) => (
-              <ChatBubble 
-                index={index}
-                key={`${msg.created_at}-${index}`}
-                {...msg}
-                isLatestReply={index === messages.length - 1 && msg.role !== 'user' && messages.length > 1}
-                onRegenerate={handleRegenerate}
-                onRetry={handleRetry}
-                onRate={handleRate} 
-              />
+              <div key={`${msg.created_at}-${index}`} className="relative">                
+                <ChatBubble 
+                  index={index}
+                  {...msg}
+                  characterId={id}
+                  enableVoice={character?.metadata.enable_voice}
+                  isLatestReply={index === messages.length - 1 && msg.role !== 'user' && messages.length > 1}
+                  onRegenerate={handleRegenerate}
+                  onRetry={handleRetry}
+                  onRate={handleRate} 
+                />
+              </div>
             ))}
 
             {/* Typing Indicator */}

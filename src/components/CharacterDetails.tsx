@@ -24,7 +24,7 @@ export function CharacterDetails({ character }: CharacterDetailsProps) {
       {/* Background Image with Gradient Overlay */}
       <div className="absolute inset-0 z-0">
         <Image
-          src={'/bg2.png'}
+          src={character?.background_image_url || '/bg2.png'}
           alt={character.name}
           fill
           className="object-cover blur-sm"
@@ -38,7 +38,7 @@ export function CharacterDetails({ character }: CharacterDetailsProps) {
         <div className="px-4 mb-6">
           <div className="relative w-24 h-24 mb-4 mx-auto">
             <Image
-              src="/bg2.png"
+              src={character?.avatar_image_url || '/bg2.png'}
               alt={character.name}
               fill
               className="rounded-2xl object-cover"

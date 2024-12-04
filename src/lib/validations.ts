@@ -20,7 +20,7 @@ export const UserSchema = z.object({
 export const CharacterMetadataSchema = z.object({
   creator: z.string(),
   version: z.string(),
-  status: z.string(),
+  status: z.enum(['initialized', 'active', 'inactive']),
 });
 
 export const CharacterPromptsSchema = z.object({
@@ -37,8 +37,10 @@ export const CharacterSchema = z.object({
   metadata: CharacterMetadataSchema,
   prompts: CharacterPromptsSchema,
   tags: z.array(z.string()),
-  telegram_handle: z.string(),
+  telegram_handle: z.string().optional(),
   telegram_token: z.string().optional(),
+  background_image_url: z.string().optional(),
+  avatar_image_url: z.string().optional(),
   created_at: TimestampSchema,
   updated_at: TimestampSchema,
   published_at: TimestampSchema,

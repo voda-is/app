@@ -19,7 +19,7 @@ export function CharacterCard({ character, index }: CharacterCardProps) {
     >
       <div className="relative rounded-md overflow-hidden">
         <Image
-          src="/bg2.png"
+          src={character?.avatar_image_url || '/bg2.png'}
           alt={character.name}
           width={200}
           height={300}

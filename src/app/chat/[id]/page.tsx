@@ -98,7 +98,7 @@ export default function ChatPage() {
       {/* Background Image */}
       <div className="fixed inset-0 z-0">
         <Image
-          src="/bg2.png"
+          src={character?.background_image_url || '/bg2.png'}
           alt="background"
           fill
           className="object-cover opacity-80"
@@ -113,7 +113,7 @@ export default function ChatPage() {
         <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-28">
           <Header
             name={character?.name as string}
-            image={'/bg2.png'}
+            image={character?.avatar_image_url || '/bg2.png'}
             className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>

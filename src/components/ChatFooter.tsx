@@ -9,6 +9,7 @@ interface InputBarProps {
   onSend: () => void;
   placeholder: string;
   disabled?: boolean;
+  timer?: string;
 }
 
 export function ChatFooter({
@@ -17,6 +18,7 @@ export function ChatFooter({
   onSend,
   placeholder,
   disabled,
+  timer,
 }: InputBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -40,10 +42,11 @@ export function ChatFooter({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-[#0B0C0C]">
-      <div className="p-4 backdrop-blur-md bg-black flex justify-between">
+    <div className="fixed bottom-4 left-0 right-0 z-20 mt-auto bg-[#171717]">
+      <div className="bg-[#FFF068] ">{timer}</div>
+      <div className="p-4 backdrop-blur-md bg-[#171717] flex justify-between">
         <div
-          className={`flex items-center gap-2 backdrop-blur-md bg-black border border-[rgba(255, 255, 255, 0.7)] py-1 rounded-full px-4 ${
+          className={`flex items-center gap-2 backdrop-blur-md border border-[rgba(255, 255, 255, 0.7)] py-1 rounded-full px-4 ${
             disabled ? "opacity-50" : ""
           }`}
         >

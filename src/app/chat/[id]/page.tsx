@@ -182,14 +182,14 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-[#0B0C0C]">
+          {/* <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-[#0B0C0C]">
             <div
               onClick={() => setShowPayModal(true)}
               className="border w-[85px] h-[30px] border-[#10B981] rounded-full flex items-center justify-center"
             >
               <div className="text-[#10B981] text-[12px] text-center">Pay</div>
             </div>
-          </div>
+          </div> */}
           {/* Chat Footer */}
           <ChatFooter
             message={inputMessage}

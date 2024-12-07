@@ -36,7 +36,7 @@ export default function ChatPage() {
 
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
-
+  const [isSpeaking, setIsSpeaking] = useState(false); // 是否为当前正在聊天的用户
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showPayModal, setShowPayModal] = useState(false);
@@ -187,7 +187,7 @@ export default function ChatPage() {
         onChange={setInputMessage}
         onSend={handleSendMessage}
         placeholder={`Message ${character?.name}`}
-        disabled={disableActions}
+        disabled={isSpeaking ? disableActions : true}
         seconds={30} // 这里可以传递剩余时间
       />
 

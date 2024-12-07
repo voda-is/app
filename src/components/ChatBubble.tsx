@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
 import { motion, useAnimationControls } from "framer-motion";
 import { IoRefresh, IoWarning } from "react-icons/io5";
 import { GiSoundWaves } from "react-icons/gi";
 import { HistoryMessage, TTSEntry } from "@/lib/validations";
 import { FormattedText } from "@/components/FormattedText";
-import { useState, useMemo, useEffect } from 'react';
-import { useTTS } from '@/hooks/api';
-import { extractText } from '@/lib/formatText';
-import { hashText } from '@/lib/utils';
+import { useState, useMemo, useEffect } from "react";
+import { useTTS } from "@/hooks/api";
+import { extractText } from "@/lib/formatText";
+import { hashText } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 
 interface ChatBubbleProps extends HistoryMessage {
@@ -21,7 +21,7 @@ interface ChatBubbleProps extends HistoryMessage {
   characterId: string;
 }
 
-export function ChatBubble({ 
+export function ChatBubble({
   role,
   text,
   created_at,
@@ -30,22 +30,23 @@ export function ChatBubble({
   onRetry,
   onRegenerate,
   onRate,
-  status = 'sent',
+  status = "sent",
   enableVoice = false,
   characterId,
 }: ChatBubbleProps) {
-  const isUser = role === 'user';
-  const isAssistant = role === 'assistant';
-  const timestamp = new Date(created_at).toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  const isUser = role === "user";
+  const isAssistant = role === "assistant";
+  const timestamp = new Date(created_at).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   // Determine bubble style based on role
   const getBubbleStyle = () => {
-    if (isUser) return 'bg-[#FDB777] text-black';
-    if (isAssistant) return 'bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white';
-    return 'bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white'; // default style
+    if (isUser) return "bg-[#10B981] text-black";
+    if (isAssistant)
+      return "bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white";
+    return "bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white"; // default style
   };
 
   // State to track the current rating
@@ -55,26 +56,31 @@ export function ChatBubble({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [hash, setHash] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
+    null
+  );
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  
+
   // Extract text once and memoize it
-  const ttsText = useMemo(() => extractText(text).join(' '), [text]);
-  
+  const ttsText = useMemo(() => extractText(text).join(" "), [text]);
+
   // Calculate hash when text changes
   useEffect(() => {
     hashText(ttsText).then(setHash);
   }, [ttsText]);
-  
+
   // Get cached result
   const { data: cachedTTS } = useQuery<TTSEntry>({
-    queryKey: ['tts', hash],
+    queryKey: ["tts", hash],
     enabled: !!hash,
     staleTime: Infinity,
   });
 
-  const audioUrl = useMemo(() => audioBlob ? URL.createObjectURL(audioBlob) : null, [audioBlob]);
+  const audioUrl = useMemo(
+    () => (audioBlob ? URL.createObjectURL(audioBlob) : null),
+    [audioBlob]
+  );
 
   // Clean up the URL when component unmounts
   useEffect(() => {
@@ -89,20 +95,22 @@ export function ChatBubble({
     if (audioUrl && audioElement) {
       // Make sure audio is loaded
       audioElement.load();
-      
+
       // Wait for audio to be loaded before playing
       const playAudio = () => {
-        audioElement.play().catch(error => {
-          console.error('Error auto-playing audio:', error);
+        audioElement.play().catch((error) => {
+          console.error("Error auto-playing audio:", error);
         });
       };
 
       // Add event listener for when audio is ready
-      audioElement.addEventListener('canplaythrough', playAudio, { once: true });
+      audioElement.addEventListener("canplaythrough", playAudio, {
+        once: true,
+      });
 
       // Cleanup
       return () => {
-        audioElement.removeEventListener('canplaythrough', playAudio);
+        audioElement.removeEventListener("canplaythrough", playAudio);
       };
     }
   }, [audioUrl, audioElement]);
@@ -114,20 +122,20 @@ export function ChatBubble({
         onSuccess: (entry) => {
           // Check if the entry.audioBlob is valid
           if (!entry.audioBlob || entry.audioBlob.size === 0) {
-            console.error('Received empty audio blob');
+            console.error("Received empty audio blob");
             return;
           }
 
           // Try to create a blob with explicit audio type
-          const audioBlob = new Blob([entry.audioBlob], { 
-            type: 'audio/mp3'
+          const audioBlob = new Blob([entry.audioBlob], {
+            type: "audio/mp3",
           });
-          
+
           setAudioBlob(audioBlob);
         },
         onError: (error) => {
-          console.error('TTS generation failed:', error);
-        }
+          console.error("TTS generation failed:", error);
+        },
       }
     );
   };
@@ -139,11 +147,13 @@ export function ChatBubble({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`flex items-center gap-2 ${isUser ? 'justify-end' : 'justify-start'}`}
+      className={`flex items-center gap-2 ${
+        isUser ? "justify-end" : "justify-start"
+      }`}
     >
       {/* Retry indicator - only show for failed user messages */}
-      {isUser && onRetry && status === 'error' && (
-        <motion.div 
+      {isUser && onRetry && status === "error" && (
+        <motion.div
           whileTap={{ scale: 0.95 }}
           className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
           onClick={() => onRetry(text)}
@@ -152,19 +162,20 @@ export function ChatBubble({
         </motion.div>
       )}
 
-      <div className={`max-w-[90%] ${isUser ? 'items-end' : 'items-start'}`}>
+      <div className={`max-w-[90%] ${isUser ? "items-end" : "items-start"}`}>
         <div className={`rounded-2xl px-4 py-2 text-sm ${getBubbleStyle()}`}>
           {/* Message content */}
           <div className="mb-2">
             {!isUser && enableVoice && !audioBlob && (
-              <button 
+              <button
                 onClick={handleTTSClick}
                 disabled={isTTSLoading}
                 className={`
                   flex items-center gap-2 px-3 py-1.5 rounded-lg 
-                  ${isTTSLoading 
-                    ? 'bg-white/5 cursor-not-allowed' 
-                    : 'bg-white/10 hover:bg-white/20 active:scale-95'
+                  ${
+                    isTTSLoading
+                      ? "bg-white/5 cursor-not-allowed"
+                      : "bg-white/10 hover:bg-white/20 active:scale-95"
                   }
                   text-white/80 hover:text-white 
                   transition-all duration-200 
@@ -173,21 +184,21 @@ export function ChatBubble({
               >
                 <GiSoundWaves className="w-5 h-5" />
                 <span className="text-sm font-medium">
-                  {isTTSLoading ? 'Generating...' : 'Listen'}
+                  {isTTSLoading ? "Generating..." : "Listen"}
                 </span>
               </button>
             )}
-            
+
             {audioBlob && audioUrl && (
               <div className="flex flex-col gap-2 mb-3">
-                <audio 
+                <audio
                   ref={(element) => {
                     if (element && !audioElement) {
                       setAudioElement(element);
                     }
                   }}
                   src={audioUrl}
-                  style={{ display: 'none' }}
+                  style={{ display: "none" }}
                   onLoadedMetadata={() => {
                     if (audioElement) {
                       setDuration(audioElement.duration);
@@ -195,19 +206,21 @@ export function ChatBubble({
                   }}
                   onPlay={() => {
                     setIsPlaying(true);
-                    controls.start({ 
+                    controls.start({
                       width: "100%",
-                      transition: { 
+                      transition: {
                         duration: duration - currentTime,
                         ease: "linear",
-                        type: "tween"
-                      }
+                        type: "tween",
+                      },
                     });
                   }}
                   onPause={() => {
                     setIsPlaying(false);
                     controls.stop();
-                    controls.set({ width: `${(currentTime / duration) * 100}%` });
+                    controls.set({
+                      width: `${(currentTime / duration) * 100}%`,
+                    });
                   }}
                   onEnded={() => {
                     setIsPlaying(false);
@@ -221,7 +234,7 @@ export function ChatBubble({
                   }}
                 />
 
-                <button 
+                <button
                   onClick={() => {
                     if (audioElement) {
                       if (isPlaying) {
@@ -231,8 +244,8 @@ export function ChatBubble({
                           audioElement.currentTime = 0;
                           controls.set({ width: 0 });
                         }
-                        audioElement.play().catch(error => {
-                          console.error('Error playing audio:', error);
+                        audioElement.play().catch((error) => {
+                          console.error("Error playing audio:", error);
                         });
                       }
                     }
@@ -242,16 +255,18 @@ export function ChatBubble({
                     text-white/80 hover:text-white 
                     transition-all duration-200 overflow-hidden"
                 >
-                  <motion.div 
+                  <motion.div
                     className="absolute left-0 top-0 bottom-0 bg-white/10"
                     initial={{ width: 0 }}
                     animate={controls}
                   />
-                  
+
                   <div className="relative flex items-center gap-2">
-                    <GiSoundWaves className={`w-5 h-5 ${isPlaying ? 'animate-pulse' : ''}`} />
+                    <GiSoundWaves
+                      className={`w-5 h-5 ${isPlaying ? "animate-pulse" : ""}`}
+                    />
                     <span className="text-sm font-medium">
-                      {isPlaying ? 'Playing...' : 'Play Audio'}
+                      {isPlaying ? "Playing..." : "Play Audio"}
                     </span>
                     <span className="text-xs text-white/60">
                       {Math.ceil(duration)}"
@@ -262,13 +277,16 @@ export function ChatBubble({
             )}
 
             {/* Rest of the message content */}
-            <div className={`${enableVoice ? 'border-t border-white/10 pt-4' : isUser ? 'pt-4' : ''}`}>
-              {text && (
-                <FormattedText 
-                  text={text}
-                  skipFormatting={isUser}
-                />
-              )}
+            <div
+              className={`${
+                enableVoice
+                  ? "border-t border-white/10 pt-4"
+                  : isUser
+                  ? "pt-4"
+                  : ""
+              }`}
+            >
+              {text && <FormattedText text={text} skipFormatting={isUser} />}
             </div>
           </div>
 
@@ -276,7 +294,11 @@ export function ChatBubble({
           <div className="border-t border-white/10 mt-2 pt-2">
             {/* Timestamp */}
             <div className="flex items-center gap-2">
-              <span className={`text-xs ${isUser ? 'text-black/70' : 'text-white/70'}`}>
+              <span
+                className={`text-xs ${
+                  isUser ? "text-black/70" : "text-white/70"
+                }`}
+              >
                 {timestamp}
               </span>
             </div>
@@ -299,7 +321,9 @@ export function ChatBubble({
                 {onRate && (
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-400">Rate this response:</span>
+                      <span className="text-xs text-gray-400">
+                        Rate this response:
+                      </span>
                       {[1, 2, 3, 4, 5].map((rating) => (
                         <button
                           key={rating}
@@ -307,7 +331,11 @@ export function ChatBubble({
                             setCurrentRating(rating);
                             onRate(rating);
                           }}
-                          className={`transition-colors ${rating <= currentRating ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
+                          className={`transition-colors ${
+                            rating <= currentRating
+                              ? "text-yellow-400"
+                              : "text-gray-400 hover:text-yellow-400"
+                          }`}
                         >
                           ★
                         </button>
@@ -322,4 +350,4 @@ export function ChatBubble({
       </div>
     </motion.div>
   );
-} 
+}

@@ -15,11 +15,9 @@ import {
   useRegenerateLastMessage,
 } from "@/hooks/api";
 import { HistoryMessage } from "@/lib/validations";
-import {
-  isOnTelegram,
-  notificationOccurred,
-  setupTelegramInterface,
-} from "@/lib/telegram";
+import { isOnTelegram, setupTelegramInterface } from "@/lib/telegram";
+import PayModal from "../components/payModal";
+import PaySuccessModal from "../components/paySuccess";
 
 export default function ChatPage() {
   const params = useParams();
@@ -38,9 +36,11 @@ export default function ChatPage() {
 
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
-
+  const [isSpeaking, setIsSpeaking] = useState(false); // 是否为当前正在聊天的用户
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [isPaySuccessModalOpen, setIsPaySuccessModalOpen] = useState(false);
 
   // @ts-ignore
   const messages: HistoryMessage[] = chatHistory || [];
@@ -54,6 +54,7 @@ export default function ChatPage() {
       setupTelegramInterface(router);
     }
   }, []);
+
   // Scroll when messages change or typing state changes
   useEffect(() => {
     scrollToBottom();
@@ -107,8 +108,14 @@ export default function ChatPage() {
     return <div>Error loading chat history</div>;
   }
 
+  const handlePay = () => {
+    // TODO:
+    setShowPayModal(false);
+    setIsPaySuccessModalOpen(true);
+  };
+
   return (
-    <main className="flex flex-col w-full bg-black">
+    <div className="flex flex-col h-screen bg-black">
       {/* Background Image */}
       <div className="fixed inset-0 z-0">
         <Image
@@ -121,77 +128,78 @@ export default function ChatPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/90" />
       </div>
 
-      {/* Content Container */}
-      <div className="relative top-0 left-0 z-10 flex flex-col">
-        {/* Header - adjusted padding */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-28">
-          <Header
-            name={character?.name as string}
-            image={character?.avatar_image_url || "/bg2.png"}
-            className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
-          />
-        </div>
+      <Header
+        name={character?.name as string}
+        image={character?.avatar_image_url || "/bg2.png"}
+        className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
+      />
 
-        {/* Messages Container */}
-        <div ref={scrollRef} className="flex-1 pt-28 pb-10">
-          <div className="flex flex-col space-y-4 p-4">
-            {/* Description */}
-            <div className="flex justify-center">
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
-                <div className="text-lg font-semibold mb-2 text-center text-pink-300">
-                  Description
-                </div>
-                <div className="text-sm leading-relaxed text-gray-100">
-                  {character?.description}
-                </div>
+      {/* Messages Container */}
+      <div ref={scrollRef} className="flex-1 pt-28 pb-10 overflow-y-auto">
+        <div className="flex flex-col space-y-4 p-4">
+          {/* Description */}
+          <div className="flex justify-center">
+            <div className="bg-[#rgba(255, 255, 255, 0.3)] backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
+              <div className="text-lg font-semibold mb-2 text-center text-pink-300">
+                Description
+              </div>
+              <div className="text-sm leading-relaxed text-gray-100">
+                {character?.description}
               </div>
             </div>
-
-            {/* Messages */}
-            {messages.map((msg, index) => (
-              <div key={`${msg.created_at}-${index}`} className="relative">
-                <ChatBubble
-                  index={index}
-                  {...msg}
-                  characterId={id}
-                  enableVoice={character?.metadata.enable_voice}
-                  isLatestReply={
-                    index === messages.length - 1 &&
-                    msg.role !== "user" &&
-                    messages.length > 1
-                  }
-                  onRegenerate={handleRegenerate}
-                  onRetry={handleRetry}
-                  onRate={handleRate}
-                />
-              </div>
-            ))}
-
-            {/* Typing Indicator */}
-            {(isSending || isRegenerating) && (
-              <div className="flex items-start gap-2">
-                <TypingIndicator />
-              </div>
-            )}
-
-            {/* Responsive bottom spacing using Tailwind breakpoints and Safari-specific CSS */}
-            <div ref={messagesEndRef} className="h-16" />
           </div>
-        </div>
 
-        {/* Input Container */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-gradient-to-t from-black to-transparent">
-          <div className="px-4 pb-4 md:pb-6">
-            <ChatFooter
-              message={inputMessage}
-              onChange={setInputMessage}
-              onSend={handleSendMessage}
-              placeholder={`Message ${character?.name}`}
-              disabled={disableActions}
-            />
-          </div>
+          {/* Messages */}
+          {messages.map((msg, index) => (
+            <div key={`${msg.created_at}-${index}`} className="relative">
+              <ChatBubble
+                index={index}
+                {...msg}
+                characterId={id}
+                enableVoice={character?.metadata.enable_voice}
+                isLatestReply={
+                  index === messages.length - 1 &&
+                  msg.role !== "user" &&
+                  messages.length > 1
+                }
+                onRegenerate={handleRegenerate}
+                onRetry={handleRetry}
+                onRate={handleRate}
+              />
+            </div>
+          ))}
+
+          {/* Typing Indicator */}
+          {(isSending || isRegenerating) && (
+            <div className="flex items-start gap-2">
+              <TypingIndicator />
+            </div>
+          )}
+
+          {/* Responsive bottom spacing using Tailwind breakpoints and Safari-specific CSS */}
+          <div ref={messagesEndRef} className="h-16" />
         </div>
       </div>
-    </main>
+
+      {/* Chat Footer */}
+      <ChatFooter
+        message={inputMessage}
+        onChange={setInputMessage}
+        onSend={handleSendMessage}
+        placeholder={`Message ${character?.name}`}
+        disabled={isSpeaking ? disableActions : true}
+        seconds={30} // 这里可以传递剩余时间
+      />
+
+      <PayModal
+        isOpen={showPayModal}
+        onClose={() => setShowPayModal(false)}
+        onSuccess={handlePay}
+      />
+      <PaySuccessModal
+        isOpen={isPaySuccessModalOpen}
+        onClose={() => setIsPaySuccessModalOpen(false)}
+      />
+    </div>
   );
 }

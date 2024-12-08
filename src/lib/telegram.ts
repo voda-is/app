@@ -11,7 +11,7 @@ declare global {
 }
 
 // telegram user data
-export function getTelegramUser(mock: boolean = false): TelegramUser {
+export function getTelegramUser(mock: boolean = true): TelegramUser {
   if (mock) {
     return {
       id: 7699268464,
@@ -28,7 +28,9 @@ export function getTelegramUser(mock: boolean = false): TelegramUser {
 }
 
 export function notificationOccurred(type: "error" | "success" | "warning") {
-  window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
+  if (isOnTelegram()) {
+    window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
+  }
 }
 
 export function setupTelegramInterface(router: AppRouterInstance) {

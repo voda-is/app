@@ -3,7 +3,7 @@
 import { motion, useAnimationControls } from "framer-motion";
 import { IoRefresh, IoWarning } from "react-icons/io5";
 import { GiSoundWaves } from "react-icons/gi";
-import { HistoryMessage, TTSEntry } from "@/lib/validations";
+import { ChatHistoryPair, HistoryMessage, TTSEntry } from "@/lib/validations";
 import { FormattedText } from "@/components/FormattedText";
 import { useState, useMemo, useEffect } from "react";
 import { useTTS } from "@/hooks/api";
@@ -11,8 +11,12 @@ import { extractText } from "@/lib/formatText";
 import { hashText } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 
-interface ChatBubbleProps extends HistoryMessage {
-  index: number;
+interface ChatBubbleProps  {
+  message: string,
+  role: "user" | "assistant",
+  created_at: number,
+  status: "sent" | "error",
+
   isLatestReply?: boolean;
   onRetry?: (text: string) => void;
   onRegenerate?: () => void;
@@ -22,10 +26,9 @@ interface ChatBubbleProps extends HistoryMessage {
 }
 
 export function ChatBubble({
+  message,
   role,
-  text,
   created_at,
-  index,
   isLatestReply,
   onRetry,
   onRegenerate,
@@ -34,6 +37,8 @@ export function ChatBubble({
   enableVoice = false,
   characterId,
 }: ChatBubbleProps) {
+  if (!message) return null;
+
   const isUser = role === "user";
   const isAssistant = role === "assistant";
   const timestamp = new Date(created_at).toLocaleTimeString([], {
@@ -63,7 +68,7 @@ export function ChatBubble({
   const [duration, setDuration] = useState(0);
 
   // Extract text once and memoize it
-  const ttsText = useMemo(() => extractText(text).join(" "), [text]);
+  const ttsText = useMemo(() => extractText(message).join(" "), [message]);
 
   // Calculate hash when text changes
   useEffect(() => {
@@ -146,7 +151,7 @@ export function ChatBubble({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
+      transition={{ delay: 0.1 }}
       className={`flex items-center gap-2 ${
         isUser ? "justify-end" : "justify-start"
       }`}
@@ -156,7 +161,7 @@ export function ChatBubble({
         <motion.div
           whileTap={{ scale: 0.95 }}
           className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
-          onClick={() => onRetry(text)}
+          onClick={() => onRetry(message)}
         >
           <IoWarning className="w-5 h-5 text-white" />
         </motion.div>
@@ -286,7 +291,7 @@ export function ChatBubble({
                   : ""
               }`}
             >
-              {text && <FormattedText text={text} skipFormatting={isUser} />}
+              {message && <FormattedText text={message} skipFormatting={isUser} />}
             </div>
           </div>
 

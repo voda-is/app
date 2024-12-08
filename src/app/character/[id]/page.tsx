@@ -2,7 +2,7 @@
 
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { CharacterDetails } from "@/components/CharacterDetails";
-import { useCharacter } from "@/hooks/api";
+import { useCharacter, useCharacterChatHistory } from "@/hooks/api";
 import { useParams, useRouter } from "next/navigation";
 import { isOnTelegram } from "@/lib/telegram";
 import { setupTelegramInterface } from "@/lib/telegram";
@@ -14,6 +14,8 @@ export default function CharacterPage() {
   const router = useRouter();
   
   const { data: character, isLoading } = useCharacter(id);
+  const { data: chatHistoryIds, isLoading: historyLoading, error: historyError } = useCharacterChatHistory(id);
+
   useEffect(() => {
     if (isOnTelegram()) {
       setupTelegramInterface(router);
@@ -23,8 +25,8 @@ export default function CharacterPage() {
     return <LoadingScreen />;
   }
 
-  if (!character) {
+  if (!character || !chatHistoryIds) {
     return null;
   }
-  return <CharacterDetails character={character} />;
+  return <CharacterDetails character={character} chatHistoryIds={chatHistoryIds} />;
 } 

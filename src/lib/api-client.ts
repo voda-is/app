@@ -50,8 +50,11 @@ apiProxy.interceptors.response.use(
       throw new Error('No response data');
     }
 
-    // if response is an array buffer, return it as is
-    if (response.headers['content-type']?.includes('audio/')) {
+    // if response is an array buffer or SSE, return it as is
+    if (
+      response.headers['content-type']?.includes('audio/') ||
+      response.headers['content-type']?.includes('text/event-stream')
+    ) {
       return response;
     }
 
@@ -123,6 +126,15 @@ export const api = {
         data: payload,
       });
 
+      // const responseClaimFreePoints = await apiProxy.post('', {
+      //   path: '/user/points/free',
+      //   method: 'POST',
+      //   data: {
+      //     user_id: telegramUser.id.toString(),
+      //     stripUserId: true,
+      //   },
+      // });
+
       // throw if response is not ok
       if (response.status !== 200) {
         throw new Error('Failed to register user');
@@ -165,10 +177,35 @@ export const api = {
   },
 
   chat: {
-    checkPastConversation: async (characterId: string): Promise<boolean> => {
+    createConversation: async (characterId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/has_past_conversation/${characterId}`,
+        path: `/conversations/${characterId}`,
+        method: 'POST',
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+          is_public: false,
+        }
+      });
+      return null;
+    },
+    getConversationHistoryIdOnly: async (characterId: string): Promise<string[]> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post('', {
+        path: `/conversations/id_only/${characterId}`,
+        method: 'GET',
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        }
+      });
+      return response.data.data["conversations"];
+    },
+    getConversation: async (conversationId: string): Promise<ConversationHistory> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post('', {
+        path: `/conversation_history/${conversationId}`,
         method: 'GET',
         data: {
           user_id: telegramUser.id.toString(),
@@ -178,23 +215,11 @@ export const api = {
       return response.data.data;
     },
 
-    getConversationHistory: async (characterId: string): Promise<ConversationHistory> => {
+    sendMessage: async (conversationId: string, text: string): Promise<HistoryMessage> => {
+      console.log('sending message', text);
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/chat_history/${characterId}`,
-        method: 'GET',
-        data: {
-          user_id: telegramUser.id.toString(),
-          stripUserId: true,
-        }
-      });
-      return response.data.data;
-    },
-
-    sendMessage: async (characterId: string, text: string): Promise<HistoryMessage> => {
-      const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
-        path: `/chat/${characterId}`,
+        path: `/chat/${conversationId}`,
         method: 'POST',
         data: { 
           message: text, 
@@ -202,21 +227,19 @@ export const api = {
           stripUserId: true,
         }
       });
-      notificationOccurred('success');
       return response.data.data;
     },
 
-    regenerateLastMessage: async (characterId: string): Promise<HistoryMessage> => {
+    regenerateLastMessage: async (conversationId: string): Promise<HistoryMessage> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/regenerate_last_message/${characterId}`,
+        path: `/regenerate_last_message/${conversationId}`,
         method: 'POST',
         data: { 
           user_id: telegramUser.id.toString(), 
           stripUserId: true,
         }
       });
-      notificationOccurred('success');
       return response.data.data;
     },
   },
@@ -259,4 +282,8 @@ export const api = {
       return audioBlob;     
     },
   },
+
+  sse: {
+    
+  }
 };

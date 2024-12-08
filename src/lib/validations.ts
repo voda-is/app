@@ -52,19 +52,26 @@ export const CharacterSchema = z.object({
 export const ContentTypeSchema = z.enum(['text', 'image']);
 
 export const HistoryMessageSchema = z.object({
-  role: z.string(),
+  user_id: CryptoHashSchema,
   created_at: TimestampSchema,
-  type: ContentTypeSchema,
+  content_type: ContentTypeSchema,
   text: z.string(),
-  status: z.enum(['error', 'sending', 'sent']),
+  status: z.enum(['error', 'sent']),
 });
+
+// Update to pair messages together
+export const ChatHistoryPairSchema = z.tuple([HistoryMessageSchema, HistoryMessageSchema]);
 
 export const ConversationHistorySchema = z.object({
   _id: CryptoHashSchema,
-  char_id: CryptoHashSchema,
-  user_id: z.string(),
-  nonce: z.number().int().nonnegative(),
-  history: z.array(HistoryMessageSchema),
+  public: z.boolean(),
+  is_concluded: z.boolean(),
+
+  owner_id: CryptoHashSchema,
+  character_id: CryptoHashSchema,
+
+  history: z.array(ChatHistoryPairSchema),
+
   updated_at: TimestampSchema,
   created_at: TimestampSchema,
 });
@@ -121,3 +128,6 @@ export interface TTSEntry {
   audioBlob: Blob;
   status: TTSStatus;
 }
+
+// Update the type export
+export type ChatHistoryPair = z.infer<typeof ChatHistoryPairSchema>;

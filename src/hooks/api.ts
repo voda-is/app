@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import type { Character, ConversationHistory, User, TTSEntry } from '@/lib/validations';
+import type { Character, ConversationHistory, User, TTSEntry, ChatroomMessages } from '@/lib/validations';
 import { hashText } from '@/lib/utils';
 import { TTSContext } from './context';
 
@@ -144,5 +144,25 @@ export function useTTS() {
         );
       });
     },
+  });
+}
+
+export function useChatroom(characterId: string) {
+  return useQuery<ChatroomMessages>({
+    queryKey: ['chatroom', characterId],
+    queryFn: async () => {
+      const result = await api.chatroom.getOrCreateChatroom(characterId);
+      console.log('result', result);
+      if (!result) throw new Error('Failed to get/create chatroom');
+      return result;
+    },
+    enabled: !!characterId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

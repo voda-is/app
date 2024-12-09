@@ -21,7 +21,7 @@ export default function CharacterPage() {
       setupTelegramInterface(router);
     }
   }, []);
-  if (isLoading || !id) {
+  if (isLoading || historyLoading || !id) {
     return <LoadingScreen />;
   }
 

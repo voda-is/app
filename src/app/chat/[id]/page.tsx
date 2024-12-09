@@ -168,7 +168,7 @@ export default function ChatPage() {
 
       {/* Content Container */}
       <div className="relative top-0 left-0 z-10 flex flex-col">
-        {/* Header - adjusted padding */}
+        {/* Header */}
         <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-28">
           <Header
             name={character?.name as string}
@@ -200,7 +200,8 @@ export default function ChatPage() {
                 message={replacePlaceholders(characterFirstMessage as string, character?.name as string, telegramUser?.first_name as string)}
                 role="assistant"
                 created_at={conversation?.created_at || 0}
-
+                assistantAvatar={character?.avatar_image_url}
+                userAvatar={character?.avatar_image_url || "/default-avatar.png"}
                 characterId={character._id}
                 enableVoice={character?.metadata.enable_voice}
                 isLatestReply={false}
@@ -219,7 +220,8 @@ export default function ChatPage() {
                   role={"user"}
                   created_at={pair[0].created_at}
                   status={pair[0].status}
-
+                  assistantAvatar={character?.avatar_image_url}
+                  userAvatar={telegramUser?.profile_photo || "/bg2.png"}
                   characterId={character._id}
                   enableVoice={character?.metadata.enable_voice}
                   isLatestReply={false}
@@ -234,7 +236,8 @@ export default function ChatPage() {
                   role={"assistant"}
                   created_at={pair[1].created_at}
                   status={pair[1].status}
-
+                  assistantAvatar={character?.avatar_image_url}
+                  userAvatar={character?.avatar_image_url || "/default-avatar.png"}
                   characterId={character._id}
                   enableVoice={character?.metadata.enable_voice}
                   isLatestReply={index === messages.length - 1}
@@ -250,7 +253,6 @@ export default function ChatPage() {
               <TypingIndicator />
             )}
 
-            {/* Responsive bottom spacing using Tailwind breakpoints and Safari-specific CSS */}
             <div ref={messagesEndRef} className="h-10" />
           </div>
         </div>

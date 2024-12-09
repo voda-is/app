@@ -131,3 +131,56 @@ export interface TTSEntry {
 
 // Update the type export
 export type ChatHistoryPair = z.infer<typeof ChatHistoryPairSchema>;
+
+export const ChatroomSchema = z.object({
+  id: CryptoHashSchema,
+  character_id: CryptoHashSchema,
+  
+  user_on_stage: CryptoHashSchema,
+  
+  user_hijacking: CryptoHashSchema.optional(),
+  hijacking_time: z.number().int().positive().optional(),
+  
+  current_stage_nonce: z.number().int().nonnegative(),
+  
+  // Array of tuples containing [nonce, message_id]
+  messages: z.array(z.tuple([
+    z.number().int().nonnegative(),
+    CryptoHashSchema
+  ])),
+  
+  // Sets of user IDs
+  historical_audience: z.set(CryptoHashSchema),
+  current_audience: z.set(CryptoHashSchema),
+  
+  updated_at: z.number().int().positive(),
+  created_at: z.number().int().positive(),
+});
+
+// Type inference
+export type Chatroom = z.infer<typeof ChatroomSchema>;
+
+export const ChatroomMessagesSchema = z.object({
+  _id: CryptoHashSchema,
+  is_conclued: z.boolean(),
+  
+  history: z.array(ChatHistoryPairSchema),
+  
+  users: z.set(CryptoHashSchema), // Set of user IDs who sent messages
+  
+  updated_at: z.number().int().positive(),
+  created_at: z.number().int().positive(),
+});
+
+// Type inference
+export type ChatroomMessages = z.infer<typeof ChatroomMessagesSchema>;
+
+// Optional: Default values factory function
+export const createDefaultChatroomMessages = (id: string): ChatroomMessages => ({
+  _id: id,
+  is_conclued: false,
+  history: [],
+  users: new Set(),
+  updated_at: Date.now(),
+  created_at: Date.now(),
+});

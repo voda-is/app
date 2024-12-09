@@ -1,48 +1,77 @@
 import Image from "next/image";
-import { motion } from "framer-motion";
-import OnLineUsers from "@/app/chat/components/onLineUsers";
-import { useEffect, useState } from "react";
 
-interface HeaderProps {
+interface User {
+  id: string;
+  avatar_url: string;
   name: string;
-  image: string;
-  className?: string;
 }
 
-export function ChatroomHeader({ name, image, className = "" }: HeaderProps) {
-  const [comingUser, setComingUser] = useState<{
-    name: string;
-    time: string;
-  } | null>(null);
+interface ChatroomHeaderProps {
+  name: string;
+  image: string;
+  userCount: number;
+  recentUsers: User[];
+  latestJoinedUser?: string;
+  className?: string;
+  onUsersClick: () => void;
+}
 
-  useEffect(() => {
-    // TODO: get coming user, timer
-    setTimeout(() => {
-      setComingUser({
-        name: "John",
-        time: "10:00",
-      });
-    }, 1000);
-  }, []);
+export function ChatroomHeader({ 
+  name, 
+  image, 
+  userCount, 
+  recentUsers,
+  latestJoinedUser,
+  className = "",
+  onUsersClick
+}: ChatroomHeaderProps) {
   return (
-    <div
-      className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-[#1D1F20] h-16 ${className}`}
-    >
-      <div className="flex items-center justify-between px-4 py-3">
-        <OnLineUsers />
-        <div className="flex items-center gap-2">
+    <div className={`flex flex-col justify-between h-full ${className}`}>
+      {/* Character info - centered at top */}
+      <div className="flex items-center justify-center space-x-3 pt-4">
+        <div className="relative w-10 h-10">
           <Image
             src={image}
             alt={name}
-            width={41}
-            height={41}
+            fill
             className="object-cover rounded-full"
           />
-          <span className="text-white text-xl">{name}</span>
         </div>
-        {comingUser && (
-          <div className="text-white/60 text-sm">
-            <span className="text-[#10B981]">{comingUser.name}</span> coming
+        <span className="text-white font-medium text-xl">{name}</span>
+      </div>
+
+      {/* Users info - bottom left */}
+      <div className="flex justify-between items-end px-4 pb-3">
+        <button 
+          onClick={onUsersClick}
+          className="flex items-center space-x-3 hover:bg-white/10 rounded-xl p-2 transition-colors"
+        >
+          <div className="flex -space-x-2">
+            {recentUsers.map((user) => (
+              <div 
+                key={user.id} 
+                className="relative w-6 h-6 rounded-full border-2 border-black/50 backdrop-blur-sm"
+              >
+                <Image
+                  src={user.avatar_url}
+                  alt={user.name}
+                  fill
+                  className="object-cover rounded-full"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-white/80 text-sm">{userCount} online</span>
+          </div>
+        </button>
+
+        {latestJoinedUser && (
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1.5">
+            <span className="text-white/90 text-sm">
+              {latestJoinedUser} just joined
+            </span>
           </div>
         )}
       </div>

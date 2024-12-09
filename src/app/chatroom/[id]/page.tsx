@@ -15,6 +15,9 @@ import { api } from "@/lib/api-client";
 import { ChatroomHeader } from "@/components/ChatroomHeader";
 import { ChatroomFooter } from "@/components/ChatroomFooter";
 import { replacePlaceholders } from "@/lib/formatText";
+import { useChatroomEvents } from '@/lib/sse';
+import { getUserProfilesCache } from '@/lib/userProfilesCache';
+import { UsersExpandedView } from "@/components/UsersExpandedView";
 
 export default function ChatroomPage() {
   const params = useParams();
@@ -31,12 +34,117 @@ export default function ChatroomPage() {
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
   const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
   const { data: telegramUser } = useTelegramUser();
-  useEffect(() => {
-    if (chatroomMessages?.history) {
-      setMessages(chatroomMessages.history);
+
+  const [currentUserIds, setCurrentUserIds] = useState<string[]>(
+    chatroom?.current_audience || []
+  );
+
+  // Remove the useUserProfiles hook usage since we'll manage profiles through cache
+  const [userProfiles, setUserProfiles] = useState({});
+
+  // Helper function to ensure user profiles are loaded
+  const ensureUserProfiles = async (userIds: string[]) => {
+    const cache = getUserProfilesCache();
+    const missingIds = userIds.filter(id => !cache.hasUser(id));
+    
+    if (missingIds.length > 0) {
+      const users = await api.user.getUsers(missingIds);
+      users.forEach(user => cache.addUser(user));
     }
-  }, [chatroomMessages]);
-  
+    
+    setUserProfiles(cache.getAllUsers());
+  };
+
+  // Helper function to collect unique user IDs from messages
+  const extractUserIdsFromMessages = (history: HistoryMessage[][]) => {
+    return Array.from(new Set(
+      history.flatMap(pair => 
+        pair.filter(msg => msg.user_id).map(msg => msg.user_id)
+      )
+    ));
+  };
+
+  // Initial data loading
+  useEffect(() => {
+    if (!chatroom || !chatroomMessages) return;
+
+    const userIds = new Set<string>();
+
+    // Add current audience
+    chatroom.current_audience?.forEach(id => userIds.add(id));
+    
+    // Add user on stage
+    if (chatroom.user_on_stage) {
+      userIds.add(chatroom.user_on_stage);
+    }
+
+    // Add message authors
+    if (chatroomMessages.history) {
+      extractUserIdsFromMessages(chatroomMessages.history).forEach(id => userIds.add(id));
+    }
+
+    // Load all unique user profiles
+    const uniqueUserIds = Array.from(userIds);
+    if (uniqueUserIds.length > 0) {
+      ensureUserProfiles(uniqueUserIds);
+    }
+  }, [chatroom, chatroomMessages]);
+
+  // Update SSE event handlers with console logs
+  useChatroomEvents(chatroomId, {
+    onMessageReceived: async (message) => {
+      if (message.user_id) {
+        await ensureUserProfiles([message.user_id]);
+      }
+      setMessages(prev => {
+        const lastPair = prev[prev.length - 1];
+        if (lastPair && !lastPair[1]) {
+          return [...prev.slice(0, -1), [lastPair[0], message]];
+        }
+        return [...prev, [message]];
+      });
+    },
+    onResponseReceived: (response) => {
+      setShowTypingIndicator(false);
+      setMessages(prev => {
+        const lastPair = prev[prev.length - 1];
+        if (lastPair && !lastPair[1]) {
+          return [...prev.slice(0, -1), [lastPair[0], response]];
+        }
+        return [...prev, [response]];
+      });
+    },
+    onHijackRegistered: (hijack) => {
+      ensureUserProfiles([hijack.user._id]);
+      setDisableActions(true);
+    },
+    onHijackSucceeded: (hijack) => {
+      ensureUserProfiles([hijack.user._id]);
+      setDisableActions(false);
+      setIsCurrentSpeaker(hijack.user._id === telegramUser?._id);
+    },
+    onJoinChatroom: async (join) => {
+      if (join.user._id) {
+        await ensureUserProfiles([join.user._id]);
+        setCurrentUserIds(prev => {
+          if (prev.includes(join.user._id)) return prev;
+          return [...prev, join.user._id];
+        });
+      }
+    },
+    onLeaveChatroom: (leave) => {
+      setCurrentUserIds(prev => 
+        prev.filter(id => id !== leave.user_id)
+      );
+    }
+  });
+
+  // Add debug logging for user profile updates
+  useEffect(() => {
+    const cache = getUserProfilesCache();
+    console.log('Current cache state:', cache.getAllUsers());
+  }, [messages, currentUserIds]);
+
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
 
@@ -70,6 +178,43 @@ export default function ChatroomPage() {
     fetchHijackCost();
   }, [chatroomId]);
 
+  useEffect(() => {
+    if (!chatroomId || !telegramUser?._id) {
+      console.log('Missing chatroomId or user, skipping join room');
+      return;
+    }
+
+    const joinRoom = async () => {
+      try {
+        console.log('Joining room:', chatroomId);
+        await api.chatroom.joinChatroom(chatroomId);
+        console.log('Successfully joined room');
+      } catch (error) {
+        console.error('Failed to join room:', error);
+      }
+    };
+
+    // Join the room
+    joinRoom();
+
+    // Leave the room when the component unmounts
+    return () => {
+      const leaveRoom = async () => {
+        try {
+          console.log('Leaving room:', chatroomId);
+          await api.chatroom.leaveChatroom(chatroomId);
+          console.log('Successfully left room');
+        } catch (error) {
+          console.error('Failed to leave room:', error);
+        }
+      };
+
+      // Only attempt to leave if we have both chatroomId and user
+      if (chatroomId && telegramUser?._id) {
+        leaveRoom();
+      }
+    };
+  }, [chatroomId, telegramUser?._id]); // Dependencies ensure this runs when needed
 
   const handleSendMessage = async () => {
     if (disableActions) return;
@@ -82,7 +227,6 @@ export default function ChatroomPage() {
     setInputMessage(""); // Clear input immediately
     
     try {
-      // We'll implement this later
       await api.chatroom.chat(chatroomId, trimmedMessage);
       setShowTypingIndicator(false);
       setDisableActions(false);
@@ -112,46 +256,57 @@ export default function ChatroomPage() {
 
   const handleReaction = async (type: string) => {
     if (disableActions) return;
-    console.log(`Reaction: ${type}`); // Implement reaction logic
+    console.log(`Reaction: ${type}`);
   };
 
-  // Placeholder data for testing
-  const mockRecentUsers = [
-    {
-      id: "1",
-      avatar_url: "https://t.me/i/userpic/320/HrprSXgyPFDFixBuMmj1QnF2p5-0mduYc-SKXGTmyTc.svg",
-      name: "Felix"
-    },
-    {
-      id: "2",
-      avatar_url: "https://t.me/i/userpic/320/HrprSXgyPFDFixBuMmj1QnF2p5-0mduYc-SKXGTmyTc.svg",
-      name: "Alice"
-    },
-    {
-      id: "3",
-      avatar_url: "https://t.me/i/userpic/320/HrprSXgyPFDFixBuMmj1QnF2p5-0mduYc-SKXGTmyTc.svg",
-      name: "Bob"
-    }
-  ];
-  const mockUserCount = 42;
+  // Update the recentUsers transformation to use local userProfiles state
+  const recentUsers = currentUserIds
+    .slice(0, 3)
+    .map(id => userProfiles[id])
+    .filter(Boolean)
+    .map(user => ({
+      id: user._id,
+      name: user.first_name,
+      avatar_url: user.profile_photo || '/bg2.png'
+    }));
 
-  const mockAllUsers = [
-    {
-      id: "1",
-      avatar_url: "https://t.me/i/userpic/320/HrprSXgyPFDFixBuMmj1QnF2p5-0mduYc-SKXGTmyTc.svg",
-      name: "Felix"
-    },
-    {
-      id: "2",
-      avatar_url: "https://t.me/i/userpic/320/HrprSXgyPFDFixBuMmj1QnF2p5-0mduYc-SKXGTmyTc.svg",
-      name: "Alice"
-    },
-    {
-      id: "3",
-      avatar_url: "https://t.me/i/userpic/320/HrprSXgyPFDFixBuMmj1QnF2p5-0mduYc-SKXGTmyTc.svg",
-      name: "Bob"
-    }
-  ];
+  // Message rendering with proper user avatars
+  const renderMessages = messages.flatMap((pair, index) => [
+    // User message
+    <div key={`${pair[0].created_at}-${index}`}>
+      <ChatBubble 
+        message={pair[0].text}
+        role="user"
+        created_at={pair[0].created_at}
+        status={pair[0].status}
+        assistantAvatar={character?.avatar_image_url}
+        userAvatar={pair[0].user?.profile_photo || "/bg2.png"} // Use message user's avatar
+        characterId={character._id}
+        enableVoice={character?.metadata.enable_voice}
+        isLatestReply={false}
+        onRegenerate={() => {}}
+        onRetry={() => {}}
+        onRate={() => {}}
+      />
+    </div>,
+    // Assistant message
+    <div key={`assistant-${index}`}>
+      {!pair[1] || !pair[1].text ? null : <ChatBubble 
+        message={pair[1].text}
+        role="assistant"
+        created_at={pair[1].created_at}
+        status={pair[1].status}
+        assistantAvatar={character?.avatar_image_url}
+        userAvatar={character?.avatar_image_url} // Assistant always uses character avatar
+        characterId={character._id}
+        enableVoice={character?.metadata.enable_voice}
+        isLatestReply={index === messages.length - 1}
+        onRegenerate={() => {}}
+        onRetry={() => {}}
+        onRate={() => {}}
+      />}
+    </div>
+  ]);
 
   if (characterLoading || !character) {
     return <LoadingScreen />;
@@ -172,22 +327,22 @@ export default function ChatroomPage() {
 
       <div className="relative flex flex-col h-full">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-32">
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-40">
           <ChatroomHeader
             name={character?.name as string}
             image={character?.avatar_image_url || '/bg2.png'}
-            userCount={mockUserCount}
-            recentUsers={mockRecentUsers}
-            latestJoinedUser="Alice"
+            userCount={currentUserIds.length}
+            recentUsers={recentUsers}
+            latestJoinedUser={recentUsers[0]?.name}
             onUsersClick={() => setIsUsersExpanded(true)}
-            className="flex-shrink-0 h-full pt-[var(--tg-content-safe-area-inset-top)]"
+            className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>
 
         {/* Messages Container */}
         <div 
           ref={scrollRef}
-          className="flex-1 pt-32 pb-10"
+          className="flex-1 pt-42 pb-10"
         >
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
@@ -207,7 +362,7 @@ export default function ChatroomPage() {
                 role="assistant"
                 created_at={chatroom?.created_at || 0}
                 assistantAvatar={character?.avatar_image_url}
-                userAvatar={character?.avatar_image_url || "/default-avatar.png"}
+                userAvatar={character?.avatar_image_url || "/bg2.png"}
                 characterId={character._id}
                 enableVoice={character?.metadata.enable_voice}
                 isLatestReply={false}
@@ -218,40 +373,7 @@ export default function ChatroomPage() {
               />
 
             {/* Messages */}
-            {messages.flatMap((pair, index) => [
-              <div key={`${pair[0].created_at}-${index}`}>
-                <ChatBubble 
-                  message={pair[0].text}
-                  role={"user"}
-                  created_at={pair[0].created_at}
-                  status={pair[0].status}
-                  assistantAvatar={character?.avatar_image_url}
-                  userAvatar={telegramUser?.profile_photo || "/bg2.png"}
-                  characterId={character._id}
-                  enableVoice={character?.metadata.enable_voice}
-                  isLatestReply={false}
-                  onRegenerate={() => {}}
-                  onRetry={() => {}}
-                  onRate={() => {}}
-                />
-              </div>,
-              <div key={`assistant-${index}`}>
-                {!pair[1] || !pair[1].text ? null : <ChatBubble 
-                  message={pair[1].text}
-                  role={"assistant"}
-                  created_at={pair[1].created_at}
-                  status={pair[1].status}
-                  assistantAvatar={character?.avatar_image_url}
-                  userAvatar={character?.avatar_image_url || "/default-avatar.png"}
-                  characterId={character._id}
-                  enableVoice={character?.metadata.enable_voice}
-                  isLatestReply={index === messages.length - 1}
-                  onRegenerate={() => {}}
-                  onRetry={() => {}}
-                  onRate={() => {}}
-                />}
-              </div>
-            ])}
+            {renderMessages}
 
             {/* Typing Indicator */}
             {showTypingIndicator && (
@@ -283,62 +405,12 @@ export default function ChatroomPage() {
           )}
         </div>
 
-        {/* Users Expanded View */}
-        <div 
-          className={`fixed inset-0 z-50 transition-all duration-300 ${
-            isUsersExpanded 
-              ? 'opacity-100 pointer-events-auto' 
-              : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setIsUsersExpanded(false)}
-          />
-
-          {/* Content - Slides up from bottom */}
-          <div 
-            className={`fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-md rounded-t-3xl p-6 transition-transform duration-300 ease-out ${
-              isUsersExpanded ? 'translate-y-0' : 'translate-y-full'
-            }`}
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex flex-col items-center">
-              {/* Drag indicator */}
-              <div className="w-12 h-1 bg-white/20 rounded-full mb-6" />
-              
-              <div className="flex justify-between items-center w-full mb-6">
-                <h3 className="text-white text-lg font-medium">Online Users</h3>
-                <button 
-                  onClick={() => setIsUsersExpanded(false)}
-                  className="text-white/60 hover:text-white transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-
-              <div className="grid grid-cols-4 gap-6 w-full max-h-[60vh] overflow-y-auto">
-                {mockAllUsers.map((user) => (
-                  <div 
-                    key={user.id}
-                    className="flex flex-col items-center space-y-2"
-                  >
-                    <div className="relative w-16 h-16">
-                      <Image
-                        src={user.avatar_url}
-                        alt={user.name}
-                        fill
-                        className="object-cover rounded-full"
-                      />
-                    </div>
-                    <span className="text-white/90 text-sm text-center">{user.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+        <UsersExpandedView 
+          isExpanded={isUsersExpanded}
+          onClose={() => setIsUsersExpanded(false)}
+          currentUserIds={currentUserIds}
+          userOnStageId={chatroom?.user_on_stage}
+        />
       </div>
     </main>
   );

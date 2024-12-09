@@ -25,10 +25,10 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} bg-gray-900 text-white`}>
-        {/* <Script
+        <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
-        /> */}
+        />
         <Providers>
           <main>{children}</main>
           {/* <TelegramDebug /> */}

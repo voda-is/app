@@ -259,7 +259,7 @@ export function ChatBubble({
             )}
 
             {/* Message Text */}
-            <div className={enableVoice ? "border-t border-white/10 pt-4" : ""}>
+            <div className={"pt-2"}>
               {message && <FormattedText text={message} skipFormatting={isUser} />}
             </div>
           </div>

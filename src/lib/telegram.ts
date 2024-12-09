@@ -20,6 +20,7 @@ export function getTelegramUser(mock: boolean = false): TelegramUser {
   }
 
   const telegramData = window.Telegram.WebApp.initDataUnsafe.user;
+  console.log('telegramData', telegramData);
   if (!telegramData) {
       throw new Error('Telegram user data not found');
   }
@@ -45,5 +46,5 @@ export function setupTelegramInterface(router: AppRouterInstance) {
 }
 
 export function isOnTelegram() {
-  return window.Telegram && window.Telegram.WebApp;
+  return window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe;
 }

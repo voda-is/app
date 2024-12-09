@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     delete data.stripUserId;
     delete data.isStream;
 
+    console.log("sending", JSON.stringify(data));
     // Make the actual API request with the access token
     const response = await fetch(`${API_URL}${path}`, {
       method: method,

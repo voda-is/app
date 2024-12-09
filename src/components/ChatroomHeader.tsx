@@ -41,10 +41,10 @@ export function ChatroomHeader({
       </div>
 
       {/* Users info - bottom left */}
-      <div className="flex justify-between items-end px-4 pb-3">
+      <div className="flex justify-between items-end px-4 py-3">
         <button 
           onClick={onUsersClick}
-          className="flex items-center space-x-3 hover:bg-white/10 rounded-xl p-2 transition-colors"
+          className="flex items-center space-x-3 bg-emerald-300/20 rounded-lg px-3 py-1.5"
         >
           <div className="flex -space-x-2">
             {recentUsers.map((user) => (
@@ -68,7 +68,7 @@ export function ChatroomHeader({
         </button>
 
         {latestJoinedUser && (
-          <div className="bg-white/10 backdrop-blur-sm rounded-lg px-3 py-1.5">
+          <div className="bg-white/25 backdrop-blur-sm rounded-lg px-3 py-1.5">
             <span className="text-white/90 text-sm">
               {latestJoinedUser} just joined
             </span>

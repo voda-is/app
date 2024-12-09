@@ -9,6 +9,7 @@ import {
   HistoryMessage,
   ChatroomMessages,
   Chatroom,
+  User,
 } from './validations';
 import { z } from 'zod';
 import { getTelegramUser } from '@/lib/telegram';
@@ -150,6 +151,19 @@ export const api = {
 
       return userResponse.data.data;
     },
+    getUsers: async (userIds: string[]): Promise<User[]> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post('', {
+        path: '/users',
+        method: 'POST',
+        data: { 
+          user_ids: userIds,
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    }
   },
 
   characters: {

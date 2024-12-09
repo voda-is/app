@@ -150,8 +150,8 @@ export const ChatroomSchema = z.object({
   ])),
   
   // Sets of user IDs
-  historical_audience: z.set(CryptoHashSchema),
-  current_audience: z.set(CryptoHashSchema),
+  historical_audience: z.array(CryptoHashSchema),
+  current_audience: z.array(CryptoHashSchema),
   
   updated_at: z.number().int().positive(),
   created_at: z.number().int().positive(),
@@ -166,7 +166,7 @@ export const ChatroomMessagesSchema = z.object({
   
   history: z.array(ChatHistoryPairSchema),
   
-  users: z.set(CryptoHashSchema), // Set of user IDs who sent messages
+  users: z.array(CryptoHashSchema), // Set of user IDs who sent messages
   
   updated_at: z.number().int().positive(),
   created_at: z.number().int().positive(),
@@ -174,13 +174,3 @@ export const ChatroomMessagesSchema = z.object({
 
 // Type inference
 export type ChatroomMessages = z.infer<typeof ChatroomMessagesSchema>;
-
-// Optional: Default values factory function
-export const createDefaultChatroomMessages = (id: string): ChatroomMessages => ({
-  _id: id,
-  is_conclued: false,
-  history: [],
-  users: new Set(),
-  updated_at: Date.now(),
-  created_at: Date.now(),
-});

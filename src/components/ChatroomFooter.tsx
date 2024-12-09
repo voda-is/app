@@ -32,7 +32,7 @@ export function ChatroomFooter({
           className="flex-1 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white px-6 py-4 rounded-xl flex items-center justify-center space-x-4 disabled:opacity-50 transition-colors"
         >
           <div className="bg-emerald-500/20 px-4 rounded-full flex items-center">
-            <span className="text-lg font-semibold text-emerald-400">{10}</span>
+            <span className="text-lg font-semibold text-emerald-400">{`${hijackCost}`}</span>
           </div>
           <span className="text-lg font-bold font-medium">HIJACK⚡️</span>
         </button>

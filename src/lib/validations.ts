@@ -133,7 +133,7 @@ export interface TTSEntry {
 export type ChatHistoryPair = z.infer<typeof ChatHistoryPairSchema>;
 
 export const ChatroomSchema = z.object({
-  id: CryptoHashSchema,
+  _id: CryptoHashSchema,
   character_id: CryptoHashSchema,
   
   user_on_stage: CryptoHashSchema,

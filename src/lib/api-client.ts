@@ -8,6 +8,7 @@ import {
   ConversationHistory,
   HistoryMessage,
   ChatroomMessages,
+  Chatroom,
 } from './validations';
 import { z } from 'zod';
 import { getTelegramUser } from '@/lib/telegram';
@@ -285,10 +286,10 @@ export const api = {
   },
 
   chatroom: {
-    getOrCreateChatroom: async (characterId: string): Promise<ChatroomMessages> => {
+    getOrCreateChatroom: async (characterId: string): Promise<Chatroom> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/get_or_create_chatroom/${characterId}`,
+        path: `/chatroom/get_or_create/${characterId}`,
         method: 'POST',
         data: {
           user_id: telegramUser.id.toString(),
@@ -298,10 +299,34 @@ export const api = {
       console.log('response', response.data.data);
       return response.data.data;
     },
+    getChatroom: async (chatroomId: string): Promise<Chatroom> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post('', {
+        path: `/chatroom/get/${chatroomId}`,
+        method: 'GET',
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        }
+      });
+      return response.data.data;
+    },
+    getChatroomMessages: async (chatroomId: string): Promise<ChatroomMessages> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post('', {
+        path: `/chatroom/messages/${chatroomId}`,
+        method: 'GET',
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        }
+      });
+      return response.data.data;
+    },
     joinChatroom: async (chatroomId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/join_chatroom/${chatroomId}`,
+        path: `/chatroom/join/${chatroomId}`,
         method: 'POST',
         data: {
           user_id: telegramUser.id.toString(),
@@ -313,7 +338,7 @@ export const api = {
     leaveChatroom: async (chatroomId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/leave_chatroom/${chatroomId}`,
+        path: `/chatroom/leave/${chatroomId}`,
         method: 'POST',
         data: {
           user_id: telegramUser.id.toString(),
@@ -322,17 +347,22 @@ export const api = {
       });
       return response.data.data;
     },
-    getHijackCost: async (characterId: string): Promise<number> => {
+    getHijackCost: async (characterId: string): Promise<any> => {
+      const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/hijack_cost/${characterId}`,
+        path: `/chatroom/hijack_cost/${characterId}`,
         method: 'GET',
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        }
       });
       return response.data.data;
     },
     registerHijack: async (characterId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/register_hijack/${characterId}`,
+        path: `/chatroom/register_hijack/${characterId}`,
         method: 'POST',
         data: {
           user_id: telegramUser.id.toString(),
@@ -344,7 +374,7 @@ export const api = {
     hijackChatroom: async (characterId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
-        path: `/hijack/${characterId}`,
+        path: `/chatroom/hijack/${characterId}`,
         method: 'POST',
         data: {
           user_id: telegramUser.id.toString(),

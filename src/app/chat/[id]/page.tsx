@@ -195,7 +195,6 @@ export default function ChatPage() {
               </div>
             </div>
 
-            <div className="">
               <ChatBubble 
                 message={replacePlaceholders(characterFirstMessage as string, character?.name as string, telegramUser?.first_name as string)}
                 role="assistant"
@@ -210,7 +209,6 @@ export default function ChatPage() {
                 onRate={handleRate}
                 status={"sent"} 
               />
-            </div>
 
             {/* Messages */}
             {messages.flatMap((pair, index) => [

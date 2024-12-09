@@ -7,28 +7,36 @@ import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { useCharacter, useTelegramUser } from '@/hooks/api';
+import { useCharacter, useChatroom, useChatroomMessages, useTelegramUser } from '@/hooks/api';
 import { HistoryMessage } from "@/lib/validations";
 import { isOnTelegram, notificationOccurred, setupTelegramInterface } from "@/lib/telegram";
 import { InputBar } from "@/components/InputBar";
 import { api } from "@/lib/api-client";
 import { ChatroomHeader } from "@/components/ChatroomHeader";
 import { ChatroomFooter } from "@/components/ChatroomFooter";
+import { replacePlaceholders } from "@/lib/formatText";
 
 export default function ChatroomPage() {
   const params = useParams();
-  const characterId = params?.character as string;
+  const chatroomId = params?.id as string;
   const router = useRouter();
   
-  const [messages, setMessages] = useState<HistoryMessage[]>([]);
+  const [messages, setMessages] = useState<HistoryMessage[][]>([]);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   const [isCurrentSpeaker, setIsCurrentSpeaker] = useState(false);
   const [hijackCost, setHijackCost] = useState(0);
   const [isUsersExpanded, setIsUsersExpanded] = useState(false);
 
+  const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
+  const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
+  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
   const { data: telegramUser } = useTelegramUser();
-  const { data: character, isLoading: characterLoading } = useCharacter(characterId);
-
+  useEffect(() => {
+    if (chatroomMessages?.history) {
+      setMessages(chatroomMessages.history);
+    }
+  }, [chatroomMessages]);
+  
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
 
@@ -53,14 +61,15 @@ export default function ChatroomPage() {
   useEffect(() => {
     const fetchHijackCost = async () => {
       try {
-        const cost = await api.chatroom.getHijackCost(characterId);
-        setHijackCost(cost);
+        const cost = await api.chatroom.getHijackCost(chatroomId);
+        setHijackCost(cost['cost']);
       } catch (error) {
         console.error('Failed to fetch hijack cost:', error);
       }
     };
     fetchHijackCost();
-  }, [characterId]);
+  }, [chatroomId]);
+
 
   const handleSendMessage = async () => {
     if (disableActions) return;
@@ -74,7 +83,7 @@ export default function ChatroomPage() {
     
     try {
       // We'll implement this later
-      await api.chatroom.chat(characterId, trimmedMessage);
+      await api.chatroom.chat(chatroomId, trimmedMessage);
       setShowTypingIndicator(false);
       setDisableActions(false);
       notificationOccurred('success');
@@ -90,8 +99,8 @@ export default function ChatroomPage() {
     setDisableActions(true);
     
     try {
-      await api.chatroom.registerHijack(characterId);
-      await api.chatroom.hijackChatroom(characterId);
+      await api.chatroom.registerHijack(chatroomId);
+      await api.chatroom.hijackChatroom(chatroomId);
       setIsCurrentSpeaker(true);
       notificationOccurred('success');
     } catch (error) {
@@ -193,22 +202,56 @@ export default function ChatroomPage() {
               </div>
             </div>
 
+            <ChatBubble 
+                message={replacePlaceholders(character?.prompts.first_message as string, character?.name as string, telegramUser?.first_name as string)}
+                role="assistant"
+                created_at={chatroom?.created_at || 0}
+                assistantAvatar={character?.avatar_image_url}
+                userAvatar={character?.avatar_image_url || "/default-avatar.png"}
+                characterId={character._id}
+                enableVoice={character?.metadata.enable_voice}
+                isLatestReply={false}
+                onRegenerate={() => {}}
+                onRetry={() => {}}
+                onRate={() => {}}
+                status={"sent"} 
+              />
+
             {/* Messages */}
-            {messages.map((message, index) => (
-              <div key={`${message.created_at}-${index}`}>
+            {messages.flatMap((pair, index) => [
+              <div key={`${pair[0].created_at}-${index}`}>
                 <ChatBubble 
-                  message={message.text}
-                  role={message.user_id === character._id ? "assistant" : "user"}
-                  created_at={message.created_at}
-                  status={message.status}
+                  message={pair[0].text}
+                  role={"user"}
+                  created_at={pair[0].created_at}
+                  status={pair[0].status}
+                  assistantAvatar={character?.avatar_image_url}
+                  userAvatar={telegramUser?.profile_photo || "/bg2.png"}
+                  characterId={character._id}
+                  enableVoice={character?.metadata.enable_voice}
+                  isLatestReply={false}
+                  onRegenerate={() => {}}
+                  onRetry={() => {}}
+                  onRate={() => {}}
+                />
+              </div>,
+              <div key={`assistant-${index}`}>
+                {!pair[1] || !pair[1].text ? null : <ChatBubble 
+                  message={pair[1].text}
+                  role={"assistant"}
+                  created_at={pair[1].created_at}
+                  status={pair[1].status}
+                  assistantAvatar={character?.avatar_image_url}
+                  userAvatar={character?.avatar_image_url || "/default-avatar.png"}
                   characterId={character._id}
                   enableVoice={character?.metadata.enable_voice}
                   isLatestReply={index === messages.length - 1}
-                  userAvatar="/path-to-user-avatar.png"
-                  assistantAvatar={character?.avatar_image_url}
-                />
+                  onRegenerate={() => {}}
+                  onRetry={() => {}}
+                  onRate={() => {}}
+                />}
               </div>
-            ))}
+            ])}
 
             {/* Typing Indicator */}
             {showTypingIndicator && (
@@ -221,7 +264,7 @@ export default function ChatroomPage() {
 
         {/* Input Container - Conditionally render InputBar or ChatroomFooter */}
         <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto">
-          {isCurrentSpeaker ? (
+          {telegramUser?._id === chatroom?.user_on_stage ? (
             <InputBar
               message={inputMessage}
               onChange={setInputMessage}

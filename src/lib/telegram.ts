@@ -11,7 +11,7 @@ declare global {
 }
 
 // telegram user data
-export function getTelegramUser(mock: boolean = true): TelegramUser {
+export function getTelegramUser(mock: boolean = false): TelegramUser {
   if (mock) {
     return {
       id: 7699268464,

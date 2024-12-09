@@ -13,19 +13,19 @@ import { useQuery } from "@tanstack/react-query";
 import { ProgressBarButton } from "./ProgressBarButton";
 import Image from "next/image";
 
-interface ChatBubbleProps  {
-  message: string,
-  role: "user" | "assistant",
-  created_at: number,
-  status: "sent" | "error",
-  userAvatar?: string,
-  assistantAvatar?: string,
+interface ChatBubbleProps {
+  message: string;
+  role: "user" | "assistant";
+  created_at: number;
+  status: "sent" | "error";
+  userAvatar?: string;
+  assistantAvatar?: string;
   isLatestReply?: boolean;
   onRetry?: (text: string) => void;
   onRegenerate?: () => void;
   onRate?: (rating: number) => void;
   enableVoice?: boolean;
-  characterId: string;
+  characterId: string | undefined;
 }
 
 export function ChatBubble({
@@ -53,7 +53,7 @@ export function ChatBubble({
 
   // Determine bubble style based on role
   const getBubbleStyle = () => {
-    if (isUser) 
+    if (isUser)
       return "bg-emerald-500/60 backdrop-blur-md border border-emerald-500/20 text-white shadow-lg";
     if (isAssistant)
       return "bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white";
@@ -128,7 +128,7 @@ export function ChatBubble({
 
   const handleTTSClick = async () => {
     generateTTS(
-      { text: ttsText, characterId },
+      { text: ttsText, characterId: characterId || "" },
       {
         onSuccess: (entry) => {
           // Check if the entry.audioBlob is valid
@@ -168,7 +168,9 @@ export function ChatBubble({
           <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
             <div className="relative w-6 h-6 flex-shrink-0">
               <Image
-                src={isUser ? userAvatar : (assistantAvatar || "/default-avatar.png")}
+                src={
+                  isUser ? userAvatar : assistantAvatar || "/default-avatar.png"
+                }
                 alt={isUser ? "User" : "Assistant"}
                 fill
                 className="object-cover rounded-full"
@@ -249,18 +251,24 @@ export function ChatBubble({
                     }
                   }}
                 >
-                  <GiSoundWaves className={`w-5 h-5 ${isPlaying ? "animate-pulse" : ""}`} />
+                  <GiSoundWaves
+                    className={`w-5 h-5 ${isPlaying ? "animate-pulse" : ""}`}
+                  />
                   <span className="text-sm font-medium">
                     {isPlaying ? "Playing..." : "Play Audio"}
                   </span>
-                  <span className="text-xs text-white/60">{Math.ceil(duration)}"</span>
+                  <span className="text-xs text-white/60">
+                    {Math.ceil(duration)}"
+                  </span>
                 </ProgressBarButton>
               </div>
             )}
 
             {/* Message Text */}
             <div className={"pt-2"}>
-              {message && <FormattedText text={message} skipFormatting={isUser} />}
+              {message && (
+                <FormattedText text={message} skipFormatting={isUser} />
+              )}
             </div>
           </div>
 
@@ -282,7 +290,9 @@ export function ChatBubble({
               {onRate && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-400">Rate this response:</span>
+                    <span className="text-xs text-gray-400">
+                      Rate this response:
+                    </span>
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <button
                         key={rating}

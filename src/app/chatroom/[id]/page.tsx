@@ -52,11 +52,6 @@ export default function ChatroomPage() {
     chatroom?.current_audience || []
   );
 
-  console.log("chatroom", chatroom);
-
-  // Remove the useUserProfiles hook usage since we'll manage profiles through cache
-  const [userProfiles, setUserProfiles] = useState<User[]>([]);
-
   // Helper function to ensure user profiles are loaded
   const ensureUserProfiles = async (userIds: string[]) => {
     const missingIds = userIds.filter((id) => !cache.hasUser(id));
@@ -65,10 +60,6 @@ export default function ChatroomPage() {
       const users = await api.user.getUsers(missingIds);
       cache.addUsers(users);
     }
-
-    const cacheUsers = cache.getAllUsers();
-    console.log("cacheUsers", cacheUsers);
-    setUserProfiles(cacheUsers);
   };
 
   // Helper function to collect unique user IDs from messages
@@ -105,6 +96,7 @@ export default function ChatroomPage() {
       extractUserIdsFromMessages(chatroomMessages.history).forEach((id) =>
         userIds.add(id)
       );
+      setMessages(chatroomMessages.history);
     }
 
     // Load all unique user profiles
@@ -294,6 +286,7 @@ export default function ChatroomPage() {
       avatar_url: user.profile_photo || "/bg2.png",
     }));
 
+  console.log("messages👏👏", messages);
   // Message rendering with proper user avatars
   const renderMessages = messages.flatMap((pair: any, index) => [
     // User message
@@ -305,7 +298,7 @@ export default function ChatroomPage() {
         status={pair[0].status}
         assistantAvatar={character?.avatar_image_url}
         userAvatar={pair[0].user?.profile_photo || "/bg2.png"} // Use message user's avatar
-        characterId={character._id}
+        characterId={character?._id}
         enableVoice={character?.metadata.enable_voice}
         isLatestReply={false}
         onRegenerate={() => {}}
@@ -323,7 +316,7 @@ export default function ChatroomPage() {
           status={pair[1].status}
           assistantAvatar={character?.avatar_image_url}
           userAvatar={character?.avatar_image_url} // Assistant always uses character avatar
-          characterId={character._id}
+          characterId={character?._id}
           enableVoice={character?.metadata.enable_voice}
           isLatestReply={index === messages.length - 1}
           onRegenerate={() => {}}

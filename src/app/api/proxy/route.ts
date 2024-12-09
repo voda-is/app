@@ -1,24 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.API_BASE_URL;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN;
 
 if (!ADMIN_TOKEN) {
-  throw new Error('ADMIN_TOKEN environment variable is not set');
+  throw new Error("ADMIN_TOKEN environment variable is not set");
 }
 
 async function getAccessToken(user_id: string): Promise<string> {
   const response = await fetch(`${API_URL}/token`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ADMIN_TOKEN}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${ADMIN_TOKEN}`,
     },
     body: JSON.stringify(user_id),
   });
 
   if (!response.ok) {
-    throw new Error('Failed to get access token');
+    throw new Error("Failed to get access token");
   }
 
   const data = await response.json();
@@ -30,15 +30,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { path, method, data } = body.data;
 
-    console.log('path', path);
-    console.log('method', method);
-    console.log('data', data);
+    console.log("path", path);
+    console.log("method", method);
+    console.log("data", data);
 
     let authHeader = {};
     if (!data.ignoreToken) {
       const accessToken = await getAccessToken(data.user_id);
       authHeader = {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       };
 
       if (data.stripUserId) {
@@ -58,33 +58,32 @@ export async function POST(request: NextRequest) {
       method: method,
       headers: {
         ...authHeader,
-        ...(method !== 'GET' && { 'Content-Type': 'application/json' }),
+        ...(method !== "GET" && { "Content-Type": "application/json" }),
       },
-      ...(method === 'GET' 
-        ? { 
-            url: `${API_URL}${path}?${new URLSearchParams(data).toString()}`
+      ...(method === "GET"
+        ? {
+            url: `${API_URL}${path}?${new URLSearchParams(data).toString()}`,
           }
-        : { body: JSON.stringify(data) }
-      ),
+        : { body: JSON.stringify(data) }),
     });
 
     if (isStream) {
       if (!response.body) {
-        throw new Error('No response body');
+        throw new Error("No response body");
       }
 
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers.get("content-type");
       const arrayBuffer = await response.arrayBuffer();
       // Return raw binary data
       return new Response(arrayBuffer, {
         headers: {
-          'Content-Type': contentType || 'audio/mp3',
-          'Content-Length': arrayBuffer.byteLength.toString(),
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'Content-Transfer-Encoding': 'binary',
-          'x-content-type-options': 'nosniff'
+          "Content-Type": contentType || "audio/mp3",
+          "Content-Length": arrayBuffer.byteLength.toString(),
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+          "Content-Transfer-Encoding": "binary",
+          "x-content-type-options": "nosniff",
         },
       });
     } else {
@@ -93,12 +92,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(responseData);
     }
   } catch (error) {
-    console.error('API Proxy Error:', error);
+    console.error("API Proxy Error:", error);
     return NextResponse.json(
-      { 
-        status: 500, 
-        message: 'Internal Server Error',
-        data: null 
+      {
+        status: 500,
+        message: "Internal Server Error",
+        data: null,
       },
       { status: 500 }
     );

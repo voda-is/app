@@ -31,6 +31,8 @@ import { UserProfilesCache } from "@/lib/userProfilesCache";
 export default function ChatroomPage() {
   const params = useParams();
   const chatroomId = params?.id as string;
+
+  console.log("chatroomId", chatroomId);
   const router = useRouter();
   const cache = new UserProfilesCache();
   const [messages, setMessages] = useState<HistoryMessage[][]>([]);
@@ -140,11 +142,11 @@ export default function ChatroomPage() {
       setIsCurrentSpeaker(hijack.user._id === telegramUser?._id);
     },
     onJoinChatroom: async (join) => {
-      if (join.user._id) {
-        await ensureUserProfiles([join.user._id]);
+      if (join?.user?._id) {
+        await ensureUserProfiles([join?.user?._id]);
         setCurrentUserIds((prev) => {
-          if (prev.includes(join.user._id)) return prev;
-          return [...prev, join.user._id];
+          if (prev.includes(join?.user?._id)) return prev;
+          return [...prev, join?.user?._id];
         });
       }
     },

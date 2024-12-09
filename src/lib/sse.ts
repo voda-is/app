@@ -15,9 +15,10 @@ export const useChatroomEvents = (
   handlers: ChatroomEventHandlers
 ) => {
   const setupEventSource = useCallback(() => {
+    console.log("API_BASE_URL = ", process.env.API_BASE_URL);
     // Create EventSource connection
     const eventSource = new EventSource(
-      `${process.env.API_BASE_URL}/sse/chatroom/${chatroomId}`
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/sse/chatroom/${chatroomId}`
     );
 
     // Connection opened
@@ -28,16 +29,19 @@ export const useChatroomEvents = (
     // Listen for specific events
     eventSource.addEventListener("messageReceived", (event) => {
       const data = JSON.parse(event.data);
+      console.log("messageReceived", data);
       handlers.onMessageReceived?.(data);
     });
 
     eventSource.addEventListener("responseReceived", (event) => {
       const data = JSON.parse(event.data);
+      console.log("responseReceived", data);
       handlers.onResponseReceived?.(data);
     });
 
     eventSource.addEventListener("hijackRegistered", (event) => {
       const data = JSON.parse(event.data);
+      console.log("hijackRegistered", data);
       handlers.onHijackRegistered?.(data);
     });
 

@@ -7,149 +7,48 @@ import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { useCharacter, useConversation, useTelegramUser } from '@/hooks/api';
-import { HistoryMessage } from "@/lib/validations";
-import { isOnTelegram, notificationOccurred, setupTelegramInterface } from "@/lib/telegram";
-import { InputBar } from "@/components/InputBar";
-import { replacePlaceholders } from "@/lib/formatText";
-import { api } from "@/lib/api-client";
+import { useCharacter } from "@/hooks/api";
 
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-  
-  const [messages, setMessages] = useState<HistoryMessage[][]>([]);
-  const [showTypingIndicator, setShowTypingIndicator] = useState(false);
+  const { data: character, isLoading: characterLoading } = useCharacter(id);
 
-  // Fetch initial data
-  const { data: telegramUser } = useTelegramUser();
-  const { data: conversation, isLoading: historyLoading, error: historyError } = useConversation(id);
-  const characterId = conversation?.character_id;
-  const { data: character, isLoading: characterLoading } = useCharacter(characterId);
-
-  // Set initial messages when conversation loads
-  useEffect(() => {
-    if (conversation?.history) {
-      setMessages(conversation.history);
-    }
-  }, [conversation]);
-
+  const [messages, setMessages] = useState<string[]>(() => {
+    // 从 localStorage 中读取消息
+    const savedMessages = localStorage.getItem(`chatMessages-${id}`);
+    return savedMessages ? JSON.parse(savedMessages) : [];
+  });
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
-
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // @ts-ignore
-  const characterFirstMessage = character?.prompts.first_message;
-
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior, block: 'end' });
+  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
   };
 
   useEffect(() => {
-    if (isOnTelegram()) {
-      setupTelegramInterface(router);
-    }
-  }, []);
-  // Scroll when messages change or typing state changes
-  useEffect(() => {
+    if (characterLoading) return;
+    // Scroll to bottom when messages change
     scrollToBottom();
-    setDisableActions(false);
-  }, [messages, showTypingIndicator]);
+  }, [messages, characterLoading]);
 
-  // Modify this effect to run after messages and character are loaded
-  useEffect(() => {
-    if (messages.length > 0 && character) {
-      scrollToBottom('auto');
-    }
-  }, [messages, character]);
-
-  const handleSendMessage = async () => {
+  const handleSendMessage = () => {
     if (disableActions) return;
     setDisableActions(true);
-    setShowTypingIndicator(true);
-    
     const trimmedMessage = inputMessage.trim();
     if (!trimmedMessage) return;
 
-    setInputMessage(""); // Clear input immediately    
-    // Add the user message to the flat array
-    setMessages([...messages, [{
-      user_id: conversation?.owner_id || '', // Provide empty string as fallback
-      text: trimmedMessage,
-      content_type: "text" as const, // Type assertion to narrow the type
-      status: "sent" as const, // Type assertion to narrow the type
-      created_at: Date.now() / 1000,
-    }]]);
-    
-    try {
-      const response = await api.chat.sendMessage(id, trimmedMessage);
-      // Add the assistant's response to the last array
-      setMessages(prev => {
-        const lastArray = prev[prev.length - 1];
-        return [
-          ...prev.slice(0, -1),
-          [...lastArray, response]
-        ];
-      });
-      setShowTypingIndicator(false);
-      setDisableActions(false);
-      notificationOccurred('success');
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      // Remove the failed message
-      setMessages(prev => prev.slice(0, -1));
-      setShowTypingIndicator(false);
-      setDisableActions(false);
-    }
+    setInputMessage(""); // Clear input immediately
+    const updatedMessages = [...messages, trimmedMessage];
+    setMessages(updatedMessages);
+    localStorage.setItem(`chatMessages-${id}`, JSON.stringify(updatedMessages)); // 存储到 localStorage
   };
 
-  const handleRegenerate = async () => {
-    if (disableActions) return;
-    setDisableActions(true);
-    setShowTypingIndicator(true);
-    
-    setMessages(prev => {
-      const lastArray = prev[prev.length - 1];
-      return [...prev.slice(0, -1), [lastArray[0]]];
-    });
-    try {
-      const response = await api.chat.regenerateLastMessage(id);
-      // Add the assistant's response to the last array
-      setMessages(prev => {
-        const lastArray = prev[prev.length - 1];
-        return [
-          ...prev.slice(0, -1),
-          [lastArray[0], response]
-        ];
-      });
-      setShowTypingIndicator(false);
-      setDisableActions(false);
-      notificationOccurred('success');
-    } catch (error) {
-      console.error('Failed to regenerate message:', error);
-      setShowTypingIndicator(false);
-      setDisableActions(false);
-    }
-  };
-
-  const handleRetry = () => {
-    handleSendMessage();
-  };
-
-  const handleRate = (rating: number) => {
-    console.log(`Rated: ${rating} stars`);
-    // Handle rating logic
-  };
-
-  if (characterLoading || historyLoading || !character) {
+  if (characterLoading) {
     return <LoadingScreen />;
-  }
-
-  if (historyError) {
-    return <div>Error loading chat history</div>;
   }
 
   return (
@@ -157,7 +56,7 @@ export default function ChatPage() {
       {/* Background Image */}
       <div className="fixed inset-0 z-0">
         <Image
-          src={character?.background_image_url || '/bg2.png'}
+          src={character?.background_image_url || "/bg2.png"}
           alt="background"
           fill
           className="object-cover opacity-80"
@@ -166,104 +65,38 @@ export default function ChatPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/90" />
       </div>
 
-      {/* Content Container */}
-      <div className="relative top-0 left-0 z-10 flex flex-col">
-        {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-28">
-          <Header
-            name={character?.name as string}
-            image={character?.avatar_image_url || '/bg2.png'}
-            className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
-          />
-        </div>
+      <Header
+        name={character?.name as string}
+        image={character?.avatar_image_url || "/bg2.png"}
+        className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
+      />
 
-        {/* Messages Container */}
-        <div 
-          ref={scrollRef}
-          className="flex-1 pt-28 pb-10"
-        >
-          <div className="flex flex-col space-y-4 p-4">
-            {/* Description */}
-            <div className="flex justify-center">
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
-                <div className="text-lg font-semibold mb-2 text-center text-pink-300">
-                  Description
-                </div>
-                <div className="text-sm leading-relaxed text-gray-100">
-                  {character?.description}
-                </div>
-              </div>
+      {/* Messages Container */}
+      <div ref={scrollRef} className="flex-1 pt-28 pb-10">
+        <div className="flex flex-col space-y-4 p-4">
+          {/* Messages */}
+          {messages.map((msg, index) => (
+            <div key={index} className="relative">
+              <ChatBubble message={msg} />
             </div>
-
-              <ChatBubble 
-                message={replacePlaceholders(characterFirstMessage as string, character?.name as string, telegramUser?.first_name as string)}
-                role="assistant"
-                created_at={conversation?.created_at || 0}
-                assistantAvatar={character?.avatar_image_url}
-                userAvatar={character?.avatar_image_url || "/default-avatar.png"}
-                characterId={character._id}
-                enableVoice={character?.metadata.enable_voice}
-                isLatestReply={false}
-                onRegenerate={handleRegenerate}
-                onRetry={handleRetry}
-                onRate={handleRate}
-                status={"sent"} 
-              />
-
-            {/* Messages */}
-            {messages.flatMap((pair, index) => [
-              <div key={`${pair[0].created_at}-${index}`}>
-                <ChatBubble 
-                  message={pair[0].text}
-                  role={"user"}
-                  created_at={pair[0].created_at}
-                  status={pair[0].status}
-                  assistantAvatar={character?.avatar_image_url}
-                  userAvatar={telegramUser?.profile_photo || "/bg2.png"}
-                  characterId={character._id}
-                  enableVoice={character?.metadata.enable_voice}
-                  isLatestReply={false}
-                  onRegenerate={handleRegenerate}
-                  onRetry={handleRetry}
-                  onRate={handleRate}
-                />
-              </div>,
-              <div key={`assistant-${index}`}>
-                {!pair[1] || !pair[1].text ? null : <ChatBubble 
-                  message={pair[1].text}
-                  role={"assistant"}
-                  created_at={pair[1].created_at}
-                  status={pair[1].status}
-                  assistantAvatar={character?.avatar_image_url}
-                  userAvatar={character?.avatar_image_url || "/default-avatar.png"}
-                  characterId={character._id}
-                  enableVoice={character?.metadata.enable_voice}
-                  isLatestReply={index === messages.length - 1}
-                  onRegenerate={handleRegenerate}
-                  onRetry={handleRetry}
-                  onRate={handleRate}
-                />}
-              </div>
-            ])}
-
-            {/* Typing Indicator */}
-            {showTypingIndicator && (
-              <TypingIndicator />
-            )}
-
-            <div ref={messagesEndRef} className="h-10" />
-          </div>
+          ))}
+          <div ref={messagesEndRef} className="h-16" />
         </div>
+      </div>
 
-        {/* Input Container */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-gradient-to-t from-black to-transparent">
-          <InputBar
-            message={inputMessage}
-            onChange={setInputMessage}
-            onSend={handleSendMessage}
-            placeholder={`Message ${character?.name}`}
-            disabled={disableActions}
+      {/* Input Container */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-gradient-to-t from-black to-transparent">
+        <div className="px-4 pt-4 pb-8 backdrop-blur-md bg-[#171717] flex justify-between">
+          <textarea
+            rows={1}
+            value={inputMessage}
+            onChange={(e) => setInputMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none resize-none overflow-y-auto scrollbar-none py-0 h-[24px] leading-[24px]"
           />
+          <button onClick={handleSendMessage} className="bg-[#10B981] text-white rounded-full p-2">
+            <IoSend size={20} />
+          </button>
         </div>
       </div>
     </main>

@@ -1,5 +1,5 @@
-import { useEffect, useCallback } from 'react';
-import { HistoryMessage, User } from './validations';
+import { useEffect, useCallback } from "react";
+import { HistoryMessage, User } from "./validations";
 
 interface ChatroomEventHandlers {
   onMessageReceived?: (message: HistoryMessage) => void;
@@ -17,48 +17,48 @@ export const useChatroomEvents = (
   const setupEventSource = useCallback(() => {
     // Create EventSource connection
     const eventSource = new EventSource(
-      `http://localhost:3033/sse/chatroom/${chatroomId}`
+      `${process.env.API_BASE_URL}/sse/chatroom/${chatroomId}`
     );
 
     // Connection opened
     eventSource.onopen = () => {
-      console.log('SSE connection established');
+      console.log("SSE connection established");
     };
 
     // Listen for specific events
-    eventSource.addEventListener('messageReceived', (event) => {
+    eventSource.addEventListener("messageReceived", (event) => {
       const data = JSON.parse(event.data);
       handlers.onMessageReceived?.(data);
     });
 
-    eventSource.addEventListener('responseReceived', (event) => {
+    eventSource.addEventListener("responseReceived", (event) => {
       const data = JSON.parse(event.data);
       handlers.onResponseReceived?.(data);
     });
 
-    eventSource.addEventListener('hijackRegistered', (event) => {
+    eventSource.addEventListener("hijackRegistered", (event) => {
       const data = JSON.parse(event.data);
       handlers.onHijackRegistered?.(data);
     });
 
-    eventSource.addEventListener('hijackSucceeded', (event) => {
+    eventSource.addEventListener("hijackSucceeded", (event) => {
       const data = JSON.parse(event.data);
       handlers.onHijackSucceeded?.(data);
     });
 
-    eventSource.addEventListener('joinChatroom', (event) => {
+    eventSource.addEventListener("joinChatroom", (event) => {
       const data = JSON.parse(event.data);
       handlers.onJoinChatroom?.(data);
     });
 
-    eventSource.addEventListener('leaveChatroom', (event) => {
+    eventSource.addEventListener("leaveChatroom", (event) => {
       const data = JSON.parse(event.data);
       handlers.onLeaveChatroom?.(data);
     });
 
     // Handle errors
     eventSource.onerror = (error) => {
-      console.error('SSE error:', error);
+      console.error("SSE error:", error);
       eventSource.close();
     };
 

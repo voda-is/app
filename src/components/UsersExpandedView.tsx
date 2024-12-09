@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { User } from "@/lib/validations";
-import { getUserProfilesCache } from "@/lib/userProfilesCache";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api-client";
+import { UserProfilesCache } from "@/lib/userProfilesCache";
 
 type Props = {
   isExpanded: boolean;
@@ -11,30 +11,32 @@ type Props = {
   userOnStageId?: string;
 };
 
-export function UsersExpandedView({ 
-  isExpanded, 
+export function UsersExpandedView({
+  isExpanded,
   onClose,
   currentUserIds,
-  userOnStageId 
+  userOnStageId,
 }: Props) {
   const [isLoading, setIsLoading] = useState(false);
-  const cache = getUserProfilesCache();
-  const [userProfiles, setUserProfiles] = useState<Record<string, User>>(cache.getAllUsers());
+  const cache = new UserProfilesCache();
+  const [userProfiles, setUserProfiles] = useState<User[]>(cache.getAllUsers());
+
+  console.log("userProfiles", userProfiles);
 
   useEffect(() => {
     const loadMissingProfiles = async () => {
       if (!currentUserIds.length) return;
 
-      const missingIds = currentUserIds.filter(id => !cache.hasUser(id));
+      const missingIds = currentUserIds.filter((id) => !cache.hasUser(id));
       if (missingIds.length === 0) return;
 
       setIsLoading(true);
       try {
         const users = await api.user.getUsers(missingIds);
-        users.forEach(user => cache.addUser(user));
+        users.forEach((user) => cache.addUser(user));
         setUserProfiles(cache.getAllUsers());
       } catch (error) {
-        console.error('Failed to load user profiles:', error);
+        console.error("Failed to load user profiles:", error);
       } finally {
         setIsLoading(false);
       }
@@ -44,31 +46,33 @@ export function UsersExpandedView({
   }, [currentUserIds, isExpanded]); // Only run when currentUserIds changes or component is expanded
 
   return (
-    <div 
+    <div
       className={`fixed inset-0 z-50 transition-all duration-300 ${
-        isExpanded 
-          ? 'opacity-100 pointer-events-auto' 
-          : 'opacity-0 pointer-events-none'
+        isExpanded
+          ? "opacity-100 pointer-events-auto"
+          : "opacity-0 pointer-events-none"
       }`}
     >
-      <div 
+      <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      <div 
+      <div
         className={`fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-md rounded-t-3xl p-6 transition-transform duration-300 ease-out ${
-          isExpanded ? 'translate-y-0' : 'translate-y-full'
+          isExpanded ? "translate-y-0" : "translate-y-full"
         }`}
       >
         <div className="flex flex-col items-center">
           <div className="w-12 h-1 bg-white/20 rounded-full mb-6" />
-          
+
           <div className="flex justify-between items-center w-full mb-6">
             <h3 className="text-white text-lg font-medium">
-              {isLoading ? 'Loading Users...' : `Online Users (${currentUserIds.length})`}
+              {isLoading
+                ? "Loading Users..."
+                : `Online Users (${currentUserIds.length})`}
             </h3>
-            <button 
+            <button
               onClick={onClose}
               className="text-white/60 hover:text-white transition-colors"
             >
@@ -78,10 +82,10 @@ export function UsersExpandedView({
 
           <div className="grid grid-cols-4 gap-4 w-full max-h-[60vh] overflow-y-auto p-4">
             {currentUserIds.map((userId) => {
-              const user = userProfiles[userId];
+              const user = cache.getUser(userId);
               if (!user) {
                 return (
-                  <div 
+                  <div
                     key={userId}
                     className="flex flex-col items-center space-y-2 animate-pulse"
                   >
@@ -90,15 +94,15 @@ export function UsersExpandedView({
                   </div>
                 );
               }
-              
+
               return (
-                <div 
+                <div
                   key={userId}
                   className="flex flex-col items-center space-y-2"
                 >
                   <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white/10">
                     <Image
-                      src={user.profile_photo || '/default-avatar.png'}
+                      src={user.profile_photo || "/default-avatar.png"}
                       alt={user.first_name}
                       fill
                       className="object-cover"
@@ -122,4 +126,4 @@ export function UsersExpandedView({
       </div>
     </div>
   );
-} 
+}

@@ -1,61 +1,57 @@
-import { QueryClient } from '@tanstack/react-query';
-import { User } from './validations';
+import { User } from "./validations";
 
 export type UserProfiles = Record<string, User>;
 
 export class UserProfilesCache {
-  private queryClient: QueryClient;
-  private profiles: Record<string, User> = {};
+  private getUsersFromLocalStorage = (): User[] => {
+    try {
+      const users = JSON.parse(localStorage.getItem("userProfiles") || "[]");
+      console.log(".....getUsersFromLocalStorage", users);
+      return users;
+    } catch {
+      return []; // 返回空数组以防止解析错误
+    }
+  };
 
-  constructor(queryClient: QueryClient) {
-    this.queryClient = queryClient;
-  }
-
-  // Check if a user exists in cache
   hasUser(userId: string): boolean {
-    return !!this.profiles[userId];
+    const users = this.getUsersFromLocalStorage();
+    const hasUser = users.find((user) => user._id === userId);
+    console.log(".....hasUser", !!hasUser);
+    return !!hasUser;
   }
 
-  // Add or update a single user in cache
   addUser(user: User) {
-    this.profiles[user._id] = user;
-    // Also update React Query cache
-    this.queryClient.setQueryData(['userProfile', user._id], user);
+    const usersLocal = this.getUsersFromLocalStorage();
+    usersLocal.push(user);
+    console.log(".....addUser", usersLocal);
+    localStorage.setItem("userProfiles", JSON.stringify(usersLocal));
   }
 
-  // Add multiple users to cache
   addUsers(users: User[]) {
-    users.forEach(user => this.addUser(user));
+    const usersLocal = this.getUsersFromLocalStorage();
+    usersLocal.push(...users);
+    console.log(".....addUsers", usersLocal);
+    localStorage.setItem("userProfiles", JSON.stringify(usersLocal));
   }
 
-  // Get a user from cache
   getUser(userId: string): User | undefined {
-    return this.profiles[userId];
+    const users = this.getUsersFromLocalStorage();
+    const user = users.find((user) => user._id === userId);
+    console.log(".....getUser", user);
+    return user;
+  }
+  /**
+   * 获取所有用户
+   * @returns
+   *
+   */
+  getAllUsers(): User[] {
+    const users = this.getUsersFromLocalStorage();
+    console.log(".....getAllUsers", users);
+    return users;
   }
 
-  // Get all users from cache
-  getAllUsers(): UserProfiles {
-    return this.profiles;
-  }
-
-  // Clear cache
   clear() {
-    this.profiles = {};
-    this.queryClient.removeQueries({ queryKey: ['userProfile'] });
+    localStorage.removeItem("userProfiles");
   }
 }
-
-// Create a singleton instance
-let cacheInstance: UserProfilesCache | null = null;
-
-export function initUserProfilesCache(queryClient: QueryClient) {
-  cacheInstance = new UserProfilesCache(queryClient);
-  return cacheInstance;
-}
-
-export function getUserProfilesCache() {
-  if (!cacheInstance) {
-    throw new Error('UserProfilesCache not initialized');
-  }
-  return cacheInstance;
-} 

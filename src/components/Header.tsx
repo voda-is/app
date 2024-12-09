@@ -13,7 +13,7 @@ export function Header({ name, image, className }: HeaderProps) {
     <motion.header
       className={`${className}`}
     >          
-      <div className="flex items-center justify-center px-4 py-3">
+      <div className="flex items-center justify-center px-4 py-4">
         {/* <button 
           onClick={() => router.back()} 
           className="text-white flex items-center justify-center w-10 h-10"

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-// import { TelegramDebug } from "@/components/TelegramDebug";
 import Script from "next/script";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -20,8 +19,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <meta 
-          name="viewport" 
+        <meta
+          name="viewport"
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
         />
       </head>
@@ -31,9 +30,7 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
         <Providers>
-          <main>
-            {children}
-          </main>
+          <main>{children}</main>
           {/* <TelegramDebug /> */}
         </Providers>
       </body>

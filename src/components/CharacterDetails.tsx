@@ -2,18 +2,24 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { IoChatbubble, IoTime, IoPricetag } from "react-icons/io5";
+import { IoChatbubble, IoTime, IoPricetag, IoChatbubbleSharp } from "react-icons/io5";
 import { formatDistance } from 'date-fns';
-import { Character } from "@/lib/validations";
+import { Character, Chatroom, ConversationHistory } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 
 interface CharacterDetailsProps {
   character: Character;
+  chatHistoryIds: string[];
+  chatroom: Chatroom;
 }
 
-export function CharacterDetails({ character }: CharacterDetailsProps) {
+export function CharacterDetails({ character, chatHistoryIds, chatroom }: CharacterDetailsProps) {
   const router = useRouter();
 
+  console.log('chatroom', chatroom);
+  console.log('character', character);
+  console.log('chatHistoryIds', chatHistoryIds);
+  
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -110,12 +116,21 @@ export function CharacterDetails({ character }: CharacterDetailsProps) {
         {/* Fixed Chat Button */}
         <div className="sticky bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent pt-8">
           <button
-            onClick={() => router.push(`/chat/${character._id}`)}
-            className="w-full bg-[#FDB777] text-black font-semibold py-4 rounded-2xl flex items-center justify-center gap-2"
+            onClick={() => router.push(`/chat/${chatHistoryIds?.[0]}`)}
+            className="w-full bg-[#FDB777] text-black font-semibold py-4 m-2 rounded-2xl flex items-center justify-center gap-2"
           >
             <IoChatbubble className="w-5 h-5" />
             Start Chatting
           </button>
+          {
+            chatroom && <button
+            onClick={() => router.push(`/chatroom/${chatroom._id}`)}
+            className="w-full bg-emerald-300 text-black font-semibold py-4 m-2 rounded-2xl flex items-center justify-center gap-2"
+          >
+            <IoChatbubbleSharp className="w-5 h-5" />
+            Join Chatroom ⚡️
+          </button>
+          }
         </div>
       </div>
     </motion.div>

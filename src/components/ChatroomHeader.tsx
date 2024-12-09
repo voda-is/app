@@ -1,10 +1,5 @@
+import { User } from "@/lib/validations";
 import Image from "next/image";
-
-interface User {
-  id: string;
-  avatar_url: string;
-  name: string;
-}
 
 interface ChatroomHeaderProps {
   name: string;
@@ -49,12 +44,12 @@ export function ChatroomHeader({
           <div className="flex -space-x-2">
             {recentUsers.map((user) => (
               <div 
-                key={user.id} 
+                key={user._id} 
                 className="relative w-6 h-6 rounded-full border-2 border-black/50 backdrop-blur-sm"
               >
                 <Image
-                  src={user.avatar_url}
-                  alt={user.name}
+                  src={user.profile_photo || "/bg2.png"}
+                  alt={user.first_name}
                   fill
                   className="object-cover rounded-full"
                 />

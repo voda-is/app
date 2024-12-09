@@ -42,13 +42,13 @@ export function ProgressBarButton({
     <button
       onClick={onClick}
       className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg 
-        bg-white/10 hover:bg-white/20 active:scale-95
+        bg-white/20 active:scale-95
         text-white/80 hover:text-white 
         transition-all duration-200 overflow-hidden
         ${className}`}
     >
       <motion.div
-        className="absolute left-0 top-0 bottom-0 bg-white/10"
+        className="absolute left-0 top-0 bottom-0 bg-white/30"
         initial={{ width: 0 }}
         animate={controls}
         onAnimationComplete={() => onComplete?.()}

@@ -11,7 +11,12 @@ import {
   useCharacter,
   useChatroom,
   useChatroomMessages,
+  useHijackCost,
+  useJoinChatroom,
+  useLeaveChatroom,
+  useSendMessageToChatroom,
   useTelegramUser,
+  useUserProfiles,
 } from "@/hooks/api";
 import { HistoryMessage, User } from "@/lib/validations";
 import {
@@ -27,149 +32,67 @@ import { replacePlaceholders } from "@/lib/formatText";
 import { useChatroomEvents } from "@/lib/sse";
 import { UsersExpandedView } from "@/components/UsersExpandedView";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
+import { ProgressBarButton } from "@/components/ProgressBarButton";
+import { ChatContextWithUnknownUser, Message } from "@/lib/chat-context";
+import { useQueryClient } from "@tanstack/react-query";
+
+const HIJACK_DURATION = 60; // 60 seconds wait time
 
 export default function ChatroomPage() {
   const params = useParams();
   const chatroomId = params?.id as string;
-
-  console.log("chatroomId", chatroomId);
   const router = useRouter();
-  const cache = new UserProfilesCache();
-  const [messages, setMessages] = useState<HistoryMessage[][]>([]);
-  const [showTypingIndicator, setShowTypingIndicator] = useState(false);
-  const [isCurrentSpeaker, setIsCurrentSpeaker] = useState(false);
-  const [hijackCost, setHijackCost] = useState(0);
-  const [isUsersExpanded, setIsUsersExpanded] = useState(false);
 
-  const { data: chatroom, isLoading: chatroomLoading } =
-    useChatroom(chatroomId);
-  const { data: character, isLoading: characterLoading } = useCharacter(
-    chatroom?.character_id
-  );
-  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } =
-    useChatroomMessages(chatroomId);
-  const { data: telegramUser } = useTelegramUser();
+  // Luanch Sequence:
+  // 1. get chatroom info
+  // 2. get character info
+  // 3. get chatroom messages
+  // 4. get chatroom hijack cost
+  // 5. collect all user profiles need to be fetched 
+  // 6. fetch user profiles from server or cache
+  // 7. register SSE, and refetch when needed
 
-  const [currentUserIds, setCurrentUserIds] = useState<string[]>(
-    chatroom?.current_audience || []
-  );
-
-  // Helper function to ensure user profiles are loaded
-  const ensureUserProfiles = async (userIds: string[]) => {
-    const missingIds = userIds.filter((id) => !cache.hasUser(id));
-
-    if (missingIds.length > 0) {
-      const users = await api.user.getUsers(missingIds);
-      cache.addUsers(users);
-    }
-  };
-
-  // Helper function to collect unique user IDs from messages
-  const extractUserIdsFromMessages = (history: HistoryMessage[][]) => {
-    return Array.from(
-      new Set(
-        history.flatMap((pair) =>
-          pair.filter((msg) => msg.user_id).map((msg) => msg.user_id)
-        )
-      )
-    );
-  };
-
-  // Initial data loading
-  useEffect(() => {
-    if (!chatroom || !chatroomMessages) return;
-
-    const userIds = new Set<string>();
-
-    // Add current audience
-    chatroom.current_audience?.forEach((id) => userIds.add(id));
-
-    // Add user on stage
-    if (chatroom.user_on_stage) {
-      userIds.add(chatroom.user_on_stage);
-    }
-
-    if (chatroom.current_audience) {
-      setCurrentUserIds(chatroom.current_audience);
-    }
-
-    // Add message authors
-    if (chatroomMessages.history) {
-      extractUserIdsFromMessages(chatroomMessages.history).forEach((id) =>
-        userIds.add(id)
-      );
-      setMessages(chatroomMessages.history);
-    }
-
-    // Load all unique user profiles
-    const uniqueUserIds = Array.from(userIds);
-    if (uniqueUserIds.length > 0) {
-      ensureUserProfiles(uniqueUserIds);
-    }
-  }, [chatroom, chatroomMessages]);
-
-  // Update SSE event handlers with console logs
-  useChatroomEvents(chatroomId, {
-    onMessageReceived: async (message) => {
-      if (message.user_id) {
-        await ensureUserProfiles([message.user_id]);
-      }
-      setMessages((prev) => {
-        const lastPair = prev[prev.length - 1];
-        if (lastPair && !lastPair[1]) {
-          return [...prev.slice(0, -1), [lastPair[0], message]];
-        }
-        return [...prev, [message]];
-      });
-    },
-    onResponseReceived: (response) => {
-      setShowTypingIndicator(false);
-      setMessages((prev) => {
-        const lastPair = prev[prev.length - 1];
-        if (lastPair && !lastPair[1]) {
-          return [...prev.slice(0, -1), [lastPair[0], response]];
-        }
-        return [...prev, [response]];
-      });
-    },
-    onHijackRegistered: (hijack) => {
-      ensureUserProfiles([hijack.user._id]);
-      setDisableActions(true);
-    },
-    onHijackSucceeded: (hijack) => {
-      ensureUserProfiles([hijack.user._id]);
-      setDisableActions(false);
-      setIsCurrentSpeaker(hijack.user._id === telegramUser?._id);
-    },
-    onJoinChatroom: async (join) => {
-      if (join?.user?._id) {
-        await ensureUserProfiles([join?.user?._id]);
-        setCurrentUserIds((prev) => {
-          if (prev.includes(join?.user?._id)) return prev;
-          return [...prev, join?.user?._id];
-        });
-      }
-    },
-    onLeaveChatroom: (leave) => {
-      setCurrentUserIds((prev) => prev.filter((id) => id !== leave.user_id));
-    },
-  });
-
-  // Add debug logging for user profile updates
-  // useEffect(() => {
-  //   const cache = getUserProfilesCache();
-  //   console.log("Current cache state:", cache.getAllUsers());
-  // }, [messages, currentUserIds]);
-
-  const [inputMessage, setInputMessage] = useState("");
-  const [disableActions, setDisableActions] = useState(false);
+  // After Launch Sequence:
+  // 1. scroll to bottom
+  // 2. call API to join chatroom
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-    messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-  };
+  const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
+  const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
+  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
+  const { data: hijackCost, isLoading: hijackCostLoading } = useHijackCost(chatroomId);
+  const { data: userProfiles, isLoading: userProfilesLoading } = useUserProfiles(chatroom!, chatroomMessages!);
+  const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
+
+  const { mutate: joinChatroom, isPending: joinChatroomPending } = useJoinChatroom(chatroomId);
+  const { mutate: leaveChatroom, isPending: leaveChatroomPending } = useLeaveChatroom(chatroomId);
+  const { mutate: sendMessage, isPending: sendMessagePending } = useSendMessageToChatroom(chatroomId, (error) => {
+    console.error("Failed to send message:", error);
+    setMessages(chatContext.markLastMessageAsError(messages));
+  });
+  
+  const cache = new UserProfilesCache();
+  const chatContext = new ChatContextWithUnknownUser(character!);
+  const queryClient = useQueryClient();
+
+  const [isReady, setIsReady] = useState(false); // all data to be fetched from remote is ready
+
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentUsers, setCurrentUsers] = useState<User[]>([]);
+  const [showTypingIndicator, setShowTypingIndicator] = useState(false);
+  const [isCurrentSpeaker, setIsCurrentSpeaker] = useState(false);
+  const [isUsersExpanded, setIsUsersExpanded] = useState(false);
+  const [hijackProgress, setHijackProgress] = useState(0);
+  const [inputMessage, setInputMessage] = useState("");
+  const [disableActions, setDisableActions] = useState(false);
+
+  // Basic Setups
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" });
+    setDisableActions(false);
+  }, [messages, showTypingIndicator]);
 
   useEffect(() => {
     if (isOnTelegram()) {
@@ -178,96 +101,116 @@ export default function ChatroomPage() {
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
-    setDisableActions(false);
-  }, [messages, showTypingIndicator]);
-
-  useEffect(() => {
-    const fetchHijackCost = async () => {
-      try {
-        const cost = await api.chatroom.getHijackCost(chatroomId);
-        setHijackCost(cost["cost"]);
-      } catch (error) {
-        console.error("Failed to fetch hijack cost:", error);
-      }
-    };
-    fetchHijackCost();
-  }, [chatroomId]);
-
-  useEffect(() => {
-    if (!chatroomId || !telegramUser?._id) {
-      console.log("Missing chatroomId or user, skipping join room");
-      return;
+    if (sendMessagePending) {
+      setShowTypingIndicator(true);
+      setDisableActions(true);
+    } else {
+      setShowTypingIndicator(false);
+      setDisableActions(false);
     }
+  }, [sendMessagePending]);
 
-    const joinRoom = async () => {
-      try {
-        console.log("Joining room:", chatroomId);
-        await api.chatroom.joinChatroom(chatroomId);
-        console.log("Successfully joined room");
-      } catch (error) {
-        console.error("Failed to join room:", error);
+  // Data Ready
+  useEffect(() => {
+    if (!chatroomLoading && !chatroomMessagesLoading && !userProfilesLoading && 
+      !userProfilesLoading && !telegramUserLoading && !hijackCostLoading) {
+      setIsReady(true);
+    }
+  }, [chatroomLoading, chatroomMessagesLoading, userProfilesLoading, 
+    telegramUserLoading, hijackCostLoading])
+  
+
+  // Populate items
+  useEffect(() => {
+    if (!isReady || !chatroom || !chatroomMessages || !userProfiles) return;
+    setMessages(chatContext.injectHistoryMessages(chatroomMessages.history, chatroom.created_at));
+
+    let currentUsers: User[] = [];
+    chatroom.current_audience?.forEach((id) => {
+      currentUsers.push(cache.getUser(id) as User); // always exists
+    });
+    setCurrentUsers(currentUsers);
+
+  }, [isReady, chatroom, chatroomMessages, userProfiles]);
+
+  // Update SSE event handlers with console logs
+  useChatroomEvents(chatroomId, 
+    isReady,
+  {
+    onMessageReceived: async (message) => {
+      if (message.user_id) {
+        await cache.ensureUserProfiles([message.user_id]);
       }
-    };
+      setShowTypingIndicator(true);
+      setMessages(chatContext.newUserMessage(messages, message.text, message.user_id));
+    },
+    onResponseReceived: () => {
+      setShowTypingIndicator(false);
+      queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
+    },
+    onHijackRegistered: () => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          ['chatroom', 'hijackCost'].includes(query.queryKey[0] as string) && 
+          query.queryKey[1] === chatroomId
+      });
+    },
+    onHijackSucceeded: () => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          ['chatroom', 'hijackCost'].includes(query.queryKey[0] as string) && 
+          query.queryKey[1] === chatroomId
+      });
+    },
+    onJoinChatroom: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+    },
+    onLeaveChatroom: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+    },
+  });
 
-    // Join the room
-    joinRoom();
+  useEffect(() => {
+    if (!chatroomId || !telegramUser?._id) { return; }
+    joinChatroom();
 
     // Leave the room when the component unmounts
-    return () => {
-      const leaveRoom = async () => {
-        try {
-          console.log("Leaving room:", chatroomId);
-          await api.chatroom.leaveChatroom(chatroomId);
-          console.log("Successfully left room");
-        } catch (error) {
-          console.error("Failed to leave room:", error);
-        }
-      };
-
-      // Only attempt to leave if we have both chatroomId and user
-      if (chatroomId && telegramUser?._id) {
-        leaveRoom();
-      }
-    };
-  }, [chatroomId, telegramUser?._id]); // Dependencies ensure this runs when needed
-
-  const handleSendMessage = async () => {
-    if (disableActions) return;
-    setDisableActions(true);
-    setShowTypingIndicator(true);
-
-    const trimmedMessage = inputMessage.trim();
-    if (!trimmedMessage) return;
-
-    setInputMessage(""); // Clear input immediately
-
-    try {
-      await api.chatroom.chat(chatroomId, trimmedMessage);
-      setShowTypingIndicator(false);
-      setDisableActions(false);
-      notificationOccurred("success");
-    } catch (error) {
-      console.error("Failed to send message:", error);
-      setShowTypingIndicator(false);
-      setDisableActions(false);
-    }
-  };
+    return leaveChatroom;
+  }, [chatroomId, telegramUser?._id]);
 
   const handleHijack = async () => {
     if (disableActions) return;
     setDisableActions(true);
 
-    try {
-      await api.chatroom.registerHijack(chatroomId);
-      await api.chatroom.hijackChatroom(chatroomId);
-      setIsCurrentSpeaker(true);
-      notificationOccurred("success");
-    } catch (error) {
-      console.error("Failed to hijack conversation:", error);
-    } finally {
-      setDisableActions(false);
-    }
+    await api.chatroom.registerHijack(chatroomId, hijackCost as number);
+    setDisableActions(false);
+  };
+
+  const handleSendMessage = async () => {    
+    const trimmedMessage = inputMessage.trim();
+    if (!trimmedMessage) return;
+
+    setInputMessage(""); // Clear input immediately
+    // NOTE: this will be fetched from server
+    // setMessages(chatContext.newUserMessage(messages, trimmedMessage, telegramUser?._id as string));
+    sendMessage(trimmedMessage);
+  };
+
+  const handleRegenerate = async () => {
+    // setInputMessage(""); // Clear input immediately    
+    // setMessages(chatContext.popLastMessage(messages));
+    // regenerateLastMessage();
+  };
+
+  const handleRetry = () => {
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) return;
+    sendMessage(lastMessage.message);
+  };
+
+  const handleRate = (rating: number) => {
+    console.log(`Rated: ${rating} stars`);
+    // Handle rating logic
   };
 
   const handleReaction = async (type: string) => {
@@ -275,61 +218,26 @@ export default function ChatroomPage() {
     console.log(`Reaction: ${type}`);
   };
 
-  // Update the recentUsers transformation to use local userProfiles state
-  const recentUsers = currentUserIds
-    .slice(0, 3)
-    .map((id) => {
-      return cache.getUser(id);
-    })
-    .filter(Boolean)
-    .map((user: any) => ({
-      id: user._id,
-      name: user.first_name,
-      avatar_url: user.profile_photo || "/bg2.png",
-    }));
+  // Add this effect to handle hijack progress
+  useEffect(() => {
+    if (!chatroom?.user_hijacking || !chatroom?.hijacking_time) return;
 
-  console.log("messages👏👏", messages);
-  // Message rendering with proper user avatars
-  const renderMessages = messages.flatMap((pair: any, index) => [
-    // User message
-    <div key={`${pair[0].created_at}-${index}`}>
-      <ChatBubble
-        message={pair[0].text}
-        role="user"
-        created_at={pair[0].created_at}
-        status={pair[0].status}
-        assistantAvatar={character?.avatar_image_url}
-        userAvatar={pair[0].user?.profile_photo || "/bg2.png"} // Use message user's avatar
-        characterId={character?._id}
-        enableVoice={character?.metadata.enable_voice}
-        isLatestReply={false}
-        onRegenerate={() => {}}
-        onRetry={() => {}}
-        onRate={() => {}}
-      />
-    </div>,
-    // Assistant message
-    <div key={`assistant-${index}`}>
-      {!pair[1] || !pair[1].text ? null : (
-        <ChatBubble
-          message={pair[1].text}
-          role="assistant"
-          created_at={pair[1].created_at}
-          status={pair[1].status}
-          assistantAvatar={character?.avatar_image_url}
-          userAvatar={character?.avatar_image_url} // Assistant always uses character avatar
-          characterId={character?._id}
-          enableVoice={character?.metadata.enable_voice}
-          isLatestReply={index === messages.length - 1}
-          onRegenerate={() => {}}
-          onRetry={() => {}}
-          onRate={() => {}}
-        />
-      )}
-    </div>,
-  ]);
+    const now = Math.floor(Date.now() / 1000);
+    const elapsedTime = now - chatroom.hijacking_time;
+    const remainingTime = Math.max(0, HIJACK_DURATION - elapsedTime);
+    
+    setHijackProgress(elapsedTime);
 
-  if (characterLoading || !character) {
+    if (remainingTime <= 0) return;
+
+    const interval = setInterval(() => {
+      setHijackProgress(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [chatroom?.user_hijacking, chatroom?.hijacking_time]);
+
+  if (!isReady) {
     return <LoadingScreen />;
   }
 
@@ -352,16 +260,16 @@ export default function ChatroomPage() {
           <ChatroomHeader
             name={character?.name as string}
             image={character?.avatar_image_url || "/bg2.png"}
-            userCount={currentUserIds.length}
-            recentUsers={recentUsers}
-            latestJoinedUser={recentUsers[0]?.name}
+            userCount={currentUsers.length}
+            recentUsers={currentUsers}
+            latestJoinedUser={currentUsers[0]?.first_name}
             onUsersClick={() => setIsUsersExpanded(true)}
             className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>
 
         {/* Messages Container */}
-        <div ref={scrollRef} className="flex-1 pt-42 pb-10">
+        <div ref={scrollRef} className="flex-1 pt-42 pb-28">
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">
@@ -375,37 +283,57 @@ export default function ChatroomPage() {
               </div>
             </div>
 
-            <ChatBubble
-              message={replacePlaceholders(
-                character?.prompts.first_message as string,
-                character?.name as string,
-                telegramUser?.first_name as string
-              )}
-              role="assistant"
-              created_at={chatroom?.created_at || 0}
-              assistantAvatar={character?.avatar_image_url}
-              userAvatar={character?.avatar_image_url || "/bg2.png"}
-              characterId={character._id}
-              enableVoice={character?.metadata.enable_voice}
-              isLatestReply={false}
-              onRegenerate={() => {}}
-              onRetry={() => {}}
-              onRate={() => {}}
-              status={"sent"}
-            />
-
-            {/* Messages */}
-            {renderMessages}
+            {messages.map((message) => (  
+              <ChatBubble
+                key={message.createdAt}
+                message={message}
+                onRegenerate={handleRegenerate}
+                onRetry={handleRetry}
+                onRate={handleRate}
+              />
+            ))}
 
             {/* Typing Indicator */}
             {showTypingIndicator && <TypingIndicator />}
 
             <div ref={messagesEndRef} className="h-10" />
           </div>
-        </div>
+        </div>        
 
-        {/* Input Container - Conditionally render InputBar or ChatroomFooter */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto">
+        {chatroom?.user_hijacking && (
+          <div className="fixed bottom-20 left-0 right-0 pb-5 pt-5 z-20 px-6 backdrop-blur-md bg-black/50">
+            <ProgressBarButton
+              isActive={true}
+              duration={HIJACK_DURATION}
+              progress={hijackProgress}
+              onClick={async () => {
+                try {
+                  await api.chatroom.hijackChatroom(chatroomId);
+                  setIsCurrentSpeaker(true);
+                  notificationOccurred("success");
+                } catch (error) {
+                  console.error("Failed to hijack conversation:", error);
+                }
+              }}
+              onComplete={() => setHijackProgress(0)}
+              className="w-full justify-center text-white font-medium text-base "
+            >
+              <div className="flex items-center gap-2">
+                <img 
+                  src={cache.getUser(chatroom.user_hijacking)?.profile_photo || "/bg2.png"} 
+                  alt="User avatar" 
+                  className="w-6 h-6 rounded-full"
+                />
+                <span>
+                  {cache.getUser(chatroom.user_hijacking)?.first_name || 'User'}  is hijacking the conversation...
+                </span>
+              </div>
+            </ProgressBarButton>
+          </div>
+        )}
+
+        {/* Input Container */}
+        <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto pt-2">
           {telegramUser?._id === chatroom?.user_on_stage ? (
             <InputBar
               message={inputMessage}
@@ -417,7 +345,7 @@ export default function ChatroomPage() {
           ) : (
             <ChatroomFooter
               isCurrentSpeaker={isCurrentSpeaker}
-              hijackCost={hijackCost}
+              hijackCost={hijackCost as number}
               onHijack={handleHijack}
               onReaction={handleReaction}
               disabled={disableActions}
@@ -428,7 +356,7 @@ export default function ChatroomPage() {
         <UsersExpandedView
           isExpanded={isUsersExpanded}
           onClose={() => setIsUsersExpanded(false)}
-          currentUserIds={currentUserIds}
+          currentUser={currentUsers}
           userOnStageId={chatroom?.user_on_stage}
         />
       </div>

@@ -12,41 +12,28 @@ import { hashText } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { ProgressBarButton } from "./ProgressBarButton";
 import Image from "next/image";
+import { Message } from "@/lib/chat-context";
 
 interface ChatBubbleProps {
-  message: string;
-  role: "user" | "assistant";
-  created_at: number;
-  status: "sent" | "error";
-  userAvatar?: string;
-  assistantAvatar?: string;
-  isLatestReply?: boolean;
+  message: Message;
+
   onRetry?: (text: string) => void;
   onRegenerate?: () => void;
   onRate?: (rating: number) => void;
-  enableVoice?: boolean;
-  characterId: string | undefined;
 }
 
 export function ChatBubble({
   message,
-  role,
-  created_at,
-  userAvatar = "/bg2.png",
-  assistantAvatar,
-  isLatestReply,
+
   onRetry,
   onRegenerate,
   onRate,
-  status = "sent",
-  enableVoice = false,
-  characterId,
 }: ChatBubbleProps) {
   if (!message) return null;
 
-  const isUser = role === "user";
-  const isAssistant = role === "assistant";
-  const timestamp = new Date(created_at).toLocaleTimeString([], {
+  const isUser = message.role === "user";
+  const isAssistant = message.role === "assistant";
+  const timestamp = new Date(message.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -67,14 +54,12 @@ export function ChatBubble({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [hash, setHash] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   // Extract text once and memoize it
-  const ttsText = useMemo(() => extractText(message).join(" "), [message]);
+  const ttsText = useMemo(() => extractText(message.message).join(" "), [message]);
 
   // Calculate hash when text changes
   useEffect(() => {
@@ -128,7 +113,7 @@ export function ChatBubble({
 
   const handleTTSClick = async () => {
     generateTTS(
-      { text: ttsText, characterId: characterId || "" },
+      { text: ttsText, characterId: message.character._id || "" },
       {
         onSuccess: (entry) => {
           // Check if the entry.audioBlob is valid
@@ -151,8 +136,6 @@ export function ChatBubble({
     );
   };
 
-  const controls = useAnimationControls();
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -169,7 +152,7 @@ export function ChatBubble({
             <div className="relative w-6 h-6 flex-shrink-0">
               <Image
                 src={
-                  isUser ? userAvatar : assistantAvatar || "/default-avatar.png"
+                  (isUser ? message.user.profile_photo : message.character.avatar_image_url) || "/bg2.png"
                 }
                 alt={isUser ? "User" : "Assistant"}
                 fill
@@ -181,7 +164,7 @@ export function ChatBubble({
 
           {/* Message content */}
           <div className="mb-2">
-            {!isUser && enableVoice && !audioBlob && (
+            {!isUser && message.enableVoice && !audioBlob && (
               <button
                 onClick={handleTTSClick}
                 disabled={isTTSLoading}
@@ -267,13 +250,13 @@ export function ChatBubble({
             {/* Message Text */}
             <div className={"pt-2"}>
               {message && (
-                <FormattedText text={message} skipFormatting={isUser} />
+                <FormattedText text={message.message} skipFormatting={isUser} />
               )}
             </div>
           </div>
 
           {/* Controls for assistant messages */}
-          {isLatestReply && !isUser && (
+          {message.isLatestReply && !isUser && (
             <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-white/10">
               {/* Regenerate button */}
               {onRegenerate && (
@@ -318,11 +301,11 @@ export function ChatBubble({
       </div>
 
       {/* Retry indicator */}
-      {isUser && onRetry && status === "error" && (
+      {isUser && onRetry && message.status === "error" && (
         <motion.div
           whileTap={{ scale: 0.95 }}
           className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
-          onClick={() => onRetry(message)}
+          onClick={() => onRetry(message.message)}
         >
           <IoWarning className="w-5 h-5 text-white" />
         </motion.div>

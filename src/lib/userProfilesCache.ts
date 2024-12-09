@@ -1,3 +1,4 @@
+import { api } from "./api-client";
 import { User } from "./validations";
 
 export type UserProfiles = Record<string, User>;
@@ -8,9 +9,18 @@ export class UserProfilesCache {
       const users = JSON.parse(localStorage.getItem("userProfiles") || "[]");
       return users;
     } catch {
-      return []; // 返回空数组以防止解析错误
+      return [];
     }
   };
+
+  async ensureUserProfiles(userIds: string[]) {
+    const missingIds = userIds.filter((id) => !this.hasUser(id));
+    if (missingIds.length > 0) {
+      const users = await api.user.getUsers(missingIds);
+      this.addUsers(users);
+    }
+    return this.getAllUsers();
+  }
 
   hasUser(userId: string): boolean {
     const users = this.getUsersFromLocalStorage();
@@ -35,11 +45,7 @@ export class UserProfilesCache {
     const user = users.find((user) => user._id === userId);
     return user;
   }
-  /**
-   * 获取所有用户
-   * @returns
-   *
-   */
+
   getAllUsers(): User[] {
     const users = this.getUsersFromLocalStorage();
     return users;

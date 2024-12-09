@@ -231,7 +231,7 @@ export const api = {
       return response.data.data;
     },
 
-    sendMessage: async (conversationId: string, text: string): Promise<HistoryMessage> => {
+    sendMessage: async (conversationId: string, text: string): Promise<null> => {
       console.log('sending message', text);
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
@@ -243,10 +243,10 @@ export const api = {
           stripUserId: true,
         }
       });
-      return response.data.data;
+      return null;
     },
 
-    regenerateLastMessage: async (conversationId: string): Promise<HistoryMessage> => {
+    regenerateLastMessage: async (conversationId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
         path: `/regenerate_last_message/${conversationId}`,
@@ -256,7 +256,7 @@ export const api = {
           stripUserId: true,
         }
       });
-      return response.data.data;
+      return null;
     },
   },
 
@@ -373,7 +373,7 @@ export const api = {
       });
       return response.data.data;
     },
-    registerHijack: async (characterId: string): Promise<null> => {
+    registerHijack: async (characterId: string, hijackCost: number): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post('', {
         path: `/chatroom/register_hijack/${characterId}`,
@@ -381,6 +381,7 @@ export const api = {
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
+          amount: hijackCost,
         }
       });
       return response.data.data;

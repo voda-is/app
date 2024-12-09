@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import type { Character, ConversationHistory, User, TTSEntry, ChatroomMessages, Chatroom } from '@/lib/validations';
+import type { Character, ConversationHistory, User, TTSEntry, ChatroomMessages, Chatroom, HistoryMessage } from '@/lib/validations';
 import { hashText } from '@/lib/utils';
 import { TTSContext } from './context';
+import { UserProfilesCache } from '@/lib/userProfilesCache';
+import { Message } from '@/lib/chat-context';
 
 // User related hooks
 export function useTelegramUser() {
@@ -94,6 +96,31 @@ export function useConversation(conversationId: string) {
   });
 }
 
+export function useSendMessage(conversationId: string, isError: (error: Error) => void) {
+  const queryClient = useQueryClient();
+
+  return useMutation<null, Error, string>({
+    mutationFn: (text: string) => api.chat.sendMessage(conversationId, text),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+    },
+    onError: isError,
+  });
+}
+
+export function useRegenerateLastMessage(conversationId: string, isError: (error: Error) => void) {
+  const queryClient = useQueryClient();
+
+  return useMutation<null, Error, void>({
+    mutationFn: () => api.chat.regenerateLastMessage(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+    },
+    onError: isError,
+  });
+}
+
+// TTS related hooks
 export function useTTS() {
   const queryClient = useQueryClient();
 
@@ -147,6 +174,7 @@ export function useTTS() {
   });
 }
 
+// Chatroom related hooks
 export function useChatroomWithCharacter(characterId: string) {
   return useQuery<Chatroom>({
     queryKey: ['chatroomCharacter', characterId],
@@ -186,7 +214,6 @@ export function useChatroom(chatroomId: string) {
   });
 }
 
-
 export function useChatroomMessages(chatroomId: string) {
   return useQuery<ChatroomMessages>({
     queryKey: ['chatroomMessages', chatroomId],
@@ -201,3 +228,109 @@ export function useChatroomMessages(chatroomId: string) {
     refetchOnReconnect: false,
   });
 }
+
+export function useHijackCost(chatroomId: string) {
+  return useQuery<number>({
+    queryKey: ['hijackCost', chatroomId],
+    queryFn: () => api.chatroom.getHijackCost(chatroomId),
+    enabled: !!chatroomId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function useUserProfiles(chatroom: Chatroom, chatroomMessages: ChatroomMessages) {
+  return useQuery<User[]>({
+    queryKey: ['userProfiles'],
+    queryFn: () => {
+      const cache = new UserProfilesCache();
+      const userIds = new Set<string>();
+      chatroom.current_audience.forEach((id) => userIds.add(id));
+
+      chatroomMessages.history.forEach((pair) => {
+        pair.forEach((msg) => {
+          if (msg.user_id) {
+            userIds.add(msg.user_id);
+          }
+        });
+      });
+
+      userIds.add(chatroom.user_on_stage);
+      const uniqueUserIds = Array.from(userIds);
+      return cache.ensureUserProfiles(uniqueUserIds);
+    },
+    enabled: !!chatroom && !!chatroomMessages,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function useJoinChatroom(chatroomId: string | undefined) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<null, Error, void>({
+    mutationFn: () => {
+      if (!chatroomId) throw new Error('Invalid chatroom ID');
+      return api.chatroom.joinChatroom(chatroomId);
+    },
+    onSuccess: () => {
+      if (chatroomId) {
+        queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+      }
+    }
+  });
+}
+
+export function useLeaveChatroom(chatroomId: string | undefined) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<null, Error, void>({
+    mutationFn: () => {
+      if (!chatroomId) throw new Error('Invalid chatroom ID');
+      return api.chatroom.leaveChatroom(chatroomId);
+    },
+    onSuccess: () => {
+      if (chatroomId) {
+        queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+      }
+    },
+  });
+}
+
+export function useSendMessageToChatroom(chatroomId: string, isError: (error: Error) => void) {
+  const queryClient = useQueryClient();
+
+  return useMutation<null, Error, string>({
+    mutationFn: (text: string) => api.chatroom.chat(chatroomId, text),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
+    },
+    onError: isError,
+  });
+}
+
+// export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: (error: Error) => void) {
+//   const queryClient = useQueryClient();
+
+//   return useMutation<null, Error, void>({
+//     mutationFn: () => {
+//       return api.chatroom.regenerateLastMessage(chatroomId);
+//     },
+//     onSuccess: () => {
+//       if (chatroomId) {
+//         queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
+//       }
+//     },
+//     onError: isError,
+//   });
+// }

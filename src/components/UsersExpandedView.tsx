@@ -1,50 +1,19 @@
 import Image from "next/image";
 import { User } from "@/lib/validations";
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api-client";
-import { UserProfilesCache } from "@/lib/userProfilesCache";
 
 type Props = {
   isExpanded: boolean;
   onClose: () => void;
-  currentUserIds: string[];
+  currentUser: User[];
   userOnStageId?: string;
 };
 
 export function UsersExpandedView({
   isExpanded,
   onClose,
-  currentUserIds,
+  currentUser,
   userOnStageId,
 }: Props) {
-  const [isLoading, setIsLoading] = useState(false);
-  const cache = new UserProfilesCache();
-  const [userProfiles, setUserProfiles] = useState<User[]>(cache.getAllUsers());
-
-  console.log("userProfiles", userProfiles);
-
-  useEffect(() => {
-    const loadMissingProfiles = async () => {
-      if (!currentUserIds.length) return;
-
-      const missingIds = currentUserIds.filter((id) => !cache.hasUser(id));
-      if (missingIds.length === 0) return;
-
-      setIsLoading(true);
-      try {
-        const users = await api.user.getUsers(missingIds);
-        users.forEach((user) => cache.addUser(user));
-        setUserProfiles(cache.getAllUsers());
-      } catch (error) {
-        console.error("Failed to load user profiles:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadMissingProfiles();
-  }, [currentUserIds, isExpanded]); // Only run when currentUserIds changes or component is expanded
-
   return (
     <div
       className={`fixed inset-0 z-50 transition-all duration-300 ${
@@ -68,9 +37,7 @@ export function UsersExpandedView({
 
           <div className="flex justify-between items-center w-full mb-6">
             <h3 className="text-white text-lg font-medium">
-              {isLoading
-                ? "Loading Users..."
-                : `Online Users (${currentUserIds.length})`}
+              Online Users ({currentUser.length})
             </h3>
             <button
               onClick={onClose}
@@ -81,23 +48,10 @@ export function UsersExpandedView({
           </div>
 
           <div className="grid grid-cols-4 gap-4 w-full max-h-[60vh] overflow-y-auto p-4">
-            {currentUserIds.map((userId) => {
-              const user = cache.getUser(userId);
-              if (!user) {
-                return (
-                  <div
-                    key={userId}
-                    className="flex flex-col items-center space-y-2 animate-pulse"
-                  >
-                    <div className="w-16 h-16 rounded-full bg-white/10" />
-                    <div className="w-16 h-4 rounded bg-white/10" />
-                  </div>
-                );
-              }
-
+            {currentUser.map((user) => {
               return (
                 <div
-                  key={userId}
+                  key={user._id}
                   className="flex flex-col items-center space-y-2"
                 >
                   <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white/10">
@@ -108,14 +62,14 @@ export function UsersExpandedView({
                       className="object-cover"
                       sizes="64px"
                     />
-                    {userId === userOnStageId && (
+                    {user._id === userOnStageId && (
                       <div className="absolute inset-0 ring-2 ring-pink-500 ring-offset-2 ring-offset-black/90 rounded-full" />
                     )}
                   </div>
                   <span className="text-white/90 text-sm text-center font-medium truncate max-w-full px-2">
                     {user.first_name}
                   </span>
-                  {userId === userOnStageId && (
+                  {user._id === userOnStageId && (
                     <span className="text-xs text-pink-500">Speaking</span>
                   )}
                 </div>

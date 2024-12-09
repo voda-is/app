@@ -12,10 +12,11 @@ interface ChatroomEventHandlers {
 
 export const useChatroomEvents = (
   chatroomId: string,
+  isReady: boolean,
   handlers: ChatroomEventHandlers
 ) => {
   const setupEventSource = useCallback(() => {
-    console.log("API_BASE_URL = ", process.env.API_BASE_URL);
+    if (!isReady) return null;
     // Create EventSource connection
     const eventSource = new EventSource(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/sse/chatroom/${chatroomId}`
@@ -29,19 +30,16 @@ export const useChatroomEvents = (
     // Listen for specific events
     eventSource.addEventListener("messageReceived", (event) => {
       const data = JSON.parse(event.data);
-      console.log("messageReceived", data);
       handlers.onMessageReceived?.(data);
     });
 
     eventSource.addEventListener("responseReceived", (event) => {
       const data = JSON.parse(event.data);
-      console.log("responseReceived", data);
       handlers.onResponseReceived?.(data);
     });
 
     eventSource.addEventListener("hijackRegistered", (event) => {
       const data = JSON.parse(event.data);
-      console.log("hijackRegistered", data);
       handlers.onHijackRegistered?.(data);
     });
 
@@ -67,14 +65,16 @@ export const useChatroomEvents = (
     };
 
     return eventSource;
-  }, [chatroomId, handlers]);
+  }, [chatroomId, handlers, isReady]);
 
   useEffect(() => {
-    const eventSource = setupEventSource();
-
+    let eventSource: EventSource | null = null;
+    if (isReady) {
+      eventSource = setupEventSource();
+    }
     // Cleanup on unmount
     return () => {
-      eventSource.close();
+      eventSource?.close();
     };
-  }, [setupEventSource]);
+  }, [setupEventSource, isReady]);
 };

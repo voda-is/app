@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
@@ -35,6 +35,7 @@ import { UserProfilesCache } from "@/lib/userProfilesCache";
 import { ProgressBarButton } from "@/components/ProgressBarButton";
 import { ChatContextWithUnknownUser, Message } from "@/lib/chat-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { debounce } from "lodash";
 
 const HIJACK_DURATION = 60; // 60 seconds wait time
 
@@ -48,7 +49,7 @@ export default function ChatroomPage() {
   // 2. get character info
   // 3. get chatroom messages
   // 4. get chatroom hijack cost
-  // 5. collect all user profiles need to be fetched 
+  // 5. collect all user profiles need to be fetched
   // 6. fetch user profiles from server or cache
   // 7. register SSE, and refetch when needed
 
@@ -59,20 +60,30 @@ export default function ChatroomPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
-  const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
-  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
-  const { data: hijackCost, isLoading: hijackCostLoading } = useHijackCost(chatroomId);
-  const { data: userProfiles, isLoading: userProfilesLoading } = useUserProfiles(chatroom!, chatroomMessages!);
-  const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
+  const { data: chatroom, isLoading: chatroomLoading } =
+    useChatroom(chatroomId);
+  const { data: character, isLoading: characterLoading } = useCharacter(
+    chatroom?.character_id
+  );
+  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } =
+    useChatroomMessages(chatroomId);
+  const { data: hijackCost, isLoading: hijackCostLoading } =
+    useHijackCost(chatroomId);
+  const { data: userProfiles, isLoading: userProfilesLoading } =
+    useUserProfiles(chatroom!, chatroomMessages!);
+  const { data: telegramUser, isLoading: telegramUserLoading } =
+    useTelegramUser();
 
-  const { mutate: joinChatroom, isPending: joinChatroomPending } = useJoinChatroom(chatroomId);
-  const { mutate: leaveChatroom, isPending: leaveChatroomPending } = useLeaveChatroom(chatroomId);
-  const { mutate: sendMessage, isPending: sendMessagePending } = useSendMessageToChatroom(chatroomId, (error) => {
-    console.error("Failed to send message:", error);
-    setMessages(chatContext.markLastMessageAsError(messages));
-  });
-  
+  const { mutate: joinChatroom, isPending: joinChatroomPending } =
+    useJoinChatroom(chatroomId);
+  const { mutate: leaveChatroom, isPending: leaveChatroomPending } =
+    useLeaveChatroom(chatroomId);
+  const { mutate: sendMessage, isPending: sendMessagePending } =
+    useSendMessageToChatroom(chatroomId, (error) => {
+      console.error("Failed to send message:", error);
+      setMessages(chatContext.markLastMessageAsError(messages));
+    });
+
   const cache = new UserProfilesCache();
   const chatContext = new ChatContextWithUnknownUser(character!);
   const queryClient = useQueryClient();
@@ -90,7 +101,10 @@ export default function ChatroomPage() {
 
   // Basic Setups
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "instant",
+      block: "end",
+    });
     setDisableActions(false);
   }, [messages, showTypingIndicator]);
 
@@ -112,81 +126,107 @@ export default function ChatroomPage() {
 
   // Data Ready
   useEffect(() => {
-    if (!chatroomLoading && !chatroomMessagesLoading && !userProfilesLoading && 
-      !userProfilesLoading && !telegramUserLoading && !hijackCostLoading) {
+    if (
+      !chatroomLoading &&
+      !chatroomMessagesLoading &&
+      !userProfilesLoading &&
+      !userProfilesLoading &&
+      !telegramUserLoading &&
+      !hijackCostLoading
+    ) {
       setIsReady(true);
     }
-  }, [chatroomLoading, chatroomMessagesLoading, userProfilesLoading, 
-    telegramUserLoading, hijackCostLoading])
-  
+  }, [
+    chatroomLoading,
+    chatroomMessagesLoading,
+    userProfilesLoading,
+    telegramUserLoading,
+    hijackCostLoading,
+  ]);
 
   // Populate items
   useEffect(() => {
     if (!isReady || !chatroom || !chatroomMessages || !userProfiles) return;
-    setMessages(chatContext.injectHistoryMessages(chatroomMessages.history, chatroom.created_at));
+    setMessages(
+      chatContext.injectHistoryMessages(
+        chatroomMessages.history,
+        chatroom.created_at
+      )
+    );
 
     let currentUsers: User[] = [];
     chatroom.current_audience?.forEach((id) => {
       currentUsers.push(cache.getUser(id) as User); // always exists
     });
     setCurrentUsers(currentUsers);
-
   }, [isReady, chatroom, chatroomMessages, userProfiles]);
 
   // Update SSE event handlers with console logs
-  useChatroomEvents(chatroomId, 
-    isReady,
-  {
+  useChatroomEvents(chatroomId, isReady, {
     onMessageReceived: async (message) => {
       if (message.user_id) {
         await cache.ensureUserProfiles([message.user_id]);
       }
       setShowTypingIndicator(true);
-      setMessages(chatContext.newUserMessage(messages, message.text, message.user_id));
+      setMessages(
+        chatContext.newUserMessage(messages, message.text, message.user_id)
+      );
     },
     onResponseReceived: () => {
       setShowTypingIndicator(false);
-      queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
+      queryClient.invalidateQueries({
+        queryKey: ["chatroomMessages", chatroomId],
+      });
     },
     onHijackRegistered: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          ['chatroom', 'hijackCost'].includes(query.queryKey[0] as string) && 
-          query.queryKey[1] === chatroomId
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          ["chatroom", "hijackCost"].includes(query.queryKey[0] as string) &&
+          query.queryKey[1] === chatroomId,
       });
     },
     onHijackSucceeded: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          ['chatroom', 'hijackCost'].includes(query.queryKey[0] as string) && 
-          query.queryKey[1] === chatroomId
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          ["chatroom", "hijackCost"].includes(query.queryKey[0] as string) &&
+          query.queryKey[1] === chatroomId,
       });
     },
     onJoinChatroom: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
     },
     onLeaveChatroom: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
     },
   });
 
   useEffect(() => {
-    if (!chatroomId || !telegramUser?._id) { return; }
+    if (!chatroomId || !telegramUser?._id) {
+      return;
+    }
     joinChatroom();
 
     // Leave the room when the component unmounts
     return leaveChatroom;
   }, [chatroomId, telegramUser?._id]);
 
-  const handleHijack = async () => {
-    if (disableActions) return;
-    setDisableActions(true);
+  const handleHijack = useCallback(
+    debounce(async () => {
+      console.log("hijacking 🌻chatroom", disableActions);
+      if (disableActions) return;
+      const hijackResponse: any = await api.chatroom.registerHijack(
+        chatroomId,
+        hijackCost as { cost: number }
+      );
 
-    await api.chatroom.registerHijack(chatroomId, hijackCost as number);
-    setDisableActions(false);
-  };
+      if (hijackResponse?.status === 200) {
+        setDisableActions(true);
+      }
+    }, 300), // 300ms 的防抖时间
+    [disableActions, chatroomId, hijackCost]
+  );
 
-  const handleSendMessage = async () => {    
+  const handleSendMessage = async () => {
     const trimmedMessage = inputMessage.trim();
     if (!trimmedMessage) return;
 
@@ -197,7 +237,7 @@ export default function ChatroomPage() {
   };
 
   const handleRegenerate = async () => {
-    // setInputMessage(""); // Clear input immediately    
+    // setInputMessage(""); // Clear input immediately
     // setMessages(chatContext.popLastMessage(messages));
     // regenerateLastMessage();
   };
@@ -216,6 +256,7 @@ export default function ChatroomPage() {
   const handleReaction = async (type: string) => {
     if (disableActions) return;
     console.log(`Reaction: ${type}`);
+    // await api.chatroom.reactToMessage(chatroomId, type);
   };
 
   // Add this effect to handle hijack progress
@@ -225,13 +266,13 @@ export default function ChatroomPage() {
     const now = Math.floor(Date.now() / 1000);
     const elapsedTime = now - chatroom.hijacking_time;
     const remainingTime = Math.max(0, HIJACK_DURATION - elapsedTime);
-    
+
     setHijackProgress(elapsedTime);
 
     if (remainingTime <= 0) return;
 
     const interval = setInterval(() => {
-      setHijackProgress(prev => prev + 1);
+      setHijackProgress((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -283,7 +324,7 @@ export default function ChatroomPage() {
               </div>
             </div>
 
-            {messages.map((message) => (  
+            {messages.map((message) => (
               <ChatBubble
                 key={message.createdAt}
                 message={message}
@@ -298,7 +339,7 @@ export default function ChatroomPage() {
 
             <div ref={messagesEndRef} className="h-10" />
           </div>
-        </div>        
+        </div>
 
         {chatroom?.user_hijacking && (
           <div className="fixed bottom-20 left-0 right-0 pb-5 pt-5 z-20 px-6 backdrop-blur-md bg-black/50">
@@ -319,13 +360,17 @@ export default function ChatroomPage() {
               className="w-full justify-center text-white font-medium text-base "
             >
               <div className="flex items-center gap-2">
-                <img 
-                  src={cache.getUser(chatroom.user_hijacking)?.profile_photo || "/bg2.png"} 
-                  alt="User avatar" 
+                <img
+                  src={
+                    cache.getUser(chatroom.user_hijacking)?.profile_photo ||
+                    "/bg2.png"
+                  }
+                  alt="User avatar"
                   className="w-6 h-6 rounded-full"
                 />
                 <span>
-                  {cache.getUser(chatroom.user_hijacking)?.first_name || 'User'}  is hijacking the conversation...
+                  {cache.getUser(chatroom.user_hijacking)?.first_name || "User"}{" "}
+                  is hijacking the conversation...
                 </span>
               </div>
             </ProgressBarButton>
@@ -334,7 +379,9 @@ export default function ChatroomPage() {
 
         {/* Input Container */}
         <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto pt-2">
-          {telegramUser?._id === chatroom?.user_on_stage ? (
+          {telegramUser &&
+          chatroom &&
+          telegramUser?._id === chatroom?.user_on_stage ? (
             <InputBar
               message={inputMessage}
               onChange={setInputMessage}
@@ -345,7 +392,7 @@ export default function ChatroomPage() {
           ) : (
             <ChatroomFooter
               isCurrentSpeaker={isCurrentSpeaker}
-              hijackCost={hijackCost as number}
+              hijackCost={hijackCost as unknown as { cost: number }}
               onHijack={handleHijack}
               onReaction={handleReaction}
               disabled={disableActions}

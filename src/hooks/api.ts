@@ -1,34 +1,42 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api-client';
-import type { Character, ConversationHistory, User, TTSEntry, ChatroomMessages, Chatroom, HistoryMessage } from '@/lib/validations';
-import { hashText } from '@/lib/utils';
-import { TTSContext } from './context';
-import { UserProfilesCache } from '@/lib/userProfilesCache';
-import { Message } from '@/lib/chat-context';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import type {
+  Character,
+  ConversationHistory,
+  User,
+  TTSEntry,
+  ChatroomMessages,
+  Chatroom,
+  HistoryMessage,
+} from "@/lib/validations";
+import { hashText } from "@/lib/utils";
+import { TTSContext } from "./context";
+import { UserProfilesCache } from "@/lib/userProfilesCache";
+import { Message } from "@/lib/chat-context";
 
 // User related hooks
 export function useTelegramUser() {
   return useQuery<User, Error>({
-    queryKey: ['user'],
+    queryKey: ["user"],
     queryFn: api.user.register,
     retry: 1,
     refetchInterval: false,
-    staleTime: Infinity, 
+    staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false
+    refetchOnReconnect: false,
   });
 }
 
 // Character related hooks
 export function useCharacters(limit: number, offset: number) {
   return useQuery<Character[], Error>({
-    queryKey: ['characters'],
+    queryKey: ["characters"],
     queryFn: () => api.characters.list(limit, offset),
     retry: 1,
     refetchInterval: false,
-    staleTime: Infinity, 
+    staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -38,12 +46,12 @@ export function useCharacters(limit: number, offset: number) {
 
 export function useCharacter(id: string | undefined) {
   return useQuery<Character, Error>({
-    queryKey: ['characters', id],
+    queryKey: ["characters", id],
     queryFn: () => api.characters.get(id!),
     enabled: !!id,
     retry: 1,
     refetchInterval: false,
-    staleTime: Infinity, 
+    staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -56,13 +64,15 @@ export function useCharacterChatHistory(characterId: string | undefined) {
   const { data: user } = useTelegramUser();
 
   return useQuery<string[], Error>({
-    queryKey: ['characterChatHistory', characterId],
+    queryKey: ["characterChatHistory", characterId],
     queryFn: async () => {
-      if (!characterId) throw new Error('Character ID is required');
-      if (!user) throw new Error('User is required');
+      if (!characterId) throw new Error("Character ID is required");
+      if (!user) throw new Error("User is required");
 
       if (character) {
-        const history = await api.chat.getConversationHistoryIdOnly(characterId);
+        const history = await api.chat.getConversationHistoryIdOnly(
+          characterId
+        );
         if (history.length === 0) {
           await api.chat.createConversation(characterId);
           return await api.chat.getConversationHistoryIdOnly(characterId);
@@ -70,13 +80,13 @@ export function useCharacterChatHistory(characterId: string | undefined) {
           return history;
         }
       } else {
-        throw new Error('Unable to fetch chat history');
+        throw new Error("Unable to fetch chat history");
       }
     },
     enabled: !!characterId && !!user,
     retry: 1,
     refetchInterval: false,
-    staleTime: Infinity, 
+    staleTime: Infinity,
     gcTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -86,35 +96,45 @@ export function useCharacterChatHistory(characterId: string | undefined) {
 
 export function useConversation(conversationId: string) {
   return useQuery<ConversationHistory, Error>({
-    queryKey: ['conversation', conversationId],
+    queryKey: ["conversation", conversationId],
     queryFn: () => api.chat.getConversation(conversationId),
     enabled: !!conversationId,
     retry: 1,
     refetchInterval: false,
-    staleTime: Infinity, 
+    staleTime: Infinity,
     gcTime: Infinity,
   });
 }
 
-export function useSendMessage(conversationId: string, isError: (error: Error) => void) {
+export function useSendMessage(
+  conversationId: string,
+  isError: (error: Error) => void
+) {
   const queryClient = useQueryClient();
 
   return useMutation<null, Error, string>({
     mutationFn: (text: string) => api.chat.sendMessage(conversationId, text),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+      queryClient.invalidateQueries({
+        queryKey: ["conversation", conversationId],
+      });
     },
     onError: isError,
   });
 }
 
-export function useRegenerateLastMessage(conversationId: string, isError: (error: Error) => void) {
+export function useRegenerateLastMessage(
+  conversationId: string,
+  isError: (error: Error) => void
+) {
   const queryClient = useQueryClient();
 
   return useMutation<null, Error, void>({
     mutationFn: () => api.chat.regenerateLastMessage(conversationId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
+      queryClient.invalidateQueries({
+        queryKey: ["conversation", conversationId],
+      });
     },
     onError: isError,
   });
@@ -124,48 +144,60 @@ export function useRegenerateLastMessage(conversationId: string, isError: (error
 export function useTTS() {
   const queryClient = useQueryClient();
 
-  return useMutation<TTSEntry, Error, { text: string; characterId: string }, TTSContext>({
+  return useMutation<
+    TTSEntry,
+    Error,
+    { text: string; characterId: string },
+    TTSContext
+  >({
     mutationFn: async ({ text, characterId }) => {
       const hash = await hashText(text);
-      
+
       // Check cache first
-      const cached = queryClient.getQueryData<TTSEntry>(['tts', hash]);
+      const cached = queryClient.getQueryData<TTSEntry>(["tts", hash]);
       if (cached) {
         return cached;
       }
 
       // Generate new audio if not cached
       const audioBlob = await api.tts.generateSpeech(text, characterId);
-      const result = { text, audioBlob, status: 'complete' as const };
-      
+      const result = { text, audioBlob, status: "complete" as const };
+
       // Cache the result
-      queryClient.setQueryData(['tts', hash], result);
-      
+      queryClient.setQueryData(["tts", hash], result);
+
       return result;
     },
     onMutate: async ({ text }) => {
       const hash = await hashText(text);
-      const previousTTS = queryClient.getQueryData<TTSEntry[]>(['ttsHistory']);
-      
+      const previousTTS = queryClient.getQueryData<TTSEntry[]>(["ttsHistory"]);
+
       // Check if we already have this in cache
-      const cached = queryClient.getQueryData<TTSEntry>(['tts', hash]);
+      const cached = queryClient.getQueryData<TTSEntry>(["tts", hash]);
       if (!cached) {
-        const newEntry: TTSEntry = { text, audioBlob: new Blob(), status: 'generating' };
-        queryClient.setQueryData(['ttsHistory'], [...(previousTTS || []), newEntry]);
+        const newEntry: TTSEntry = {
+          text,
+          audioBlob: new Blob(),
+          status: "generating",
+        };
+        queryClient.setQueryData(
+          ["ttsHistory"],
+          [...(previousTTS || []), newEntry]
+        );
       }
-      
+
       return { previousTTS };
     },
     onError: (err, _, context) => {
       if (context?.previousTTS) {
-        queryClient.setQueryData(['ttsHistory'], context.previousTTS);
+        queryClient.setQueryData(["ttsHistory"], context.previousTTS);
       }
     },
     onSuccess: (newEntry) => {
-      queryClient.setQueryData<TTSEntry[]>(['ttsHistory'], (old) => {
+      queryClient.setQueryData<TTSEntry[]>(["ttsHistory"], (old) => {
         if (!old) return [newEntry];
-        return old.map(entry =>
-          entry.text === newEntry.text && entry.status === 'generating'
+        return old.map((entry) =>
+          entry.text === newEntry.text && entry.status === "generating"
             ? newEntry
             : entry
         );
@@ -177,10 +209,10 @@ export function useTTS() {
 // Chatroom related hooks
 export function useChatroomWithCharacter(characterId: string) {
   return useQuery<Chatroom>({
-    queryKey: ['chatroomCharacter', characterId],
+    queryKey: ["chatroomCharacter", characterId],
     queryFn: async () => {
       const result = await api.chatroom.getOrCreateChatroom(characterId);
-      if (!result) throw new Error('Failed to get/create chatroom');
+      if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },
     enabled: !!characterId,
@@ -196,11 +228,11 @@ export function useChatroomWithCharacter(characterId: string) {
 
 export function useChatroom(chatroomId: string) {
   return useQuery<Chatroom>({
-    queryKey: ['chatroom', chatroomId],
+    queryKey: ["chatroom", chatroomId],
     queryFn: async () => {
       const result = await api.chatroom.getChatroom(chatroomId);
-      console.log('result', result);
-      if (!result) throw new Error('Failed to get/create chatroom');
+      console.log("result", result);
+      if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },
     enabled: !!chatroomId,
@@ -216,7 +248,7 @@ export function useChatroom(chatroomId: string) {
 
 export function useChatroomMessages(chatroomId: string) {
   return useQuery<ChatroomMessages>({
-    queryKey: ['chatroomMessages', chatroomId],
+    queryKey: ["chatroomMessages", chatroomId],
     queryFn: () => api.chatroom.getChatroomMessages(chatroomId),
     enabled: !!chatroomId,
     retry: 1,
@@ -230,8 +262,8 @@ export function useChatroomMessages(chatroomId: string) {
 }
 
 export function useHijackCost(chatroomId: string) {
-  return useQuery<number>({
-    queryKey: ['hijackCost', chatroomId],
+  return useQuery<{ cost: number }>({
+    queryKey: ["hijackCost", chatroomId],
     queryFn: () => api.chatroom.getHijackCost(chatroomId),
     enabled: !!chatroomId,
     retry: 1,
@@ -244,9 +276,12 @@ export function useHijackCost(chatroomId: string) {
   });
 }
 
-export function useUserProfiles(chatroom: Chatroom, chatroomMessages: ChatroomMessages) {
+export function useUserProfiles(
+  chatroom: Chatroom,
+  chatroomMessages: ChatroomMessages
+) {
   return useQuery<User[]>({
-    queryKey: ['userProfiles'],
+    queryKey: ["userProfiles"],
     queryFn: () => {
       const cache = new UserProfilesCache();
       const userIds = new Set<string>();
@@ -277,43 +312,48 @@ export function useUserProfiles(chatroom: Chatroom, chatroomMessages: ChatroomMe
 
 export function useJoinChatroom(chatroomId: string | undefined) {
   const queryClient = useQueryClient();
-  
+
   return useMutation<null, Error, void>({
     mutationFn: () => {
-      if (!chatroomId) throw new Error('Invalid chatroom ID');
+      if (!chatroomId) throw new Error("Invalid chatroom ID");
       return api.chatroom.joinChatroom(chatroomId);
     },
     onSuccess: () => {
       if (chatroomId) {
-        queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+        queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
       }
-    }
+    },
   });
 }
 
 export function useLeaveChatroom(chatroomId: string | undefined) {
   const queryClient = useQueryClient();
-  
+
   return useMutation<null, Error, void>({
     mutationFn: () => {
-      if (!chatroomId) throw new Error('Invalid chatroom ID');
+      if (!chatroomId) throw new Error("Invalid chatroom ID");
       return api.chatroom.leaveChatroom(chatroomId);
     },
     onSuccess: () => {
       if (chatroomId) {
-        queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+        queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
       }
     },
   });
 }
 
-export function useSendMessageToChatroom(chatroomId: string, isError: (error: Error) => void) {
+export function useSendMessageToChatroom(
+  chatroomId: string,
+  isError: (error: Error) => void
+) {
   const queryClient = useQueryClient();
 
   return useMutation<null, Error, string>({
     mutationFn: (text: string) => api.chatroom.chat(chatroomId, text),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
+      queryClient.invalidateQueries({
+        queryKey: ["chatroomMessages", chatroomId],
+      });
     },
     onError: isError,
   });

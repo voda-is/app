@@ -1,5 +1,5 @@
-import axios, { AxiosError } from 'axios';
-import { 
+import axios, { AxiosError } from "axios";
+import {
   GenericResponseSchema,
   UserSchema,
   UserPayloadSchema,
@@ -10,33 +10,28 @@ import {
   ChatroomMessages,
   Chatroom,
   User,
-} from './validations';
-import { z } from 'zod';
-import { getTelegramUser } from '@/lib/telegram';
+} from "./validations";
+import { z } from "zod";
+import { getTelegramUser } from "@/lib/telegram";
 
 class APIError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-    public code: string
-  ) {
+  constructor(message: string, public status: number, public code: string) {
     super(message);
-    this.name = 'APIError';
+    this.name = "APIError";
   }
 }
 
 export const apiProxy = axios.create({
-  baseURL: '/api/proxy',
+  baseURL: "/api/proxy",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-
 // Add telegram user data to every request
-apiProxy.interceptors.request.use((config) => {  
+apiProxy.interceptors.request.use((config) => {
   const originalUrl = config.url;
-  config.url = '';
+  config.url = "";
   config.data = {
     path: originalUrl,
     method: config.method?.toUpperCase(),
@@ -50,40 +45,49 @@ apiProxy.interceptors.request.use((config) => {
 apiProxy.interceptors.response.use(
   (response) => {
     if (!response.data) {
-      throw new Error('No response data');
+      throw new Error("No response data");
     }
 
     // if response is an array buffer or SSE, return it as is
     if (
-      response.headers['content-type']?.includes('audio/') ||
-      response.headers['content-type']?.includes('text/event-stream')
+      response.headers["content-type"]?.includes("audio/") ||
+      response.headers["content-type"]?.includes("text/event-stream")
     ) {
       return response;
     }
 
     try {
       const genericResponse = GenericResponseSchema.parse(response.data);
-      if (response.config.url?.includes('/user') && response.config.method === 'GET') {
+      if (
+        response.config.url?.includes("/user") &&
+        response.config.method === "GET"
+      ) {
         response.data = validateResponse(genericResponse, UserSchema);
       }
 
-      if (response.config.url?.includes('/characters') && response.config.method === 'GET') {
-        response.data = validateResponse(genericResponse, z.array(CharacterSchema));
+      if (
+        response.config.url?.includes("/characters") &&
+        response.config.method === "GET"
+      ) {
+        response.data = validateResponse(
+          genericResponse,
+          z.array(CharacterSchema)
+        );
       }
 
       // if status is not 2xx, throw an error
       if (genericResponse.status < 200 || genericResponse.status >= 300) {
-        throw new APIError(genericResponse.message, genericResponse.status, 'API_ERROR');
+        throw new APIError(
+          genericResponse.message,
+          genericResponse.status,
+          "API_ERROR"
+        );
       }
 
       return response;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new APIError(
-          'Invalid response data',
-          500,
-          'VALIDATION_ERROR'
-        );
+        throw new APIError("Invalid response data", 500, "VALIDATION_ERROR");
       }
       throw error;
     }
@@ -92,16 +96,18 @@ apiProxy.interceptors.response.use(
     if (error.response?.data) {
       try {
         const errorResponse = GenericResponseSchema.parse(error.response.data);
+        console.log("errorResponse", errorResponse);
         throw new APIError(
           errorResponse.message,
           errorResponse.status,
-          'API_ERROR'
+          "API_ERROR"
         );
       } catch {
+        console.log("catch", error);
         throw new APIError(
-          error.response.data.message || 'An error occurred',
+          error.response.data.message || "An error occurred",
           error.response.status || 500,
-          'UNKNOWN_ERROR'
+          "UNKNOWN_ERROR"
         );
       }
     }
@@ -123,9 +129,9 @@ export const api = {
         profile_photo: telegramUser.photo_url,
       });
 
-      const response = await apiProxy.post('', {
-        path: '/user',
-        method: 'POST',
+      const response = await apiProxy.post("", {
+        path: "/user",
+        method: "POST",
         data: payload,
       });
 
@@ -140,12 +146,12 @@ export const api = {
 
       // throw if response is not ok
       if (response.status !== 200) {
-        throw new Error('Failed to register user');
+        throw new Error("Failed to register user");
       }
 
-      const userResponse = await apiProxy.post('', {
-        path: '/user',
-        method: 'GET',
+      const userResponse = await apiProxy.post("", {
+        path: "/user",
+        method: "GET",
         data: { user_id: telegramUser.id.toString() },
       });
 
@@ -153,40 +159,40 @@ export const api = {
     },
     getUsers: async (userIds: string[]): Promise<User[]> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
-        path: '/users',
-        method: 'POST',
-        data: { 
+      const response = await apiProxy.post("", {
+        path: "/users",
+        method: "POST",
+        data: {
           user_ids: userIds,
           user_id: telegramUser.id.toString(),
           stripUserId: true,
         },
       });
       return response.data.data;
-    }
+    },
   },
 
   characters: {
     list: async (limit: number, offset: number) => {
-      const response = await apiProxy.post('', { 
-        path: '/characters',
-        method: 'GET',
+      const response = await apiProxy.post("", {
+        path: "/characters",
+        method: "GET",
         data: {
           limit,
           offset,
           ignoreToken: true,
-        }
+        },
       });
       return response.data.data;
     },
 
     get: async (id: string) => {
-      const response = await apiProxy.post('', { 
+      const response = await apiProxy.post("", {
         path: `/character/${id}`,
-        method: 'GET',
+        method: "GET",
         data: {
           ignoreToken: true,
-        }
+        },
       });
       return response.data.data;
     },
@@ -195,221 +201,240 @@ export const api = {
   chat: {
     createConversation: async (characterId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/conversations/${characterId}`,
-        method: 'POST',
+        method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
           is_public: false,
-        }
+        },
       });
       return null;
     },
-    getConversationHistoryIdOnly: async (characterId: string): Promise<string[]> => {
+    getConversationHistoryIdOnly: async (
+      characterId: string
+    ): Promise<string[]> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/conversations/id_only/${characterId}`,
-        method: 'GET',
+        method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return response.data.data["conversations"];
     },
-    getConversation: async (conversationId: string): Promise<ConversationHistory> => {
+    getConversation: async (
+      conversationId: string
+    ): Promise<ConversationHistory> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/conversation/${conversationId}`,
-        method: 'GET',
+        method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return response.data.data;
     },
 
-    sendMessage: async (conversationId: string, text: string): Promise<null> => {
-      console.log('sending message', text);
+    sendMessage: async (
+      conversationId: string,
+      text: string
+    ): Promise<null> => {
+      console.log("sending message", text);
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chat/${conversationId}`,
-        method: 'POST',
-        data: { 
-          message: text, 
-          user_id: telegramUser.id.toString(), 
+        method: "POST",
+        data: {
+          message: text,
+          user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return null;
     },
 
     regenerateLastMessage: async (conversationId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/regenerate_last_message/${conversationId}`,
-        method: 'POST',
-        data: { 
-          user_id: telegramUser.id.toString(), 
+        method: "POST",
+        data: {
+          user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return null;
     },
   },
 
   tts: {
-    generateSpeech: async (message: string, characterId: string): Promise<Blob> => {
+    generateSpeech: async (
+      message: string,
+      characterId: string
+    ): Promise<Blob> => {
       const telegramUser = getTelegramUser();
-      
+
       // Use fetch directly instead of axios for better binary handling
-      const response = await fetch('/api/proxy', {
-        method: 'POST',
+      const response = await fetch("/api/proxy", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           data: {
             path: `/tts/${characterId}`,
-            method: 'POST',
+            method: "POST",
             data: {
-              user_id: telegramUser.id.toString(), 
+              user_id: telegramUser.id.toString(),
               stripUserId: true,
               message,
               isStream: true,
-            }
-          }
-        })
+            },
+          },
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch audio');
+        throw new Error("Failed to fetch audio");
       }
 
       // Get the binary data
       const arrayBuffer = await response.arrayBuffer();
       // Create blob from ArrayBuffer
-      const audioBlob = new Blob([arrayBuffer], { 
-        type: response.headers.get('content-type') || 'audio/mp3'
+      const audioBlob = new Blob([arrayBuffer], {
+        type: response.headers.get("content-type") || "audio/mp3",
       });
 
-      return audioBlob;     
+      return audioBlob;
     },
   },
 
   chatroom: {
     getOrCreateChatroom: async (characterId: string): Promise<Chatroom> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chatroom/get_or_create/${characterId}`,
-        method: 'POST',
+        method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
-      console.log('response', response.data.data);
+      console.log("response", response.data.data);
       return response.data.data;
     },
     getChatroom: async (chatroomId: string): Promise<Chatroom> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chatroom/get/${chatroomId}`,
-        method: 'GET',
+        method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return response.data.data;
     },
-    getChatroomMessages: async (chatroomId: string): Promise<ChatroomMessages> => {
+    getChatroomMessages: async (
+      chatroomId: string
+    ): Promise<ChatroomMessages> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chatroom/messages/${chatroomId}`,
-        method: 'GET',
+        method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return response.data.data;
     },
     joinChatroom: async (chatroomId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chatroom/join/${chatroomId}`,
-        method: 'POST',
+        method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return response.data.data;
     },
     leaveChatroom: async (chatroomId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chatroom/leave/${chatroomId}`,
-        method: 'POST',
+        method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return response.data.data;
     },
     getHijackCost: async (characterId: string): Promise<any> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chatroom/hijack_cost/${characterId}`,
-        method: 'GET',
+        method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
       return response.data.data;
     },
-    registerHijack: async (characterId: string, hijackCost: number): Promise<null> => {
+    registerHijack: async (
+      characterId: string,
+      hijackCost: { cost: number }
+    ): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      console.log("registering hijack", characterId, telegramUser);
+
+      const response = await apiProxy.post("", {
         path: `/chatroom/register_hijack/${characterId}`,
-        method: 'POST',
+        method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-          amount: hijackCost,
-        }
+          amount: hijackCost.cost,
+        },
       });
-      return response.data.data;
+      return response.data;
     },
     hijackChatroom: async (characterId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      console.log("hijacking chatroom", characterId, telegramUser);
+      const response = await apiProxy.post("", {
         path: `/chatroom/hijack/${characterId}`,
-        method: 'POST',
+        method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-        }
+        },
       });
+      console.log("response", response.data.data);
       return response.data.data;
     },
     chat: async (chatroomId: string, message: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post('', {
+      const response = await apiProxy.post("", {
         path: `/chatroom/chat/${chatroomId}`,
-        method: 'POST',
+        method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
           message,
-        }
+        },
       });
       return response.data.data;
     },
-  }
+  },
 };

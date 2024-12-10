@@ -29,39 +29,67 @@ export const useChatroomEvents = (
 
     // Listen for specific events
     eventSource.addEventListener("messageReceived", (event) => {
-      const data = JSON.parse(event.data);
-      handlers.onMessageReceived?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        handlers.onMessageReceived?.(data);
+      } catch (error) {
+        console.error("Error parsing messageReceived event:", error);
+      }
     });
 
     eventSource.addEventListener("responseReceived", (event) => {
-      const data = JSON.parse(event.data);
-      handlers.onResponseReceived?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        handlers.onResponseReceived?.(data);
+      } catch (error) {
+        console.error("Error parsing responseReceived event:", error);
+      }
     });
 
     eventSource.addEventListener("hijackRegistered", (event) => {
-      const data = JSON.parse(event.data);
-      handlers.onHijackRegistered?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        handlers.onHijackRegistered?.(data);
+      } catch (error) {
+        console.error("Error parsing hijackRegistered event:", error);
+      }
     });
 
     eventSource.addEventListener("hijackSucceeded", (event) => {
-      const data = JSON.parse(event.data);
-      handlers.onHijackSucceeded?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        handlers.onHijackSucceeded?.(data);
+      } catch (error) {
+        console.error("Error parsing hijackSucceeded event:", error);
+      }
     });
 
     eventSource.addEventListener("joinChatroom", (event) => {
-      const data = JSON.parse(event.data);
-      handlers.onJoinChatroom?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        handlers.onJoinChatroom?.(data);
+      } catch (error) {
+        console.error("Error parsing joinChatroom event:", error);
+      }
     });
 
     eventSource.addEventListener("leaveChatroom", (event) => {
-      const data = JSON.parse(event.data);
-      handlers.onLeaveChatroom?.(data);
+      try {
+        const data = JSON.parse(event.data);
+        handlers.onLeaveChatroom?.(data);
+      } catch (error) {
+        console.error("Error parsing leaveChatroom event:", error);
+      }
     });
 
     // Handle errors
     eventSource.onerror = (error) => {
-      console.error("SSE error:", error);
-      eventSource.close();
+      try {
+        console.error("SSE error:", error);
+        eventSource.close();
+      } catch (error) {
+        console.error("Error closing SSE connection:", error);
+      }
     };
 
     return eventSource;

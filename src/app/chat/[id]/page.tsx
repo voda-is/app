@@ -7,10 +7,14 @@ import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { useCharacter, useConversation, useRegenerateLastMessage, useSendMessage, useTelegramUser } from '@/hooks/api';
+import { useCharacter, useConversation, useRegenerateLastMessage, useSendMessage, useTelegramUser, useUserPoints } from '@/hooks/api';
 import { isOnTelegram, notificationOccurred, setupTelegramInterface } from "@/lib/telegram";
 import { InputBar } from "@/components/InputBar";
 import { ChatContext, Message } from "@/lib/chat-context";
+import { PointsExpandedView } from "@/components/PointsExpandedView";
+import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
+import { api } from "@/lib/api-client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ChatPage() {
   const params = useParams();
@@ -18,8 +22,8 @@ export default function ChatPage() {
   const router = useRouter();
   
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
 
   // Fetch initial data
   const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
@@ -45,6 +49,13 @@ export default function ChatPage() {
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Points related state and data
+  const [isPointsExpanded, setIsPointsExpanded] = useState(false);
+  const { data: userPoints } = useUserPoints();
+  const claimStatus = userPoints 
+    ? getNextClaimTime(userPoints.free_claimed_balance_updated_at)
+    : { canClaim: false, timeLeft: "Loading..." };
 
   // Basic Setups
   useEffect(() => {
@@ -110,6 +121,16 @@ export default function ChatPage() {
     // Handle rating logic
   };
 
+  const handleClaimPoints = async () => {
+    try {
+      await api.user.claimFreePoints();
+      queryClient.invalidateQueries({ queryKey: ["userPoints"] });
+    } catch (error) {
+      console.error("Failed to claim points:", error);
+
+    }
+  };
+
   if (!isReady) {
     return <LoadingScreen />;
   }
@@ -131,19 +152,20 @@ export default function ChatPage() {
       {/* Content Container */}
       <div className="relative top-0 left-0 z-10 flex flex-col">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-28">
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-36">
           <Header
+            variant="chat"
             name={character?.name as string}
             image={character?.avatar_image_url || '/bg2.png'}
+            points={userPoints ? getAvailableBalance(userPoints) : 0}
+            canClaim={claimStatus.canClaim}
+            onPointsClick={() => setIsPointsExpanded(true)}
             className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>
 
         {/* Messages Container */}
-        <div 
-          ref={scrollRef}
-          className="flex-1 pt-28 pb-10"
-        >
+        <div className="flex-1 pt-28 pb-10">
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">
@@ -185,6 +207,17 @@ export default function ChatPage() {
             disabled={disableActions}
           />
         </div>
+
+        <PointsExpandedView
+          isExpanded={isPointsExpanded}
+          onClose={() => setIsPointsExpanded(false)}
+          user={telegramUser}
+          points={userPoints ? getAvailableBalance(userPoints) : 0}
+          nextClaimTime={claimStatus.timeLeft}
+          canClaim={claimStatus.canClaim}
+          onClaim={handleClaimPoints}
+        />
+
       </div>
     </main>
   );

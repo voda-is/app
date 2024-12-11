@@ -19,7 +19,7 @@ import {
   useUserProfiles,
   useUserPoints,
 } from "@/hooks/api";
-import { HistoryMessage, User } from "@/lib/validations";
+import { User } from "@/lib/validations";
 import {
   isOnTelegram,
   notificationOccurred,
@@ -27,7 +27,6 @@ import {
 } from "@/lib/telegram";
 import { InputBar } from "@/components/InputBar";
 import { api } from "@/lib/api-client";
-import { ChatroomHeader } from "@/components/ChatroomHeader";
 import { ChatroomFooter } from "@/components/ChatroomFooter";
 import { useChatroomEvents } from "@/lib/sse";
 import { UsersExpandedView } from "@/components/UsersExpandedView";
@@ -141,7 +140,8 @@ export default function ChatroomPage() {
       !userProfilesLoading &&
       !userProfilesLoading &&
       !telegramUserLoading &&
-      !hijackCostLoading
+      !hijackCostLoading &&
+      !characterLoading
     ) {
       setIsReady(true);
     }
@@ -332,8 +332,9 @@ export default function ChatroomPage() {
 
       <div className="relative flex flex-col h-full">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-40">
-          <ChatroomHeader
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-36">
+          <Header
+            variant="chatroom"
             name={character?.name as string}
             image={character?.avatar_image_url || "/bg2.png"}
             userCount={currentUsers.length}
@@ -342,7 +343,6 @@ export default function ChatroomPage() {
             onPointsClick={() => setIsPointsExpanded(true)}
             points={userPoints ? getAvailableBalance(userPoints) : 0}
             canClaim={claimStatus.canClaim}
-            timeLeft={claimStatus.timeLeft}
             className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>

@@ -57,7 +57,6 @@ export default function ChatroomPage() {
   // 1. scroll to bottom
   // 2. call API to join chatroom
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: chatroom, isLoading: chatroomLoading } =
@@ -85,7 +84,7 @@ export default function ChatroomPage() {
     });
 
   const cache = new UserProfilesCache();
-  const chatContext = new ChatContextWithUnknownUser(character!);
+  const chatContext = new ChatContextWithUnknownUser(character!, telegramUser?._id as string);
   const queryClient = useQueryClient();
 
   const [isReady, setIsReady] = useState(false); // all data to be fetched from remote is ready
@@ -310,11 +309,11 @@ export default function ChatroomPage() {
         </div>
 
         {/* Messages Container */}
-        <div ref={scrollRef} className="flex-1 pt-42 pb-28">
+        <div className="flex-1 pt-40 pb-12">
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md pt-[var(--tg-content-safe-area-inset-top)]">
                 <div className="text-lg font-semibold mb-2 text-center text-pink-300">
                   Public Chatroom
                 </div>

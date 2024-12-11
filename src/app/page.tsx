@@ -13,8 +13,10 @@ import { setupTelegramInterface } from '@/lib/telegram';
 import { isOnTelegram } from '@/lib/telegram';
 import { useRouter } from 'next/navigation';
 
+type FilterType = 'all' | 'male' | 'female' | 'roleplay' | 'chatroom';
+
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'featured' | 'popular'>('featured');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const router = useRouter();
   const { data: user, isLoading: userLoading } = useTelegramUser();
   const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
@@ -24,6 +26,20 @@ export default function Home() {
       setupTelegramInterface(router);
     }
   }, []);
+
+  const filteredCharacters = (characters as Character[])?.filter(character => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'male' || activeFilter === 'female') {
+      return character.tags[0]?.toLowerCase() === activeFilter;
+    }
+    if (activeFilter === 'roleplay') {
+      return character.metadata.enable_roleplay;
+    }
+    if (activeFilter === 'chatroom') {
+      return character.metadata.enable_chatroom;
+    }
+    return true;
+  });
 
   if (charactersLoading || userLoading) {
     return <LoadingScreen />;
@@ -36,11 +52,11 @@ export default function Home() {
       exit={{ opacity: 0 }}
       className="min-h-screen bg-gray-900 text-white px-2 pt-24 pb-20"
     >
-      <TopNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
 
       {/* Character Grid */}
       <div className="grid grid-cols-2 gap-2">
-        {(characters as Character[])?.map((character, index) => (
+        {filteredCharacters?.map((character, index) => (
           <Link key={character._id} href={`/character/${character._id}`}>
             <CharacterCard 
               character={character} 

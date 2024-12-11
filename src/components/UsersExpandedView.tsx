@@ -56,7 +56,7 @@ export function UsersExpandedView({
                 >
                   <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white/10">
                     <Image
-                      src={user.profile_photo || "/default-avatar.png"}
+                      src={user.profile_photo || "/bg2.png"}
                       alt={user.first_name}
                       fill
                       className="object-cover"

@@ -105,9 +105,11 @@ export class ChatContext {
 export class ChatContextWithUnknownUser {
   private character: Character;
   private userCache: UserProfilesCache;
+  private defaultUserId: string;
 
-  constructor(character: Character ) {
+  constructor(character: Character, defaultUserId: string) {
     this.character = character;
+    this.defaultUserId = defaultUserId;
 
     // ASSUME usercahce is ensured
     this.userCache = new UserProfilesCache();
@@ -133,7 +135,13 @@ export class ChatContextWithUnknownUser {
   }
 
   public injectHistoryMessages(messages: ChatHistoryPair[], createdAt: number): Message[] {
-    let m = [this.injectFirstMessage(messages[0][0].user_id, createdAt)];
+    let m: Message[] = [];
+    if (messages.length) {
+      m = [this.injectFirstMessage(messages[0][0].user_id, createdAt)];
+    } else {
+      m = [this.injectFirstMessage(this.defaultUserId, createdAt)];
+    }
+
     messages.forEach((pair) => {
       const userId = pair[0].user_id;
       const user = this.userCache.getUser(userId);

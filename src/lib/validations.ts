@@ -22,6 +22,8 @@ export const CharacterMetadataSchema = z.object({
   version: z.string(),
   status: z.enum(['initialized', 'active', 'inactive']),
   enable_voice: z.boolean(),
+  enable_roleplay: z.boolean().default(false),
+  enable_chatroom: z.boolean().default(false),
 });
 
 export const CharacterPromptsSchema = z.object({

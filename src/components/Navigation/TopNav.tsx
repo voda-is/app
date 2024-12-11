@@ -7,7 +7,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   return (
     <div className="fixed top-0 left-0 right-0 z-10 backdrop-blur-md bg-gray-800/70 h-40">
       {/* Points and user info would go here */}
-      <div className="h-28" />
+      <div className="h-20" />
       
       {/* Filter tabs at bottom */}
       <div className="flex space-x-2 overflow-x-auto p-4 no-scrollbar">

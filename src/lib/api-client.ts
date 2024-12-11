@@ -10,6 +10,7 @@ import {
   ChatroomMessages,
   Chatroom,
   User,
+  UserPoints,
 } from "./validations";
 import { z } from "zod";
 import { getTelegramUser } from "@/lib/telegram";
@@ -164,6 +165,30 @@ export const api = {
         method: "POST",
         data: {
           user_ids: userIds,
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
+    getUserPoints: async (): Promise<UserPoints> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: "/user/points",
+        method: "GET",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
+    claimFreePoints: async (): Promise<number> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: "/user/points/free",
+        method: "POST",
+        data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
         },

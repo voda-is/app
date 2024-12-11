@@ -17,6 +17,7 @@ import {
   useSendMessageToChatroom,
   useTelegramUser,
   useUserProfiles,
+  useUserPoints,
 } from "@/hooks/api";
 import { HistoryMessage, User } from "@/lib/validations";
 import {
@@ -28,7 +29,6 @@ import { InputBar } from "@/components/InputBar";
 import { api } from "@/lib/api-client";
 import { ChatroomHeader } from "@/components/ChatroomHeader";
 import { ChatroomFooter } from "@/components/ChatroomFooter";
-import { replacePlaceholders } from "@/lib/formatText";
 import { useChatroomEvents } from "@/lib/sse";
 import { UsersExpandedView } from "@/components/UsersExpandedView";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
@@ -36,6 +36,9 @@ import { ProgressBarButton } from "@/components/ProgressBarButton";
 import { ChatContextWithUnknownUser, Message } from "@/lib/chat-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { debounce } from "lodash";
+import { Toast } from "@/components/Toast";
+import { PointsExpandedView } from "@/components/PointsExpandedView";
+import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 
 const HIJACK_DURATION = 60; // 60 seconds wait time
 
@@ -72,6 +75,10 @@ export default function ChatroomPage() {
     useUserProfiles(chatroom!, chatroomMessages!);
   const { data: telegramUser, isLoading: telegramUserLoading } =
     useTelegramUser();
+  const { data: userPoints } = useUserPoints();
+  const claimStatus = userPoints 
+    ? getNextClaimTime(userPoints.free_claimed_balance_updated_at)
+    : { canClaim: false, timeLeft: "Loading..." };
 
   const { mutate: joinChatroom, isPending: joinChatroomPending } =
     useJoinChatroom(chatroomId);
@@ -97,6 +104,9 @@ export default function ChatroomPage() {
   const [hijackProgress, setHijackProgress] = useState(0);
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const [isPointsExpanded, setIsPointsExpanded] = useState(false);
 
   // Basic Setups
   useEffect(() => {
@@ -160,7 +170,15 @@ export default function ChatroomPage() {
     setCurrentUsers(currentUsers);
   }, [isReady, chatroom, chatroomMessages, userProfiles]);
 
-  // Update SSE event handlers with console logs
+  // Show toast for new user
+  const showNewUserToast = useCallback((username: string) => {
+    setToastMessage(`${username} joined the chat`);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  }, []);
+
   useChatroomEvents(chatroomId, isReady, {
     onMessageReceived: async (message) => {
       if (message.user_id) {
@@ -191,7 +209,8 @@ export default function ChatroomPage() {
           query.queryKey[1] === chatroomId,
       });
     },
-    onJoinChatroom: () => {
+    onJoinChatroom: (joinedData: { user: User }) => {
+      showNewUserToast(joinedData.user.first_name);
       queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
     },
     onLeaveChatroom: () => {
@@ -277,6 +296,23 @@ export default function ChatroomPage() {
     return () => clearInterval(interval);
   }, [chatroom?.user_hijacking, chatroom?.hijacking_time]);
 
+  const handleClaimPoints = async () => {
+    try {
+      await api.user.claimFreePoints();
+      queryClient.invalidateQueries({ queryKey: ["userPoints"] });
+      // Optionally show a success toast
+      setToastMessage("Points claimed successfully!");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error) {
+      console.error("Failed to claim points:", error);
+      // Optionally show an error toast
+      setToastMessage("Failed to claim points");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
   if (!isReady) {
     return <LoadingScreen />;
   }
@@ -302,8 +338,11 @@ export default function ChatroomPage() {
             image={character?.avatar_image_url || "/bg2.png"}
             userCount={currentUsers.length}
             recentUsers={currentUsers}
-            latestJoinedUser={currentUsers[0]?.first_name}
             onUsersClick={() => setIsUsersExpanded(true)}
+            onPointsClick={() => setIsPointsExpanded(true)}
+            points={userPoints ? getAvailableBalance(userPoints) : 0}
+            canClaim={claimStatus.canClaim}
+            timeLeft={claimStatus.timeLeft}
             className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>
@@ -313,7 +352,7 @@ export default function ChatroomPage() {
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md pt-[var(--tg-content-safe-area-inset-top)]">
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
                 <div className="text-lg font-semibold mb-2 text-center text-pink-300">
                   Public Chatroom
                 </div>
@@ -404,6 +443,21 @@ export default function ChatroomPage() {
           onClose={() => setIsUsersExpanded(false)}
           currentUser={currentUsers}
           userOnStageId={chatroom?.user_on_stage}
+        />
+
+        <PointsExpandedView
+          isExpanded={isPointsExpanded}
+          onClose={() => setIsPointsExpanded(false)}
+          user={telegramUser}
+          points={userPoints ? getAvailableBalance(userPoints) : 0}
+          nextClaimTime={claimStatus.timeLeft}
+          canClaim={claimStatus.canClaim}
+          onClaim={handleClaimPoints}
+        />
+
+        <Toast 
+          message={toastMessage}
+          isVisible={showToast}
         />
       </div>
     </main>

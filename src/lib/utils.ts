@@ -1,3 +1,5 @@
+import { UserPoints } from './validations';
+
 export async function hashText(text: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
@@ -39,3 +41,33 @@ export const getCustomModalStyles = (options?: {
     },
   };
 };
+
+export function getAvailableBalance(userPoints: UserPoints): number {
+  const redeemedSum = Object.values(userPoints.redeemed_balance).reduce((sum, value) => sum + value, 0);
+  return userPoints.paid_avaliable_balance + userPoints.free_claimed_balance + redeemedSum;
+}
+
+const DAILY_CLAIM_COOLDOWN = 24 * 60 * 60; // 24 hours in seconds
+
+export function getNextClaimTime(lastClaimTime: number): {
+  canClaim: boolean;
+  timeLeft: string;
+} {
+  const now = Math.floor(Date.now() / 1000); // Convert current time to seconds
+  const nextClaimTime = lastClaimTime + DAILY_CLAIM_COOLDOWN;
+  const timeLeftSeconds = nextClaimTime - now;
+  const canClaim = timeLeftSeconds <= 0;
+
+  if (canClaim) {
+    return { canClaim: true, timeLeft: "Ready to claim!" };
+  }
+
+  // Convert seconds to hours and minutes
+  const hours = Math.floor(timeLeftSeconds / 3600);
+  const minutes = Math.floor((timeLeftSeconds % 3600) / 60);
+  
+  return {
+    canClaim: false,
+    timeLeft: `${hours}h ${minutes}m`,
+  };
+}

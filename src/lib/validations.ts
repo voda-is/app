@@ -176,3 +176,21 @@ export const ChatroomMessagesSchema = z.object({
 
 // Type inference
 export type ChatroomMessages = z.infer<typeof ChatroomMessagesSchema>;
+
+// Schema for UserPoints
+export const UserPointsSchema = z.object({
+  _id: CryptoHashSchema,
+  
+  paid_avaliable_balance: z.number().int().nonnegative(),
+  paid_pending_balance: z.number().int().nonnegative(),
+  
+  free_claimed_balance: z.number().int().nonnegative(),
+  redeemed_balance: z.record(CryptoHashSchema, z.number().int().nonnegative()),
+  
+  paid_balance_updated_at: TimestampSchema,
+  free_claimed_balance_updated_at: TimestampSchema,
+  redeemed_balance_updated_at: TimestampSchema,
+});
+
+// Type inference
+export type UserPoints = z.infer<typeof UserPointsSchema>;

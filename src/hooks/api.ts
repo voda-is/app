@@ -8,6 +8,7 @@ import type {
   ChatroomMessages,
   Chatroom,
   HistoryMessage,
+  UserPoints,
 } from "@/lib/validations";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
@@ -28,6 +29,22 @@ export function useTelegramUser() {
     refetchOnReconnect: false,
   });
 }
+
+// User points related hooks
+export function useUserPoints() {
+  return useQuery<UserPoints, Error>({
+    queryKey: ["userPoints"],
+    queryFn: () => api.user.getUserPoints(),
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
 
 // Character related hooks
 export function useCharacters(limit: number, offset: number) {

@@ -1,14 +1,18 @@
 import { User } from "@/lib/validations";
 import Image from "next/image";
+import { FiAward } from "react-icons/fi";
 
 interface ChatroomHeaderProps {
   name: string;
   image: string;
   userCount: number;
   recentUsers: User[];
-  latestJoinedUser?: string;
   className?: string;
   onUsersClick: () => void;
+  onPointsClick: () => void;
+  points: number;
+  canClaim: boolean;
+  timeLeft: string;
 }
 
 export function ChatroomHeader({ 
@@ -16,9 +20,12 @@ export function ChatroomHeader({
   image, 
   userCount, 
   recentUsers,
-  latestJoinedUser,
   className = "",
-  onUsersClick
+  onUsersClick,
+  onPointsClick,
+  points,
+  canClaim,
+  timeLeft,
 }: ChatroomHeaderProps) {
   return (
     <div className={`flex flex-col justify-between h-full ${className}`}>
@@ -35,13 +42,14 @@ export function ChatroomHeader({
         <span className="text-white font-medium text-xl">{name}</span>
       </div>
 
-      {/* Users info - bottom left */}
-      <div className="flex justify-between items-end px-4 py-3">
+      {/* Bottom section with buttons */}
+      <div className="flex items-end justify-between px-4 py-3">
+        {/* Online Users */}
         <button 
           onClick={onUsersClick}
-          className="flex items-center space-x-3 bg-emerald-300/20 rounded-lg px-3 py-1.5"
+          className="h-9 flex items-center bg-emerald-300/20 rounded-lg px-3"
         >
-          <div className="flex -space-x-2">
+          <div className="flex -space-x-2 mr-3">
             {recentUsers.map((user) => (
               <div 
                 key={user._id} 
@@ -56,19 +64,34 @@ export function ChatroomHeader({
               </div>
             ))}
           </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+          <div className="flex items-center">
+            <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse mr-1" />
             <span className="text-white/80 text-sm">{userCount} online</span>
           </div>
         </button>
 
-        {latestJoinedUser && (
-          <div className="bg-white/25 backdrop-blur-sm rounded-lg px-3 py-1.5">
-            <span className="text-white/90 text-sm">
-              {latestJoinedUser} just joined
-            </span>
+        {/* Points Display with Status */}
+        <div className="relative">
+          <div className="absolute -top-4 left-0 right-0 text-center text-white/60 text-xs whitespace-nowrap">
+            {canClaim ? 'Free points available!' : ''}
           </div>
-        )}
+          <button 
+            onClick={onPointsClick}
+            className="h-9 flex items-center bg-emerald-300/20 rounded-lg px-3 min-w-[120px]"
+          >
+            <FiAward className="text-white/90 text-lg mr-2" />
+            <div className="flex flex-col items-start">
+              <div className="flex items-center">
+                <span className="text-white/90 text-sm font-medium mr-1">
+                  {points}
+                </span>
+                <span className="text-white/60 text-sm">
+                  Points
+                </span>
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );

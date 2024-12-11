@@ -152,7 +152,7 @@ export default function ChatPage() {
       {/* Content Container */}
       <div className="relative top-0 left-0 z-10 flex flex-col">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-36">
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-40">
           <Header
             variant="chat"
             name={character?.name as string}

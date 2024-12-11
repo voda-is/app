@@ -50,12 +50,12 @@ export default function Home() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gray-900 text-white px-2 pt-24 pb-20"
+      className="min-h-screen bg-gray-900 text-white px-2 pb-20"
     >
       <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
 
       {/* Character Grid */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 pt-44">
         {filteredCharacters?.map((character, index) => (
           <Link key={character._id} href={`/character/${character._id}`}>
             <CharacterCard 

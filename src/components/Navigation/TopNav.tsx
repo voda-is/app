@@ -5,11 +5,15 @@ interface TopNavProps {
 
 export function TopNav({ activeTab, onTabChange }: TopNavProps) {
   return (
-    <div className="fixed top-0 left-0 right-0 z-10 backdrop-blur-md bg-gray-800/70">
-      <div className="flex space-x-2 overflow-x-auto p-4 scrollbar-hide mt-[var(--tg-content-safe-area-inset-top)]">
+    <div className="fixed top-0 left-0 right-0 z-10 backdrop-blur-md bg-gray-800/70 h-40">
+      {/* Points and user info would go here */}
+      <div className="h-28" />
+      
+      {/* Filter tabs at bottom */}
+      <div className="flex space-x-2 overflow-x-auto p-4 no-scrollbar">
         <button
           onClick={() => onTabChange('all')}
-          className={`px-4 py-2 rounded-full transition-colors ${
+          className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors ${
             activeTab === 'all' ? 'bg-emerald-400 text-gray-900' : 'bg-gray-700/50 text-gray-200 hover:bg-gray-700'
           }`}
         >
@@ -17,7 +21,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         </button>
         <button
           onClick={() => onTabChange('male')}
-          className={`px-4 py-2 rounded-full transition-colors ${
+          className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors ${
             activeTab === 'male' ? 'bg-emerald-400 text-gray-900' : 'bg-gray-700/50 text-gray-200 hover:bg-gray-700'
           }`}
         >
@@ -25,7 +29,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         </button>
         <button
           onClick={() => onTabChange('female')}
-          className={`px-4 py-2 rounded-full transition-colors ${
+          className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors ${
             activeTab === 'female' ? 'bg-emerald-400 text-gray-900' : 'bg-gray-700/50 text-gray-200 hover:bg-gray-700'
           }`}
         >
@@ -33,7 +37,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         </button>
         <button
           onClick={() => onTabChange('roleplay')}
-          className={`px-4 py-2 rounded-full transition-colors ${
+          className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors ${
             activeTab === 'roleplay' ? 'bg-emerald-400 text-gray-900' : 'bg-gray-700/50 text-gray-200 hover:bg-gray-700'
           }`}
         >
@@ -41,7 +45,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
         </button>
         <button
           onClick={() => onTabChange('chatroom')}
-          className={`px-4 py-2 rounded-full transition-colors ${
+          className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors ${
             activeTab === 'chatroom' ? 'bg-emerald-400 text-gray-900' : 'bg-gray-700/50 text-gray-200 hover:bg-gray-700'
           }`}
         >

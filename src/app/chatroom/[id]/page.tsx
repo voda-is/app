@@ -332,7 +332,7 @@ export default function ChatroomPage() {
 
       <div className="relative flex flex-col h-full">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-36">
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-40">
           <Header
             variant="chatroom"
             name={character?.name as string}

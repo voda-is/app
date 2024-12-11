@@ -17,13 +17,6 @@ export default function CharacterPage() {
   const { data: chatroom, isLoading: chatroomLoading } = useChatroomWithCharacter(id);
   const { data: character, isLoading: characterLoading } = useCharacter(id);
 
-  console.log('chatroom', chatroom);
-  console.log('character', character);
-  console.log('chatHistoryIds', chatHistoryIds);
-
-  // Debug states
-  const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     if (isOnTelegram()) {
       setupTelegramInterface(router);
@@ -32,17 +25,6 @@ export default function CharacterPage() {
 
   if (characterLoading || historyLoading || chatroomLoading || !id) {
     return <LoadingScreen />;
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-black text-white">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-          <h3 className="text-red-400 font-medium">Error</h3>
-          <p className="text-white/70 text-sm mt-1">{error}</p>
-        </div>
-      </div>
-    );
   }
 
   if (!character || !chatHistoryIds) {

@@ -15,10 +15,6 @@ interface CharacterDetailsProps {
 
 export function CharacterDetails({ character, chatHistoryIds, chatroom }: CharacterDetailsProps) {
   const router = useRouter();
-
-  console.log('chatroom', chatroom);
-  console.log('character', character);
-  console.log('chatHistoryIds', chatHistoryIds);
   
   return (
     <motion.div 
@@ -115,15 +111,16 @@ export function CharacterDetails({ character, chatHistoryIds, chatroom }: Charac
 
         {/* Fixed Chat Button */}
         <div className="sticky bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent pt-8">
-          <button
+          {character.metadata.enable_roleplay && <button
             onClick={() => router.push(`/chat/${chatHistoryIds?.[0]}`)}
             className="w-full bg-[#FDB777] text-black font-semibold py-4 m-2 rounded-2xl flex items-center justify-center gap-2"
           >
             <IoChatbubble className="w-5 h-5" />
             Start Chatting
           </button>
+          }
           {
-            chatroom && <button
+            character.metadata.enable_chatroom && <button
             onClick={() => router.push(`/chatroom/${chatroom._id}`)}
             className="w-full bg-emerald-300 text-black font-semibold py-4 m-2 rounded-2xl flex items-center justify-center gap-2"
           >

@@ -22,7 +22,6 @@ export function ChatroomFooter({
     return null;
   }
 
-  console.log("hijackCost", hijackCost);
   return (
     <div className="flex items-center p-4 backdrop-blur-xl bg-black/20">
       <div className="flex items-center justify-between w-full space-x-3">

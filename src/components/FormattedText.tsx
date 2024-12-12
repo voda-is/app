@@ -21,7 +21,7 @@ export function FormattedText({
   
   if (markdown) {
     return (
-      <ReactMarkdown className={`whitespace-pre-wrap ${className}`}>
+      <ReactMarkdown className={`whitespace-pre-wrap ${className} overflow-hidden`}>
         {formattedText}
       </ReactMarkdown>
     );
@@ -29,7 +29,7 @@ export function FormattedText({
 
   return (
     <div 
-      className={`whitespace-pre-wrap ${className}`}
+      className={`whitespace-pre-wrap ${className} overflow-hidden`}
       dangerouslySetInnerHTML={{ __html: formattedText }}
     />
   );

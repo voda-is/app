@@ -20,7 +20,7 @@ export function Launched({ messages, characterName, onStartNewConversation }: La
 
   if (!isFullyLaunched) return null;
 
-  const baseUrl = "https://sepolia.basescan.org/tx/";
+  const baseUrl = "https://sepolia.basescan.org/tx/0x";
 
   return (
     <div className="flex flex-col items-center justify-center p-6 space-y-4 text-center bg-white/15 backdrop-blur-md border border-white/10 rounded-2xl max-w-md mx-auto w-full">

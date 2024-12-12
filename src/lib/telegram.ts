@@ -11,7 +11,7 @@ declare global {
 }
 
 // telegram user data
-export function getTelegramUser(mock: boolean = false): TelegramUser {
+export function getTelegramUser(mock: boolean = true): TelegramUser {
   if (mock) {
     return {
       id: 7699268464,
@@ -35,6 +35,12 @@ export function notificationOccurred(type: "error" | "success" | "warning") {
 }
 
 export function setupTelegramInterface(router: AppRouterInstance) {
+  const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
+  if (startParam) {
+    // Decode the path and navigate to it
+    const path = decodeURIComponent(startParam);
+    router.push(path);
+  }
   window.Telegram.WebApp.ready();
   window.Telegram.WebApp.expand();
   window.Telegram.WebApp.BackButton.show();
@@ -51,4 +57,10 @@ export function isOnTelegram() {
     window.Telegram.WebApp &&
     window.Telegram.WebApp.initDataUnsafe
   );
+}
+
+export function generateTelegramAppLink(botUsername: string, path: string): string {
+  // Encode the path to make it URL-safe
+  const encodedPath = encodeURIComponent(path);
+  return `https://t.me/${botUsername}/app?startapp=${encodedPath}`;
 }

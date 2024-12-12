@@ -487,6 +487,18 @@ export const api = {
       });
       return response.data.data;
     },
+    getMessage: async (messageId: string): Promise<ChatroomMessages> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/chatroom/get_message/${messageId}`,
+        method: "GET",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
   },
-  
 };
+

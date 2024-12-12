@@ -64,11 +64,8 @@ export default function ChatroomPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: chatroom, isLoading: chatroomLoading } =
-    useChatroom(chatroomId);
-  const { data: character, isLoading: characterLoading } = useCharacter(
-    chatroom?.character_id
-  );
+  const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
+  const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
   const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
   const { data: hijackCost, isLoading: hijackCostLoading } = useHijackCost(chatroomId);
   const { data: userProfiles, isLoading: userProfilesLoading } = useUserProfiles(chatroom!, chatroomMessages!);
@@ -393,6 +390,7 @@ export default function ChatroomPage() {
                 messages={chatroomMessages} 
                 characterName={character?.name || "Us!"} 
                 onStartNewConversation={handleStartNewConversation}
+                chatroomId={chatroomId}
               />
             )}
 

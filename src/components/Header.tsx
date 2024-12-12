@@ -1,9 +1,10 @@
+import { generateTelegramAppLink } from "@/lib/telegram";
 import { User } from "@/lib/validations";
 import Image from "next/image";
-import { FiAward } from "react-icons/fi";
+import { FiAward, FiShare2 } from "react-icons/fi";
 
 interface ChatroomHeaderProps {
-  variant?: 'chat' | 'chatroom';
+  variant?: 'chat' | 'chatroom' | 'message';
 
   name: string;
   image: string;
@@ -12,15 +13,21 @@ interface ChatroomHeaderProps {
   points: number;
   canClaim: boolean;
 
+  messageId?: string;
+  chatroomId?: string;
   userCount?: number;
   recentUsers?: User[];
   onUsersClick?: () => void;
+
+  showToast?: (message: string) => void;
 }
 
 export function Header({ 
   variant = 'chat',
   name, 
   image, 
+  messageId,
+  chatroomId,
   userCount, 
   recentUsers,
   className = "",
@@ -28,7 +35,22 @@ export function Header({
   onPointsClick,
   points,
   canClaim,
+  showToast,
 }: ChatroomHeaderProps) {
+
+  const handleShare = async () => {
+    // Generate the deep link
+    const path = `/chatroomMessage/${chatroomId}/${messageId}`;
+    const shareLink = generateTelegramAppLink("test_finewtf_bot", path);
+    
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      showToast?.("Link copied to clipboard!");
+    } catch (err) {
+      showToast?.("Failed to copy link!");
+    }
+  };
+
   return (
     <div className={`flex flex-col justify-between h-full ${className}`}>
       {/* Character info - centered at top */}
@@ -71,6 +93,17 @@ export function Header({
             <span className="text-white/80 text-sm">{userCount} online</span>
           </div>
           </button>)}
+
+        {/* Share button for message variant */}
+        {variant === 'message' && (
+          <button
+            onClick={handleShare}
+            className="h-9 flex items-center bg-emerald-300/20 rounded-lg px-3 gap-2"
+          >
+            <FiShare2 className="text-white/90 text-lg" />
+            <span className="text-white/90 text-sm">Share</span>
+          </button>
+        )}
 
         {/* Points Display with Status */}
         <div className="relative">

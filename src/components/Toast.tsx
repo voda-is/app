@@ -3,14 +3,15 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ToastProps {
   message: string;
   isVisible: boolean;
+  className?: string;
 }
 
-export function Toast({ message, isVisible }: ToastProps) {
+export function Toast({ message, isVisible, className }: ToastProps) {
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div 
-          className="fixed bottom-20 left-1/2 z-30"
+          className={`fixed bottom-20 left-1/2 z-30 ${className}`}
           initial={{ opacity: 0, y: 50, x: "-50%" }}
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0, y: 50, x: "-50%" }}

@@ -408,3 +408,18 @@ export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: 
     onError: isError,
   });
 }
+
+export function useGetMessage(messageId: string) {
+  return useQuery<ChatroomMessages>({
+    queryKey: ["chatroomMessage", messageId],
+    queryFn: () => api.chatroom.getMessage(messageId),
+    enabled: !!messageId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}

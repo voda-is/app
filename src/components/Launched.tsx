@@ -8,10 +8,11 @@ import { RiMedalLine } from 'react-icons/ri';
 interface LaunchedProps {
   messages: ChatroomMessages;
   characterName: string;
+  chatroomId: string;
   onStartNewConversation: () => void;
 }
 
-export function Launched({ messages, characterName, onStartNewConversation }: LaunchedProps) {
+export function Launched({ messages, characterName, chatroomId, onStartNewConversation }: LaunchedProps) {
   const [isReasoningExpanded, setIsReasoningExpanded] = useState(false);
 
   const isFullyLaunched = messages.is_wrapped && 
@@ -90,14 +91,25 @@ export function Launched({ messages, characterName, onStartNewConversation }: La
             />
           </a>
         </div>
-      </div>
 
-      <button 
-        onClick={onStartNewConversation}
-        className="mt-2 px-8 py-2.5 bg-emerald-500/80 text-white rounded-xl font-medium transition-colors backdrop-blur-sm"
-      >
-        Start New Chat
-      </button>
+        {/* Go to History Button */}
+        <Link 
+          href={`/chatroomMessage/${chatroomId}/${messages._id}`}
+          className="group flex items-center justify-between w-full px-4 py-2 bg-white/5 hover:bg-emerald-900/20 rounded-lg transition-colors border border-emerald-500/10"
+        >
+          <span className="text-sm text-gray-300">View Full History</span>
+          <HiOutlineExternalLink 
+            className="w-4 h-4 text-gray-400 group-hover:text-emerald-400 transition-colors"
+          />
+        </Link>
+
+        <button 
+          onClick={onStartNewConversation}
+          className="w-full px-8 py-2.5 bg-emerald-500/80 text-white rounded-xl font-medium transition-colors backdrop-blur-sm"
+        >
+          Start New Chat
+        </button>
+      </div>
     </div>
   );
 }

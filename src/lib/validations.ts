@@ -162,19 +162,28 @@ export const ChatroomSchema = z.object({
 // Type inference
 export type Chatroom = z.infer<typeof ChatroomSchema>;
 
+export const FunctionCallSchema = z.object({
+  name: z.string(),
+  symbol: z.string(),
+  image: z.string(),
+  reasoning: z.string(),
+});
+
 export const ChatroomMessagesSchema = z.object({
   _id: CryptoHashSchema,
-  is_conclued: z.boolean(),
+  is_wrapped: z.boolean(),
+  function_call: FunctionCallSchema.optional(),
+  tx_hash: CryptoHashSchema.optional(),
   
   history: z.array(ChatHistoryPairSchema),
   
-  users: z.array(CryptoHashSchema), // Set of user IDs who sent messages
-  
-  updated_at: z.number().int().positive(),
-  created_at: z.number().int().positive(),
+  updated_at: TimestampSchema,
+  created_at: TimestampSchema,
 });
 
-// Type inference
+// Add type inference for FunctionCall
+export type FunctionCall = z.infer<typeof FunctionCallSchema>;
+// Update ChatroomMessages type inference
 export type ChatroomMessages = z.infer<typeof ChatroomMessagesSchema>;
 
 // Schema for UserPoints

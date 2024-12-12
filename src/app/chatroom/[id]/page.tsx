@@ -38,6 +38,7 @@ import { debounce } from "lodash";
 import { Toast } from "@/components/Toast";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
 import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
+import { Launched } from '@/components/Launched';
 
 const HIJACK_DURATION = 60; // 60 seconds wait time
 
@@ -99,14 +100,17 @@ export default function ChatroomPage() {
   const [currentUsers, setCurrentUsers] = useState<User[]>([]);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   const [isCurrentSpeaker, setIsCurrentSpeaker] = useState(false);
-  const [isUsersExpanded, setIsUsersExpanded] = useState(false);
   const [hijackProgress, setHijackProgress] = useState(0);
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
+  
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
+  
+  const [isUsersExpanded, setIsUsersExpanded] = useState(false);
   const [isPointsExpanded, setIsPointsExpanded] = useState(false);
 
+  
   // Basic Setups
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -371,6 +375,10 @@ export default function ChatroomPage() {
                 onRate={handleRate}
               />
             ))}
+            {/* Launched component */}
+            {chatroomMessages && (
+              <Launched messages={chatroomMessages} />
+            )}
 
             {/* Typing Indicator */}
             {showTypingIndicator && <TypingIndicator />}
@@ -379,7 +387,8 @@ export default function ChatroomPage() {
           </div>
         </div>
 
-        {chatroom?.user_hijacking && (
+        {/* Only show hijack progress if not wrapped */}
+        {!chatroomMessages?.is_wrapped && chatroom?.user_hijacking && (
           <div className="fixed bottom-20 left-0 right-0 pb-5 pt-5 z-20 px-6 backdrop-blur-md bg-black/50">
             <ProgressBarButton
               isActive={true}
@@ -415,28 +424,30 @@ export default function ChatroomPage() {
           </div>
         )}
 
-        {/* Input Container */}
-        <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto pt-2">
-          {telegramUser &&
-          chatroom &&
-          telegramUser?._id === chatroom?.user_on_stage ? (
-            <InputBar
-              message={inputMessage}
-              onChange={setInputMessage}
-              onSend={handleSendMessage}
-              placeholder={`Message ${character?.name}`}
-              disabled={disableActions}
-            />
-          ) : (
-            <ChatroomFooter
-              isCurrentSpeaker={isCurrentSpeaker}
-              hijackCost={hijackCost as unknown as { cost: number }}
-              onHijack={handleHijack}
-              onReaction={handleReaction}
-              disabled={disableActions}
-            />
-          )}
-        </div>
+        {/* Input Container - Only show if not wrapped */}
+        {!chatroomMessages?.is_wrapped && (
+          <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto pt-2">
+            {telegramUser &&
+            chatroom &&
+            telegramUser?._id === chatroom?.user_on_stage ? (
+              <InputBar
+                message={inputMessage}
+                onChange={setInputMessage}
+                onSend={handleSendMessage}
+                placeholder={`Message ${character?.name}`}
+                disabled={disableActions}
+              />
+            ) : (
+              <ChatroomFooter
+                isCurrentSpeaker={isCurrentSpeaker}
+                hijackCost={hijackCost as unknown as { cost: number }}
+                onHijack={handleHijack}
+                onReaction={handleReaction}
+                disabled={disableActions}
+              />
+            )}
+          </div>
+        )}
 
         <UsersExpandedView
           isExpanded={isUsersExpanded}

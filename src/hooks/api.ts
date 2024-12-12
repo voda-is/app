@@ -45,7 +45,6 @@ export function useUserPoints() {
   });
 }
 
-
 // Character related hooks
 export function useCharacters(limit: number, offset: number) {
   return useQuery<Character[], Error>({
@@ -264,7 +263,7 @@ export function useChatroom(chatroomId: string) {
 }
 
 export function useChatroomMessages(chatroomId: string) {
-  return useQuery<ChatroomMessages>({
+  return useQuery<ChatroomMessages | null>({
     queryKey: ["chatroomMessages", chatroomId],
     queryFn: () => api.chatroom.getChatroomMessages(chatroomId),
     enabled: !!chatroomId,
@@ -359,6 +358,25 @@ export function useLeaveChatroom(chatroomId: string | undefined) {
   });
 }
 
+export function startNewConversation(chatroomId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<boolean, Error, void>({
+    mutationFn: () => {
+      if (!chatroomId) throw new Error("Invalid chatroom ID");
+      return api.chatroom.maybeCreateChatroomMessages(chatroomId);
+    },
+    onSuccess: () => {
+      if (chatroomId) {
+        queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+        queryClient.invalidateQueries({
+          queryKey: ["chatroomMessages", chatroomId],
+        });
+      }
+    },
+  });
+}
+
 export function useSendMessageToChatroom(
   chatroomId: string,
   isError: (error: Error) => void
@@ -376,18 +394,18 @@ export function useSendMessageToChatroom(
   });
 }
 
-// export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: (error: Error) => void) {
-//   const queryClient = useQueryClient();
+export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: (error: Error) => void) {
+  const queryClient = useQueryClient();
 
-//   return useMutation<null, Error, void>({
-//     mutationFn: () => {
-//       return api.chatroom.regenerateLastMessage(chatroomId);
-//     },
-//     onSuccess: () => {
-//       if (chatroomId) {
-//         queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
-//       }
-//     },
-//     onError: isError,
-//   });
-// }
+  return useMutation<null, Error, void>({
+    mutationFn: () => {
+      return api.chatroom.regenerateLastMessage(chatroomId);
+    },
+    onSuccess: () => {
+      if (chatroomId) {
+        queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
+      }
+    },
+    onError: isError,
+  });
+}

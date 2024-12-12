@@ -366,6 +366,20 @@ export const api = {
       });
       return response.data.data;
     },
+    maybeCreateChatroomMessages: async (
+      chatroomId: string
+    ): Promise<boolean> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/chatroom/create_message/${chatroomId}`,
+        method: "POST",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data["is_created"];
+    },
     getChatroomMessages: async (
       chatroomId: string
     ): Promise<ChatroomMessages> => {
@@ -461,5 +475,18 @@ export const api = {
       });
       return response.data.data;
     },
+    regenerateLastMessage: async (chatroomId: string): Promise<null> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/chatroom/regenerate_last_message/${chatroomId}`,
+        method: "POST",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
   },
+  
 };

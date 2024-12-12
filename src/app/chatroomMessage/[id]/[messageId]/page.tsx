@@ -20,6 +20,7 @@ import {
   useUserPoints,
   useStartNewConversation,
   useRegenerateLastMessageToChatroom,
+  useGetMessage,
 } from "@/hooks/api";
 import { User } from "@/lib/validations";
 import {
@@ -65,7 +66,7 @@ export default function ChatroomPage() {
 
   const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
-  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
+  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useGetMessage(messageId);
   const { data: userProfiles, isLoading: userProfilesLoading } = useUserProfiles(chatroom!, chatroomMessages!);
   const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
   const { data: userPoints } = useUserPoints();
@@ -81,11 +82,6 @@ export default function ChatroomPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentUsers, setCurrentUsers] = useState<User[]>([]);
-  const [showTypingIndicator, setShowTypingIndicator] = useState(false);
-  const [isCurrentSpeaker, setIsCurrentSpeaker] = useState(false);
-  const [hijackProgress, setHijackProgress] = useState(0);
-  const [inputMessage, setInputMessage] = useState("");
-  const [disableActions, setDisableActions] = useState(false);
   
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
@@ -100,8 +96,7 @@ export default function ChatroomPage() {
       behavior: "instant",
       block: "end",
     });
-    setDisableActions(false);
-  }, [messages, showTypingIndicator]);
+  }, [messages]);
 
   useEffect(() => {
     if (isOnTelegram()) {

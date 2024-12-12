@@ -16,6 +16,7 @@ import { Message } from "@/lib/chat-context";
 
 interface ChatBubbleProps {
   message: Message;
+  useMarkdown?: boolean;
 
   onRetry?: (text: string) => void;
   onRegenerate?: () => void;
@@ -24,6 +25,7 @@ interface ChatBubbleProps {
 
 export function ChatBubble({
   message,
+  useMarkdown = false,
 
   onRetry,
   onRegenerate,
@@ -250,7 +252,7 @@ export function ChatBubble({
             {/* Message Text */}
             <div className={"pt-2"}>
               {message && (
-                <FormattedText text={message.message} skipFormatting={isUser} />
+                <FormattedText text={message.message} skipFormatting={isUser} markdown={useMarkdown} />
               )}
             </div>
           </div>

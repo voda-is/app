@@ -19,6 +19,7 @@ import {
   useUserProfiles,
   useUserPoints,
   useStartNewConversation,
+  useRegenerateLastMessageToChatroom,
 } from "@/hooks/api";
 import { User } from "@/lib/validations";
 import {
@@ -41,7 +42,7 @@ import { PointsExpandedView } from "@/components/PointsExpandedView";
 import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 import { Launched } from '@/components/Launched';
 
-const HIJACK_DURATION = 60; // 60 seconds wait time
+const HIJACK_DURATION = 20; // 20 seconds wait time
 
 export default function ChatroomPage() {
   const params = useParams();
@@ -81,6 +82,10 @@ export default function ChatroomPage() {
   const { mutate: leaveChatroom, isPending: leaveChatroomPending } = useLeaveChatroom(chatroomId);
   const { mutate: sendMessage, isPending: sendMessagePending } = useSendMessageToChatroom(chatroomId, (error) => {
     console.error("Failed to send message:", error);
+    setMessages(chatContext.markLastMessageAsError(messages));
+  });
+  const { mutate: regenerateLastMessage, isPending: regenerateLastMessagePending } = useRegenerateLastMessageToChatroom(chatroomId, (error) => {
+    console.error("Failed to regenerate last message:", error);
     setMessages(chatContext.markLastMessageAsError(messages));
   });
   const { mutate: startNewConversation, isPending: startNewConversationPending } = useStartNewConversation(chatroomId);
@@ -196,19 +201,16 @@ export default function ChatroomPage() {
         queryKey: ["chatroomMessages", chatroomId],
       });
     },
-    onHijackRegistered: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) =>
-          ["chatroom", "hijackCost"].includes(query.queryKey[0] as string) &&
-          query.queryKey[1] === chatroomId,
-      });
+    onHijackRegistered: async ({user}: {user: User}) => {
+      if (user) {
+        await cache.ensureUserProfiles([user._id]);
+      }
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+      queryClient.invalidateQueries({ queryKey: ["hijackCost", chatroomId] });
     },
     onHijackSucceeded: () => {
-      queryClient.invalidateQueries({
-        predicate: (query) =>
-          ["chatroom", "hijackCost"].includes(query.queryKey[0] as string) &&
-          query.queryKey[1] === chatroomId,
-      });
+      queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
+      queryClient.invalidateQueries({ queryKey: ["hijackCost", chatroomId] });
     },
     onJoinChatroom: (joinedData: { user: User }) => {
       showNewUserToast(joinedData.user.first_name);
@@ -256,9 +258,9 @@ export default function ChatroomPage() {
   };
 
   const handleRegenerate = async () => {
-    // setInputMessage(""); // Clear input immediately
-    // setMessages(chatContext.popLastMessage(messages));
-    // regenerateLastMessage();
+    setInputMessage(""); // Clear input immediately
+    setMessages(chatContext.popLastMessage(messages));
+    regenerateLastMessage();
   };
 
   const handleRetry = () => {
@@ -284,14 +286,22 @@ export default function ChatroomPage() {
 
     const now = Math.floor(Date.now() / 1000);
     const elapsedTime = now - chatroom.hijacking_time;
-    const remainingTime = Math.max(0, HIJACK_DURATION - elapsedTime);
-
+    
+    // Don't start if already completed
+    if (elapsedTime >= HIJACK_DURATION) return;
+    
+    // Set initial progress (0 to HIJACK_DURATION)
     setHijackProgress(elapsedTime);
 
-    if (remainingTime <= 0) return;
-
+    // Start interval to update progress
     const interval = setInterval(() => {
-      setHijackProgress((prev) => prev + 1);
+      const currentElapsed = Math.floor(Date.now() / 1000) - (chatroom.hijacking_time || 0);
+      if (currentElapsed >= HIJACK_DURATION) {
+        clearInterval(interval);
+        setHijackProgress(HIJACK_DURATION);
+      } else {
+        setHijackProgress(currentElapsed);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
@@ -374,13 +384,14 @@ export default function ChatroomPage() {
                 onRegenerate={handleRegenerate}
                 onRetry={handleRetry}
                 onRate={handleRate}
+                useMarkdown={true}
               />
             ))}
             {/* Launched component */}
             {chatroomMessages && (
               <Launched 
                 messages={chatroomMessages} 
-                characterName={character?.name || "Elon Musk"} 
+                characterName={character?.name || "Us!"} 
                 onStartNewConversation={handleStartNewConversation}
               />
             )}
@@ -409,20 +420,18 @@ export default function ChatroomPage() {
                 }
               }}
               onComplete={() => setHijackProgress(0)}
-              className="w-full justify-center text-white font-medium text-base "
+              className="w-full justify-center text-white font-medium text-base"
             >
               <div className="flex items-center gap-2">
                 <img
-                  src={
-                    cache.getUser(chatroom.user_hijacking)?.profile_photo ||
-                    "/bg2.png"
-                  }
+                  src={cache.getUser(chatroom.user_hijacking)?.profile_photo || "/bg2.png"}
                   alt="User avatar"
                   className="w-6 h-6 rounded-full"
                 />
                 <span>
-                  {cache.getUser(chatroom.user_hijacking)?.first_name || "User"}{" "}
-                  is hijacking the conversation...
+                  {hijackProgress >= HIJACK_DURATION 
+                    ? "GET ON STAGE NOW!" 
+                    : `${cache.getUser(chatroom.user_hijacking)?.first_name || "User"} is hijacking the conversation...`}
                 </span>
               </div>
             </ProgressBarButton>

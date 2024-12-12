@@ -13,7 +13,6 @@ import type {
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { Message } from "@/lib/chat-context";
 
 // User related hooks
 export function useTelegramUser() {
@@ -358,7 +357,7 @@ export function useLeaveChatroom(chatroomId: string | undefined) {
   });
 }
 
-export function startNewConversation(chatroomId: string) {
+export function useStartNewConversation(chatroomId: string) {
   const queryClient = useQueryClient();
 
   return useMutation<boolean, Error, void>({

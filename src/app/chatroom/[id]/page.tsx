@@ -18,6 +18,7 @@ import {
   useTelegramUser,
   useUserProfiles,
   useUserPoints,
+  useStartNewConversation,
 } from "@/hooks/api";
 import { User } from "@/lib/validations";
 import {
@@ -67,28 +68,22 @@ export default function ChatroomPage() {
   const { data: character, isLoading: characterLoading } = useCharacter(
     chatroom?.character_id
   );
-  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } =
-    useChatroomMessages(chatroomId);
-  const { data: hijackCost, isLoading: hijackCostLoading } =
-    useHijackCost(chatroomId);
-  const { data: userProfiles, isLoading: userProfilesLoading } =
-    useUserProfiles(chatroom!, chatroomMessages!);
-  const { data: telegramUser, isLoading: telegramUserLoading } =
-    useTelegramUser();
+  const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
+  const { data: hijackCost, isLoading: hijackCostLoading } = useHijackCost(chatroomId);
+  const { data: userProfiles, isLoading: userProfilesLoading } = useUserProfiles(chatroom!, chatroomMessages!);
+  const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
   const { data: userPoints } = useUserPoints();
   const claimStatus = userPoints 
     ? getNextClaimTime(userPoints.free_claimed_balance_updated_at)
     : { canClaim: false, timeLeft: "Loading..." };
 
-  const { mutate: joinChatroom, isPending: joinChatroomPending } =
-    useJoinChatroom(chatroomId);
-  const { mutate: leaveChatroom, isPending: leaveChatroomPending } =
-    useLeaveChatroom(chatroomId);
-  const { mutate: sendMessage, isPending: sendMessagePending } =
-    useSendMessageToChatroom(chatroomId, (error) => {
-      console.error("Failed to send message:", error);
-      setMessages(chatContext.markLastMessageAsError(messages));
-    });
+  const { mutate: joinChatroom, isPending: joinChatroomPending } = useJoinChatroom(chatroomId);
+  const { mutate: leaveChatroom, isPending: leaveChatroomPending } = useLeaveChatroom(chatroomId);
+  const { mutate: sendMessage, isPending: sendMessagePending } = useSendMessageToChatroom(chatroomId, (error) => {
+    console.error("Failed to send message:", error);
+    setMessages(chatContext.markLastMessageAsError(messages));
+  });
+  const { mutate: startNewConversation, isPending: startNewConversationPending } = useStartNewConversation(chatroomId);
 
   const cache = new UserProfilesCache();
   const chatContext = new ChatContextWithUnknownUser(character!, telegramUser?._id as string);
@@ -145,7 +140,8 @@ export default function ChatroomPage() {
       !userProfilesLoading &&
       !telegramUserLoading &&
       !hijackCostLoading &&
-      !characterLoading
+      !characterLoading &&
+      !startNewConversationPending
     ) {
       setIsReady(true);
     }
@@ -155,6 +151,7 @@ export default function ChatroomPage() {
     userProfilesLoading,
     telegramUserLoading,
     hijackCostLoading,
+    startNewConversationPending,
   ]);
 
   // Populate items
@@ -317,6 +314,10 @@ export default function ChatroomPage() {
     }
   };
 
+  const handleStartNewConversation = () => {
+    startNewConversation();
+  };
+
   if (!isReady) {
     return <LoadingScreen />;
   }
@@ -377,7 +378,11 @@ export default function ChatroomPage() {
             ))}
             {/* Launched component */}
             {chatroomMessages && (
-              <Launched messages={chatroomMessages} />
+              <Launched 
+                messages={chatroomMessages} 
+                characterName={character?.name || "Elon Musk"} 
+                onStartNewConversation={handleStartNewConversation}
+              />
             )}
 
             {/* Typing Indicator */}

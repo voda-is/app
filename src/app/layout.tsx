@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+'use client'
+
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -9,11 +10,6 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Fine",
-  description: "Fine AI Characters",
-};
 
 export default function RootLayout({
   children,

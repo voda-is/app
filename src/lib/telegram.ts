@@ -11,7 +11,7 @@ declare global {
 }
 
 // telegram user data
-export function getTelegramUser(mock: boolean = true): TelegramUser {
+export function getTelegramUser(mock: boolean = false): TelegramUser {
   if (mock) {
     return {
       id: 7699268464,
@@ -19,8 +19,7 @@ export function getTelegramUser(mock: boolean = true): TelegramUser {
     };
   }
 
-  const telegramData = window.Telegram.WebApp.initData;
-  console.log("telegramData", telegramData);
+  const telegramData = window.Telegram.WebApp.initDataUnsafe.user;
   if (!telegramData) {
     throw new Error("Telegram user data not found");
   }
@@ -35,6 +34,15 @@ export function notificationOccurred(type: "error" | "success" | "warning") {
 }
 
 export function setupTelegramInterface(router: AppRouterInstance) {
+  const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
+  if (startParam) {
+    if (startParam.length === 128) {
+      const path = "/chatroomMessage/" + startParam.slice(0, 64) + "/" + startParam.slice(64, 128);
+      router.push(path);
+    } else {
+      router.push("/");
+    }
+  }
   window.Telegram.WebApp.ready();
   window.Telegram.WebApp.expand();
   window.Telegram.WebApp.BackButton.show();
@@ -55,7 +63,6 @@ export function isOnTelegram() {
 
 // Example function to generate a Telegram Mini App link
 export function generateTelegramAppLink(botUsername: string, path: string): string {
-  // Encode the path to make it URL-safe
-  const encodedPath = encodeURIComponent(path);
-  return `https://t.me/${botUsername}/fine?startapp=${encodedPath}`;
+  const p = path.replace("chatroomMessage", "").split("/").join("");
+  return `https://t.me/${botUsername}?startapp=${p}`;
 }

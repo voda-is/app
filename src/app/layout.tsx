@@ -19,7 +19,6 @@ export default function RootLayout({
   const router = useRouter();
 
   useEffect(() => {
-    init();
     setupTelegramInterface(router);
   }, []);
   return (

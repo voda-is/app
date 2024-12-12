@@ -11,9 +11,6 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.62.0
         version: 5.62.0(react@18.3.1)
-      '@telegram-apps/sdk':
-        specifier: ^2.9.1
-        version: 2.9.1
       axios:
         specifier: ^1.7.8
         version: 1.7.8
@@ -383,27 +380,6 @@ packages:
     resolution: {integrity: sha512-tj2ltjAn2a3fs+Dqonlvs6GyLQ/LKVJE2DVSYW+8pJ3P6/VCVGrfqv5UEchmlP7tLOvvtZcOuSyI2ooVlR5Yqw==}
     peerDependencies:
       react: ^18 || ^19
-
-  '@telegram-apps/bridge@1.7.1':
-    resolution: {integrity: sha512-oRbznpIC4UibMVygQ+tcS0ZSKx7DaI07MXQF42VETQ/VOCKeaWZeQFUifo4A+CzT6XMGo2hyse/CQP9ziX0H7g==}
-
-  '@telegram-apps/navigation@1.0.9':
-    resolution: {integrity: sha512-Ur24luu+fizrKCDQAoJWQzMj+IwNiqtQlrITz42DORKSohj5yvf9kD5AJO2r9sHC+iC2pLXHCn1dV34o6tbeaQ==}
-
-  '@telegram-apps/sdk@2.9.1':
-    resolution: {integrity: sha512-fW5e0B7yt4jIlEJfXzZwrY2cYufyXQw6xIu2eRfKl1l6N/ETIwZZRr6jOOsRCzzpWUfqePvwItqKIuRf8mGcog==}
-
-  '@telegram-apps/signals@1.1.0':
-    resolution: {integrity: sha512-5qN7cU8t3l7n0cKcnzc/1TYKJTwAggUinfwbLHL1SYmB47pBHjCvfsRiYliFohk6lb635SBmNuVZL6LHFmGZaw==}
-
-  '@telegram-apps/toolkit@1.0.0':
-    resolution: {integrity: sha512-fSVoveLuMzwRKWeXEufMSXxH+HvjsFKb1DeT3pG5qLpnb2rdtejnNcwAt6WEPtiZ3a4YntYaFuR3KYgVv0ZxeQ==}
-
-  '@telegram-apps/transformers@1.2.0':
-    resolution: {integrity: sha512-RufLdD044RPaAJdh+Mp/98JI+Wkp5mhX3WYCg6IZYFMRwu3QTu2FBwYmU9FdRmBF9utbcymSFrY1cqxh+Vtkfg==}
-
-  '@telegram-apps/types@1.2.0':
-    resolution: {integrity: sha512-HhvnSCsqlJpes5ZGsZP/qbDNq8eLLnjgZKaF5NRsDqAKUPvaIIFT1HdyDII/8EioUgoI4FHsP8MylK2Gzm2efg==}
 
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
@@ -2291,38 +2267,6 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.62.0
       react: 18.3.1
-
-  '@telegram-apps/bridge@1.7.1':
-    dependencies:
-      '@telegram-apps/signals': 1.1.0
-      '@telegram-apps/toolkit': 1.0.0
-      '@telegram-apps/transformers': 1.2.0
-      '@telegram-apps/types': 1.2.0
-
-  '@telegram-apps/navigation@1.0.9':
-    dependencies:
-      '@telegram-apps/bridge': 1.7.1
-      '@telegram-apps/signals': 1.1.0
-      '@telegram-apps/toolkit': 1.0.0
-
-  '@telegram-apps/sdk@2.9.1':
-    dependencies:
-      '@telegram-apps/bridge': 1.7.1
-      '@telegram-apps/navigation': 1.0.9
-      '@telegram-apps/signals': 1.1.0
-      '@telegram-apps/toolkit': 1.0.0
-      '@telegram-apps/transformers': 1.2.0
-
-  '@telegram-apps/signals@1.1.0': {}
-
-  '@telegram-apps/toolkit@1.0.0': {}
-
-  '@telegram-apps/transformers@1.2.0':
-    dependencies:
-      '@telegram-apps/toolkit': 1.0.0
-      '@telegram-apps/types': 1.2.0
-
-  '@telegram-apps/types@1.2.0': {}
 
   '@types/debug@4.1.12':
     dependencies:

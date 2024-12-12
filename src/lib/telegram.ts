@@ -11,7 +11,7 @@ declare global {
 }
 
 // telegram user data
-export function getTelegramUser(mock: boolean = true): TelegramUser {
+export function getTelegramUser(mock: boolean = false): TelegramUser {
   if (mock) {
     return {
       id: 7699268464,
@@ -20,7 +20,6 @@ export function getTelegramUser(mock: boolean = true): TelegramUser {
   }
 
   const telegramData = window.Telegram.WebApp.initDataUnsafe.user;
-  console.log("telegramData", telegramData);
   if (!telegramData) {
     throw new Error("Telegram user data not found");
   }

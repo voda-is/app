@@ -3,6 +3,10 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import Script from "next/script";
+import { init } from '@telegram-apps/sdk';
+import { setupTelegramInterface } from "@/lib/telegram";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,6 +20,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    init();
+    setupTelegramInterface(router);
+  }, []);
   return (
     <html lang="en">
       <head>

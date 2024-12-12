@@ -22,11 +22,7 @@ import {
   useRegenerateLastMessageToChatroom,
 } from "@/hooks/api";
 import { User } from "@/lib/validations";
-import {
-  isOnTelegram,
-  notificationOccurred,
-  setupTelegramInterface,
-} from "@/lib/telegram";
+import { notificationOccurred } from "@/lib/telegram";
 import { InputBar } from "@/components/InputBar";
 import { api } from "@/lib/api-client";
 import { ChatroomFooter } from "@/components/ChatroomFooter";
@@ -116,12 +112,6 @@ export default function ChatroomPage() {
     });
     setDisableActions(false);
   }, [messages, showTypingIndicator]);
-
-  useEffect(() => {
-    if (isOnTelegram()) {
-      setupTelegramInterface(router);
-    }
-  }, []);
 
   useEffect(() => {
     if (sendMessagePending) {

@@ -1,14 +1,7 @@
 import type { TelegramUser } from "./validations";
 import { TelegramUserSchema } from "./validations";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
-
-declare global {
-  interface Window {
-    Telegram: {
-      WebApp: WebApp;
-    };
-  }
-}
+import { backButton, expandViewport, hapticFeedback, init, initDataStartParam, initDataUser, miniApp, settingsButton, viewport } from '@telegram-apps/sdk';
 
 // telegram user data
 export function getTelegramUser(mock: boolean = false): TelegramUser {
@@ -18,44 +11,43 @@ export function getTelegramUser(mock: boolean = false): TelegramUser {
       first_name: "Sam",
     };
   }
-
-  const telegramData = window.Telegram.WebApp.initDataUnsafe.user;
-  if (!telegramData) {
+  const initData = initDataUser();
+  if (!initData) {
     throw new Error("Telegram user data not found");
   }
-  const validatedTelegramData = TelegramUserSchema.parse(telegramData);
+  const validatedTelegramData = TelegramUserSchema.parse(initData);
   return validatedTelegramData;
 }
 
 export function notificationOccurred(type: "error" | "success" | "warning") {
-  if (isOnTelegram()) {
-    window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
+  if (hapticFeedback.isSupported()) {
+    hapticFeedback.notificationOccurred(type);
   }
 }
 
 export function setupTelegramInterface(router: AppRouterInstance) {
-  const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
+  init();
+  expandViewport();
+  if (backButton.isSupported()) {
+    backButton.show();
+    backButton.onClick(() => {
+      router.back();
+    });
+  }
+  settingsButton.hide();
+ 
+  const startParam = initDataStartParam();
   if (startParam) {
     // Decode the path and navigate to it
     const path = decodeURIComponent(startParam);
     router.push(path);
   }
-  window.Telegram.WebApp.ready();
-  window.Telegram.WebApp.expand();
-  window.Telegram.WebApp.BackButton.show();
-  window.Telegram.WebApp.SettingsButton.hide();
-  window.Telegram.WebApp.BackButton.onClick(() => {
-    router.back();
-  });
-  notificationOccurred("success");
-}
 
-export function isOnTelegram() {
-  return (
-    window.Telegram &&
-    window.Telegram.WebApp &&
-    window.Telegram.WebApp.initDataUnsafe
-  );
+  if (viewport.bindCssVars.isAvailable()) {
+    viewport.bindCssVars();
+  }
+  miniApp.ready();
+  notificationOccurred("success");
 }
 
 export function generateTelegramAppLink(botUsername: string, path: string): string {

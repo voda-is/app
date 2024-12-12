@@ -2,65 +2,40 @@
 
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
-import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import {
   useCharacter,
   useChatroom,
-  useChatroomMessages,
-  useHijackCost,
-  useJoinChatroom,
-  useLeaveChatroom,
-  useSendMessageToChatroom,
   useTelegramUser,
   useUserProfiles,
   useUserPoints,
-  useStartNewConversation,
-  useRegenerateLastMessageToChatroom,
   useGetMessage,
 } from "@/hooks/api";
 import { User } from "@/lib/validations";
-import {
-  isOnTelegram,
-  notificationOccurred,
-  setupTelegramInterface,
-} from "@/lib/telegram";
-import { InputBar } from "@/components/InputBar";
 import { api } from "@/lib/api-client";
-import { ChatroomFooter } from "@/components/ChatroomFooter";
-import { useChatroomEvents } from "@/lib/sse";
 import { UsersExpandedView } from "@/components/UsersExpandedView";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { ProgressBarButton } from "@/components/ProgressBarButton";
 import { ChatContextWithUnknownUser, Message } from "@/lib/chat-context";
 import { useQueryClient } from "@tanstack/react-query";
-import { debounce } from "lodash";
 import { Toast } from "@/components/Toast";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
 import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 import { Launched } from '@/components/Launched';
-
-const HIJACK_DURATION = 20; // 20 seconds wait time
 
 export default function ChatroomPage() {
   const params = useParams();
   const chatroomId = params?.id as string;
   const messageId = params?.messageId as string;
   const router = useRouter();
-
   // Luanch Sequence:
   // 1. get chatroom info
   // 2. get character info
   // 3. get chatroom messages
   // 4. collect all user profiles need to be fetched
   // 5. fetch user profiles from server or cache
-
-  // After Launch Sequence:
-  // 1. scroll to bottom
-  // 2. call API to join chatroom
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -97,12 +72,6 @@ export default function ChatroomPage() {
       block: "end",
     });
   }, [messages]);
-
-  useEffect(() => {
-    if (isOnTelegram()) {
-      setupTelegramInterface(router);
-    }
-  }, []);
 
   // Data Ready
   useEffect(() => {
@@ -258,8 +227,6 @@ export default function ChatroomPage() {
           canClaim={claimStatus.canClaim}
           onClaim={handleClaimPoints}
         />
-
-        
       </div>
     </main>
   );

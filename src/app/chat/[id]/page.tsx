@@ -8,7 +8,7 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { useCharacter, useConversation, useRegenerateLastMessage, useSendMessage, useTelegramUser, useUserPoints } from '@/hooks/api';
-import { isOnTelegram, notificationOccurred, setupTelegramInterface } from "@/lib/telegram";
+import { notificationOccurred } from "@/lib/telegram";
 import { InputBar } from "@/components/InputBar";
 import { ChatContext, Message } from "@/lib/chat-context";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
@@ -62,12 +62,6 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" });
     setDisableActions(false);
   }, [chatContext, showTypingIndicator]);
-
-  useEffect(() => {
-    if (isOnTelegram()) {
-      setupTelegramInterface(router);
-    }
-  }, []);
 
   // Data Ready
   useEffect(() => {

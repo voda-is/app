@@ -10,7 +10,6 @@ import { useCharacters, useTelegramUser } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { Character } from '@/lib/validations';
 import { setupTelegramInterface } from '@/lib/telegram';
-import { isOnTelegram } from '@/lib/telegram';
 import { useRouter } from 'next/navigation';
 
 type FilterType = 'all' | 'male' | 'female' | 'roleplay' | 'chatroom';
@@ -22,9 +21,7 @@ export default function Home() {
   const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
 
   useEffect(() => {
-    if (isOnTelegram()) {
-      setupTelegramInterface(router);
-    }
+    setupTelegramInterface(router);
   }, []);
 
   const filteredCharacters = (characters as Character[])?.filter(character => {

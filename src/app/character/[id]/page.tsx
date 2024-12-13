@@ -2,18 +2,21 @@
 
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { CharacterDetails } from "@/components/CharacterDetails";
-import { useCharacter, useCharacterChatHistory, useChatroomWithCharacter } from "@/hooks/api";
+import { useCharacter, useCharacterChatHistory, useChatroomWithCharacter, useGetMessageBrief, useUserProfiles, useUserProfilesRaw } from "@/hooks/api";
 import { useParams } from "next/navigation";
 
 export default function CharacterPage() {
   const params = useParams();
   const id = params?.id as string;
-  
+
   const { data: chatHistoryIds, isLoading: historyLoading } = useCharacterChatHistory(id);
   const { data: chatroom, isLoading: chatroomLoading } = useChatroomWithCharacter(id);
   const { data: character, isLoading: characterLoading } = useCharacter(id);
+  const { data: messageBriefs, isLoading: messageBriefsLoading } = useGetMessageBrief(chatroom?._id || "");
+  const { data: _, isLoading: userProfilesLoading } = useUserProfilesRaw(messageBriefs || []);
+  
 
-  if (characterLoading || historyLoading || chatroomLoading || !id) {
+  if (characterLoading || historyLoading || chatroomLoading || messageBriefsLoading || !id || userProfilesLoading) {
     return <LoadingScreen />;
   }
 
@@ -21,14 +24,13 @@ export default function CharacterPage() {
     return null;
   }
 
-  console.log('chatroom', chatroom);
-
   return (
     <div className="flex flex-col min-h-screen bg-black text-white">
       <CharacterDetails 
         character={character} 
         chatHistoryIds={chatHistoryIds}
         chatroom={chatroom!}
+        messageBriefs={messageBriefs || []}
       />
     </div>
   );

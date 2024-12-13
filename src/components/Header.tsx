@@ -2,6 +2,7 @@ import { generateTelegramAppLink } from "@/lib/telegram";
 import { User } from "@/lib/validations";
 import Image from "next/image";
 import { FiAward, FiShare2 } from "react-icons/fi";
+import { useRouter } from "next/navigation";
 
 interface ChatroomHeaderProps {
   variant?: 'chat' | 'chatroom' | 'message';
@@ -20,6 +21,7 @@ interface ChatroomHeaderProps {
   onUsersClick?: () => void;
 
   showToast?: (message: string) => void;
+  characterId?: string;
 }
 
 export function Header({ 
@@ -36,7 +38,9 @@ export function Header({
   points,
   canClaim,
   showToast,
+  characterId
 }: ChatroomHeaderProps) {
+  const router = useRouter();
 
   const handleShare = async () => {
     // Generate the deep link
@@ -53,18 +57,35 @@ export function Header({
 
   return (
     <div className={`flex flex-col justify-between h-full ${className}`}>
-      {/* Character info - centered at top */}
-      <div className="flex items-center justify-center space-x-3 pt-4">
-        <div className="relative w-10 h-10">
-          <Image
-            src={image}
-            alt={name}
-            fill
-            className="object-cover rounded-full"
-          />
+      {/* Character info - centered at top, with mobile-friendly button styling */}
+      <button 
+        onClick={() => characterId && router.push(`/character/${characterId}`)}
+        className="w-full group transition-all active:scale-98 hover:bg-white/5 py-3"
+      >
+        <div className="flex items-center justify-center space-x-3">
+          <div className="relative w-10 h-10 ring-2 ring-emerald-300/30 rounded-full group-hover:ring-emerald-300/50 transition-all">
+            <Image
+              src={image}
+              alt={name}
+              fill
+              className="object-cover rounded-full"
+            />
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-300/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+              <svg 
+                className="w-3 h-3 text-emerald-300" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </div>
+          </div>
+          <span className="text-white font-medium text-xl group-hover:text-emerald-300 transition-colors">
+            {name}
+          </span>
         </div>
-        <span className="text-white font-medium text-xl">{name}</span>
-      </div>
+      </button>
 
       {/* Bottom section with buttons */}
       <div className="flex items-end justify-between px-4 py-3">

@@ -19,8 +19,6 @@ import { useQueryClient } from "@tanstack/react-query";
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
-  const router = useRouter();
-  
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -154,6 +152,7 @@ export default function ChatPage() {
             points={userPoints ? getAvailableBalance(userPoints) : 0}
             canClaim={claimStatus.canClaim}
             onPointsClick={() => setIsPointsExpanded(true)}
+            characterId={character?._id}
             className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>

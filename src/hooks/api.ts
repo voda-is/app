@@ -7,8 +7,8 @@ import type {
   TTSEntry,
   ChatroomMessages,
   Chatroom,
-  HistoryMessage,
   UserPoints,
+  MessageBrief,
 } from "@/lib/validations";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
@@ -325,6 +325,26 @@ export function useUserProfiles(
   });
 }
 
+export function useUserProfilesRaw(messageBriefs: MessageBrief[]) {
+  return useQuery<null>({
+    queryKey: ["userProfilesRaw", messageBriefs],
+    queryFn: async () => {
+      const userIds = messageBriefs.map(brief => brief.wrapped_by);
+      const cache = new UserProfilesCache();
+      await cache.ensureUserProfiles(userIds);
+      return null;
+    },
+    enabled: !!messageBriefs && messageBriefs.length > 0,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
 export function useJoinChatroom(chatroomId: string | undefined) {
   const queryClient = useQueryClient();
 
@@ -414,6 +434,21 @@ export function useGetMessage(messageId: string) {
     queryKey: ["chatroomMessage", messageId],
     queryFn: () => api.chatroom.getMessage(messageId),
     enabled: !!messageId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function useGetMessageBrief(chatroomId: string) {
+  return useQuery<MessageBrief[]>({
+    queryKey: ["messageBrief", chatroomId],
+    queryFn: () => api.chatroom.getMessageBrief(chatroomId),
+    enabled: !!chatroomId,
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,

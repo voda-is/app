@@ -153,6 +153,7 @@ export default function ChatroomPage() {
             image={character?.avatar_image_url || "/bg2.png"}
             messageId={messageId}
             chatroomId={chatroomId}
+            characterId={character?._id}
             onPointsClick={() => setIsPointsExpanded(true)}
             points={userPoints ? getAvailableBalance(userPoints) : 0}
             canClaim={claimStatus.canClaim}

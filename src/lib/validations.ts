@@ -203,3 +203,15 @@ export const UserPointsSchema = z.object({
 
 // Type inference
 export type UserPoints = z.infer<typeof UserPointsSchema>;
+
+export const MessageBriefSchema = z.object({
+  id: CryptoHashSchema,
+  wrapped_by: CryptoHashSchema,
+  is_wrapped: z.boolean(),
+  function_call: FunctionCallSchema.optional(),
+  tx_hash: CryptoHashSchema.optional(),
+  timestamp: z.number().int().positive(),
+});
+
+// Add type inference
+export type MessageBrief = z.infer<typeof MessageBriefSchema>;

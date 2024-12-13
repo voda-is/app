@@ -345,6 +345,7 @@ export default function ChatroomPage() {
             onPointsClick={() => setIsPointsExpanded(true)}
             points={userPoints ? getAvailableBalance(userPoints) : 0}
             canClaim={claimStatus.canClaim}
+            characterId={character?._id}
             className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
           />
         </div>

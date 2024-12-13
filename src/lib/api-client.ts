@@ -11,6 +11,7 @@ import {
   Chatroom,
   User,
   UserPoints,
+  MessageBrief,
 } from "./validations";
 import { z } from "zod";
 import { getTelegramUser } from "@/lib/telegram";
@@ -491,6 +492,18 @@ export const api = {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
         path: `/chatroom/get_message/${messageId}`,
+        method: "GET",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
+    getMessageBrief: async (chatroomId: string): Promise<MessageBrief[]> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/chatroom/get_messages_brief/${chatroomId}`,
         method: "GET",
         data: {
           user_id: telegramUser.id.toString(),

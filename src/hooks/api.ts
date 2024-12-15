@@ -157,6 +157,9 @@ export function useSendMessage(
       queryClient.invalidateQueries({
         queryKey: ["conversation", conversationId],
       });
+      queryClient.invalidateQueries({
+        queryKey: ["userPoints"],
+      });
     },
     onError: isError,
   });
@@ -173,6 +176,9 @@ export function useRegenerateLastMessage(
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["conversation", conversationId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["userPoints"],
       });
     },
     onError: isError,

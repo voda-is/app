@@ -47,6 +47,7 @@ export function InputBar({ message, onChange, onSend, placeholder, disabled }: I
           ref={textareaRef}
           rows={1}
           value={message}
+          disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}

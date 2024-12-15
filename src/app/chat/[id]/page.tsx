@@ -111,16 +111,26 @@ export default function ChatPage() {
 
   // Handle Send Message
   const handleSendMessage = async () => {    
+    if (!hasEnoughPoints()) {
+      notificationOccurred('error');
+      return;
+    }
+    
     const trimmedMessage = inputMessage.trim();
     if (!trimmedMessage) return;
 
-    setInputMessage(""); // Clear input immediately
+    setInputMessage("");
     setMessages(chatContext.newUserMessage(messages, trimmedMessage));
     sendMessage(trimmedMessage);
   };
 
   const handleRegenerate = async () => {
-    setInputMessage(""); // Clear input immediately    
+    if (!hasEnoughPoints()) {
+      notificationOccurred('error');
+      return;
+    }
+
+    setInputMessage("");    
     setMessages(chatContext.popLastMessage(messages));
     regenerateLastMessage();
   };
@@ -144,6 +154,10 @@ export default function ChatPage() {
       console.error("Failed to claim points:", error);
 
     }
+  };
+
+  const hasEnoughPoints = () => {
+    return userPoints && getAvailableBalance(userPoints) >= 1;
   };
 
   if (!isReady) {
@@ -227,8 +241,8 @@ export default function ChatPage() {
             message={inputMessage}
             onChange={setInputMessage}
             onSend={handleSendMessage}
-            placeholder={`Message ${character?.name}`}
-            disabled={disableActions}
+            placeholder={hasEnoughPoints() ? `Message ${character?.name}` : "Claim points to Chat"}
+            disabled={disableActions || !hasEnoughPoints()}
           />
         </div>
 

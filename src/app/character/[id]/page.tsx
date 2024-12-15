@@ -30,8 +30,7 @@ export default function CharacterPage() {
 
   const { data: chatHistoryIds, isLoading: historyLoading } = useCharacterChatHistory(id);
   const { data: character, isLoading: characterLoading } = useCharacter(id);
-  
-  console.log(character?.metadata.enable_chatroom)
+  console.log(chatHistoryIds)
   const { data: chatroom, isLoading: chatroomLoading } = useChatroomWithCharacter(
     // @ts-ignore
     character?.metadata.enable_chatroom ? id : null
@@ -56,7 +55,7 @@ export default function CharacterPage() {
   }, []);
   const [activeTab, setActiveTab] = useState<'about' | 'history'>('about');
 
-  if (characterLoading || historyLoading || createConversationLoading || deleteConversationSuccess ||
+  if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading ||
       (character?.metadata.enable_chatroom && (chatroomLoading || messageBriefsLoading || userProfilesLoading)) || 
       !id) {
     return <LoadingScreen />;

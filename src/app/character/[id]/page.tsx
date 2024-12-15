@@ -28,9 +28,10 @@ export default function CharacterPage() {
   const router = useRouter();
   const cache = new UserProfilesCache();
 
+  const [activeTab, setActiveTab] = useState<'about' | 'history'>('about');
+  const [isLoading, setIsLoading] = useState(false);
   const { data: chatHistoryIds, isLoading: historyLoading } = useCharacterChatHistory(id);
   const { data: character, isLoading: characterLoading } = useCharacter(id);
-  console.log(chatHistoryIds)
   const { data: chatroom, isLoading: chatroomLoading } = useChatroomWithCharacter(
     // @ts-ignore
     character?.metadata.enable_chatroom ? id : null
@@ -46,16 +47,18 @@ export default function CharacterPage() {
   const { mutate: createConversation, isPending: createConversationLoading, isSuccess: createConversationSuccess } = useCreateConversation(id);
   const { mutate: deleteConversation, isPending: deleteConversationLoading, isSuccess: deleteConversationSuccess } = useDeleteConversation(id);
   useEffect(() => {
-    if (createConversationSuccess) {
-      router.push(`/chat/${chatHistoryIds?.[0]}`);
+    if (createConversationSuccess && !historyLoading) {
+      setIsLoading(true);
+      setTimeout(() => {
+        router.push(`/chat/${chatHistoryIds?.[0]}`);
+      }, 3000);
     }
-  }, [createConversationSuccess]);
+  }, [createConversationSuccess, historyLoading, chatHistoryIds]);
   useEffect(() => {
     notificationOccurred('success');
   }, []);
-  const [activeTab, setActiveTab] = useState<'about' | 'history'>('about');
 
-  if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading ||
+  if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading || isLoading ||
       (character?.metadata.enable_chatroom && (chatroomLoading || messageBriefsLoading || userProfilesLoading)) || 
       !id) {
     return <LoadingScreen />;

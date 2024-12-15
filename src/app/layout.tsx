@@ -34,6 +34,11 @@ export default function RootLayout({
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
         />
+        <Script
+          src="https://analytics.fine.wtf/script.js" 
+          data-website-id="921b7b12-1961-4bc8-8eb1-bb0cfe1d26a7" 
+          strategy="afterInteractive"
+        />
         <Providers>
           <main>{children}</main>
           {/* <TelegramDebug /> */}

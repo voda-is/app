@@ -63,21 +63,21 @@ export function Header({
         className="w-full group transition-all active:scale-98 hover:bg-white/5 py-3"
       >
         <div className="flex items-center justify-center space-x-3">
-          <div className="relative w-10 h-10 ring-2 ring-emerald-300/30 rounded-full group-hover:ring-emerald-300/50 transition-all">
+          <div className="relative w-10 h-10">
             <Image
               src={image}
               alt={name}
               fill
-              className="object-cover rounded-full"
+              className="object-cover rounded-full ring-2 ring-emerald-300/30 group-hover:ring-emerald-300/50 transition-all"
             />
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-300/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+            <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-gray-600/40 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
               <svg 
-                className="w-3 h-3 text-emerald-300" 
+                className="w-4 h-4 text-emerald-300" 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
             </div>
           </div>

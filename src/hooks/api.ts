@@ -119,6 +119,32 @@ export function useConversation(conversationId: string) {
   });
 }
 
+export function useCreateConversation(characterId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<null, Error, void>({
+    mutationFn: () => api.chat.createConversation(characterId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["characterChatHistory", characterId],
+      });
+    },
+  });
+}
+
+export function useDeleteConversation(characterId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<null, Error, string>({
+    mutationFn: (conversationId: string) => api.chat.deleteConversation(conversationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["characterChatHistory", characterId],
+      });
+    },
+  });
+}
+
 export function useSendMessage(
   conversationId: string,
   isError: (error: Error) => void
@@ -224,7 +250,8 @@ export function useChatroomWithCharacter(characterId: string) {
   return useQuery<Chatroom>({
     queryKey: ["chatroomCharacter", characterId],
     queryFn: async () => {
-      const result = await api.chatroom.getOrCreateChatroom(characterId);
+      if (!characterId) throw new Error("Invalid character ID");
+      const result = await api.chatroom.generateFromCharacter(characterId);
       if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },

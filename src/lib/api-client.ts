@@ -244,6 +244,18 @@ export const api = {
       });
       return null;
     },
+    deleteConversation: async (conversationId: string): Promise<null> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/conversation/${conversationId}`,
+        method: "DELETE",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
     getConversationHistoryIdOnly: async (
       characterId: string
     ): Promise<string[]> => {
@@ -252,6 +264,7 @@ export const api = {
         path: `/conversations/id_only/${characterId}`,
         method: "GET",
         data: {
+          limit: 10,
           user_id: telegramUser.id.toString(),
           stripUserId: true,
         },
@@ -387,7 +400,7 @@ export const api = {
     },
     getChatroomMessages: async (
       chatroomId: string
-    ): Promise<ChatroomMessages | undefined> => {
+    ): Promise<ChatroomMessages> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
         path: `/chatroom/messages/${chatroomId}`,

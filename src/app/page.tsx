@@ -2,15 +2,16 @@
 
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
 import { CharacterCard } from '@/components/CharacterCard';
 import { TopNav } from '@/components/Navigation/TopNav';
-// import { BottomNav } from '@/components/Navigation/BottomNav';
-import Link from 'next/link';
-import { useCharacters, useTelegramUser } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
+
+import { useCharacters, useTelegramUser } from '@/hooks/api';
 import { Character } from '@/lib/validations';
 import { isOnTelegram, setupTelegramInterface } from '@/lib/telegram';
-import { useRouter } from 'next/navigation';
 
 type FilterType = 'all' | 'male' | 'female' | 'roleplay' | 'chatroom';
 

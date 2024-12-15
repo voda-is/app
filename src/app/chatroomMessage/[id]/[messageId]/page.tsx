@@ -3,9 +3,8 @@
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Header } from "@/components/Header";
-import { ChatBubble } from "@/components/ChatBubble";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { useQueryClient } from "@tanstack/react-query";
+
 import {
   useCharacter,
   useChatroom,
@@ -14,15 +13,20 @@ import {
   useUserPoints,
   useGetMessage,
 } from "@/hooks/api";
-import { User } from "@/lib/validations";
-import { api } from "@/lib/api-client";
-import { UsersExpandedView } from "@/components/UsersExpandedView";
+
 import { UserProfilesCache } from "@/lib/userProfilesCache";
 import { ChatContextWithUnknownUser, Message } from "@/lib/chat-context";
-import { useQueryClient } from "@tanstack/react-query";
+import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
+
+import { User } from "@/lib/validations";
+import { api } from "@/lib/api-client";
+
+import { Header } from "@/components/Header";
+import { ChatBubble } from "@/components/ChatBubble";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { UsersExpandedView } from "@/components/UsersExpandedView";
 import { Toast } from "@/components/Toast";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
-import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 import { Launched } from '@/components/Launched';
 
 export default function ChatroomPage() {

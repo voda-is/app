@@ -30,10 +30,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { path, method, data } = body.data;
 
-    console.log("path", path);
-    console.log("method", method);
-    console.log("data", data);
-
     let authHeader = {};
     if (!data.ignoreToken) {
       const accessToken = await getAccessToken(data.user_id);

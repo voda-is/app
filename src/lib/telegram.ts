@@ -11,11 +11,11 @@ declare global {
 }
 
 // telegram user data
-export function getTelegramUser(mock: boolean = true): TelegramUser {
-  if (mock) {
+export function getTelegramUser(): TelegramUser {
+  if (!isOnTelegram()) {
     return {
       id: 7699268464,
-      first_name: "Sam",
+      first_name: "Test",
     };
   }
 

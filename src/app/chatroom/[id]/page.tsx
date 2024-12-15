@@ -3,10 +3,9 @@
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Header } from "@/components/Header";
-import { ChatBubble } from "@/components/ChatBubble";
-import { TypingIndicator } from "@/components/TypingIndicator";
-import { LoadingScreen } from "@/components/LoadingScreen";
+import { useQueryClient } from "@tanstack/react-query";
+import { debounce } from "lodash";
+
 import {
   useCharacter,
   useChatroom,
@@ -21,21 +20,25 @@ import {
   useStartNewConversation,
   useRegenerateLastMessageToChatroom,
 } from "@/hooks/api";
+
 import { User } from "@/lib/validations";
-import { notificationOccurred } from "@/lib/telegram";
+import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
 import { InputBar } from "@/components/InputBar";
 import { api } from "@/lib/api-client";
-import { ChatroomFooter } from "@/components/ChatroomFooter";
 import { useChatroomEvents } from "@/lib/sse";
-import { UsersExpandedView } from "@/components/UsersExpandedView";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { ProgressBarButton } from "@/components/ProgressBarButton";
 import { ChatContextWithUnknownUser, Message } from "@/lib/chat-context";
-import { useQueryClient } from "@tanstack/react-query";
-import { debounce } from "lodash";
+import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
+
+import { Header } from "@/components/Header";
+import { ChatBubble } from "@/components/ChatBubble";
+import { TypingIndicator } from "@/components/TypingIndicator";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { ChatroomFooter } from "@/components/ChatroomFooter";
+import { UsersExpandedView } from "@/components/UsersExpandedView";
+import { ProgressBarButton } from "@/components/ProgressBarButton";
 import { Toast } from "@/components/Toast";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
-import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 import { Launched } from '@/components/Launched';
 
 const HIJACK_DURATION = 20; // 20 seconds wait time
@@ -43,7 +46,6 @@ const HIJACK_DURATION = 20; // 20 seconds wait time
 export default function ChatroomPage() {
   const params = useParams();
   const chatroomId = params?.id as string;
-  const router = useRouter();
 
   // Luanch Sequence:
   // 1. get chatroom info
@@ -59,6 +61,7 @@ export default function ChatroomPage() {
   // 2. call API to join chatroom
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingIndicatorRef = useRef<HTMLDivElement>(null);
 
   const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
@@ -73,11 +76,11 @@ export default function ChatroomPage() {
 
   const { mutate: joinChatroom, isPending: joinChatroomPending } = useJoinChatroom(chatroomId);
   const { mutate: leaveChatroom, isPending: leaveChatroomPending } = useLeaveChatroom(chatroomId);
-  const { mutate: sendMessage, isPending: sendMessagePending } = useSendMessageToChatroom(chatroomId, (error) => {
+  const { mutate: sendMessage, isPending: sendMessagePending, isSuccess: sendMessageSuccess } = useSendMessageToChatroom(chatroomId, (error) => {
     console.error("Failed to send message:", error);
     setMessages(chatContext.markLastMessageAsError(messages));
   });
-  const { mutate: regenerateLastMessage, isPending: regenerateLastMessagePending } = useRegenerateLastMessageToChatroom(chatroomId, (error) => {
+  const { mutate: regenerateLastMessage, isPending: regenerateLastMessagePending, isSuccess: regenerateLastMessageSuccess } = useRegenerateLastMessageToChatroom(chatroomId, (error) => {
     console.error("Failed to regenerate last message:", error);
     setMessages(chatContext.markLastMessageAsError(messages));
   });
@@ -106,12 +109,24 @@ export default function ChatroomPage() {
   
   // Basic Setups
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "instant",
-      block: "end",
-    });
-    setDisableActions(false);
-  }, [messages, showTypingIndicator]);
+    if (showTypingIndicator && typingIndicatorRef.current) {
+      typingIndicatorRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [showTypingIndicator]);
+
+  // Initial scroll to bottom when messages load
+  useEffect(() => {
+    if (messages.length > 0 && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    }
+  }, [messages.length === 0]); // Will only run when messages first load (changes from 0 to non-0)
+
+  // Scroll on successful message send or regenerate
+  useEffect(() => {
+    if ((sendMessageSuccess || regenerateLastMessageSuccess || sendMessagePending || regenerateLastMessagePending) && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [sendMessageSuccess, regenerateLastMessageSuccess]);
 
   useEffect(() => {
     if (sendMessagePending) {
@@ -334,7 +349,9 @@ export default function ChatroomPage() {
 
       <div className="relative flex flex-col h-full">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-40">
+        <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 ${
+          isOnTelegram() ? 'h-40' : 'h-32'
+        }`}>
           <Header
             variant="chatroom"
             name={character?.name as string}
@@ -351,7 +368,7 @@ export default function ChatroomPage() {
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 pt-40 pb-12">
+        <div className={`flex-1 ${isOnTelegram() ? 'pt-40' : 'pt-32'} pb-24`}>
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">
@@ -386,9 +403,13 @@ export default function ChatroomPage() {
             )}
 
             {/* Typing Indicator */}
-            {showTypingIndicator && <TypingIndicator />}
+            {showTypingIndicator && (
+              <div ref={typingIndicatorRef} className="mb-4">
+                <TypingIndicator />
+              </div>
+            )}
 
-            <div ref={messagesEndRef} className="h-10" />
+            <div ref={messagesEndRef} className="h-1" />
           </div>
         </div>
 
@@ -430,9 +451,7 @@ export default function ChatroomPage() {
         {/* Input Container - Only show if not wrapped */}
         {!chatroomMessages?.is_wrapped && (
           <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto pt-2">
-            {telegramUser &&
-            chatroom &&
-            telegramUser?._id === chatroom?.user_on_stage ? (
+            {telegramUser && chatroom && telegramUser?._id === chatroom?.user_on_stage ? (
               <InputBar
                 message={inputMessage}
                 onChange={setInputMessage}

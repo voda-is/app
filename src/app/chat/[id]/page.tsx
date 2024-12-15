@@ -1,26 +1,31 @@
 'use client';
 
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
+
+import { useCharacter, useConversation, useRegenerateLastMessage, useSendMessage, useTelegramUser, useUserPoints } from '@/hooks/api';
+
 import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { useCharacter, useConversation, useRegenerateLastMessage, useSendMessage, useTelegramUser, useUserPoints } from '@/hooks/api';
-import { notificationOccurred } from "@/lib/telegram";
 import { InputBar } from "@/components/InputBar";
-import { ChatContext, Message } from "@/lib/chat-context";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
+
+import { ChatContext, Message } from "@/lib/chat-context";
 import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 import { api } from "@/lib/api-client";
-import { useQueryClient } from "@tanstack/react-query";
+import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
+
 
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingIndicatorRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Fetch initial data
@@ -30,13 +35,13 @@ export default function ChatPage() {
   const { data: character, isLoading: characterLoading } = useCharacter(characterId);
 
   const chatContext = new ChatContext(character!, telegramUser!);
-  const { mutate: sendMessage, isPending: sendMessagePending } = useSendMessage(id, (error) => {
+  const { mutate: sendMessage, isPending: sendMessagePending, isSuccess: sendMessageSuccess } = useSendMessage(id, (error) => {
     console.error('Failed to send message:', error);
     notificationOccurred('error');
     setMessages(chatContext.markLastMessageAsError(messages));
   });
 
-  const { mutate: regenerateLastMessage, isPending: regenerateLastMessagePending } = useRegenerateLastMessage(id, (error) => {
+  const { mutate: regenerateLastMessage, isPending: regenerateLastMessagePending, isSuccess: regenerateLastMessageSuccess } = useRegenerateLastMessage(id, (error) => {
     console.error('Failed to regenerate message:', error);
     notificationOccurred('error');
     setMessages(chatContext.markLastMessageAsError(messages));
@@ -57,9 +62,24 @@ export default function ChatPage() {
 
   // Basic Setups
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" });
-    setDisableActions(false);
-  }, [chatContext, showTypingIndicator]);
+    if (showTypingIndicator && typingIndicatorRef.current) {
+      typingIndicatorRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [showTypingIndicator]);
+
+  // Initial scroll to bottom when messages load
+  useEffect(() => {
+    if (messages.length > 0 && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+    }
+  }, [messages.length === 0]); // Will only run when messages first load (changes from 0 to non-0)
+
+  // Scroll on successful message send or regenerate
+  useEffect(() => {
+    if ((sendMessageSuccess || regenerateLastMessageSuccess || sendMessagePending || regenerateLastMessagePending) && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [sendMessageSuccess, regenerateLastMessageSuccess]);
 
   // Data Ready
   useEffect(() => {
@@ -144,7 +164,9 @@ export default function ChatPage() {
       {/* Content Container */}
       <div className="relative top-0 left-0 z-10 flex flex-col">
         {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-40">
+        <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 ${
+          isOnTelegram() ? 'h-40' : 'h-32'
+        }`}>
           <Header
             variant="chat"
             name={character?.name as string}
@@ -153,12 +175,16 @@ export default function ChatPage() {
             canClaim={claimStatus.canClaim}
             onPointsClick={() => setIsPointsExpanded(true)}
             characterId={character?._id}
-            className="flex-shrink-0 h-16 pt-[var(--tg-content-safe-area-inset-top)]"
+            className={`flex-shrink-0 ${
+              isOnTelegram() 
+                ? 'h-16 pt-[var(--tg-content-safe-area-inset-top)]' 
+                : 'h-16'
+            }`}
           />
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 pt-28 pb-10">
+        <div className={`flex-1 ${isOnTelegram() ? 'pt-40' : 'pt-32'} pb-24`}>
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">
@@ -183,10 +209,12 @@ export default function ChatPage() {
 
             {/* Typing Indicator */}
             {showTypingIndicator && (
-              <TypingIndicator />
+              <div ref={typingIndicatorRef} className="mb-4">
+                <TypingIndicator />
+              </div>
             )}
 
-            <div ref={messagesEndRef} className="h-10" />
+            <div ref={messagesEndRef} className="h-1" />
           </div>
         </div>
 

@@ -52,20 +52,27 @@ export async function POST(request: NextRequest) {
     delete data.stripUserId;
     delete data.isStream;
 
-    console.log("sending", JSON.stringify(data));
     // Make the actual API request with the access token
-    const response = await fetch(`${API_URL}${path}`, {
-      method: method,
-      headers: {
-        ...authHeader,
-        ...(method !== "GET" && { "Content-Type": "application/json" }),
-      },
-      ...(method === "GET"
-        ? {
-            url: `${API_URL}${path}?${new URLSearchParams(data).toString()}`,
-          }
-        : { body: JSON.stringify(data) }),
-    });
+    let response;
+    if (method === "GET") {
+      const requestUrl = `${API_URL}${path}?${new URLSearchParams(data).toString()}`;
+      response = await fetch(requestUrl, {
+        method: method,
+        headers: {
+          ...authHeader,
+          "Content-Type": "application/json",
+        },
+      });
+    } else {
+      response = await fetch(`${API_URL}${path}`, {
+        method: method,
+        headers: {
+          ...authHeader,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+    }
 
     if (isStream) {
       if (!response.body) {

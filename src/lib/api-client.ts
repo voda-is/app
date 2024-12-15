@@ -12,6 +12,10 @@ import {
   User,
   UserPoints,
   MessageBrief,
+  FunctionCall,
+  TokenCreationRecord,
+  BuyTokenRecord,
+  SellTokenRecord,
 } from "./validations";
 import { z } from "zod";
 import { getTelegramUser } from "@/lib/telegram";
@@ -206,6 +210,8 @@ export const api = {
         data: {
           limit,
           offset,
+          only_roleplay: true,
+          only_chatroom: true,
           ignoreToken: true,
         },
       });
@@ -227,7 +233,7 @@ export const api = {
   chat: {
     createConversation: async (characterId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      const response = await apiProxy.post("", {
+      await apiProxy.post("", {
         path: `/conversations/${characterId}`,
         method: "POST",
         data: {
@@ -250,7 +256,7 @@ export const api = {
           stripUserId: true,
         },
       });
-      return response.data.data["conversations"];
+      return response.data.data["conversation_ids"];
     },
     getConversation: async (
       conversationId: string
@@ -266,7 +272,6 @@ export const api = {
       });
       return response.data.data;
     },
-
     sendMessage: async (
       conversationId: string,
       text: string
@@ -284,7 +289,6 @@ export const api = {
       });
       return null;
     },
-
     regenerateLastMessage: async (conversationId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
@@ -342,10 +346,10 @@ export const api = {
   },
 
   chatroom: {
-    getOrCreateChatroom: async (characterId: string): Promise<Chatroom> => {
+    generateFromCharacter: async (characterId: string): Promise<Chatroom> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
-        path: `/chatroom/get_or_create/${characterId}`,
+        path: `/chatroom/generate_from_character/${characterId}`,
         method: "POST",
         data: {
           user_id: telegramUser.id.toString(),
@@ -358,7 +362,7 @@ export const api = {
     getChatroom: async (chatroomId: string): Promise<Chatroom> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
-        path: `/chatroom/get/${chatroomId}`,
+        path: `/chatroom/${chatroomId}`,
         method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
@@ -383,7 +387,7 @@ export const api = {
     },
     getChatroomMessages: async (
       chatroomId: string
-    ): Promise<ChatroomMessages> => {
+    ): Promise<ChatroomMessages | undefined> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
         path: `/chatroom/messages/${chatroomId}`,
@@ -419,10 +423,10 @@ export const api = {
       });
       return response.data.data;
     },
-    getHijackCost: async (characterId: string): Promise<any> => {
+    getHijackCost: async (chatroomId: string): Promise<any> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
-        path: `/chatroom/hijack_cost/${characterId}`,
+        path: `/chatroom/hijack_cost/${chatroomId}`,
         method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
@@ -491,7 +495,7 @@ export const api = {
     getMessage: async (messageId: string): Promise<ChatroomMessages> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
-        path: `/chatroom/get_message/${messageId}`,
+        path: `/chatroom/message/${messageId}`,
         method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
@@ -503,7 +507,7 @@ export const api = {
     getMessageBrief: async (chatroomId: string): Promise<MessageBrief[]> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
-        path: `/chatroom/get_messages_brief/${chatroomId}`,
+        path: `/chatroom/messages_brief/${chatroomId}`,
         method: "GET",
         data: {
           user_id: telegramUser.id.toString(),
@@ -513,5 +517,99 @@ export const api = {
       return response.data.data;
     },
   },
-};
 
+  blockchain: {
+    getAddress: async (): Promise<{ sol_address: string, eth_address: string }> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: "/address",
+        method: "GET",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
+
+    createToken: async (
+      chatroomMessageId: string,
+      functionCall: FunctionCall
+    ): Promise<null> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/blockchain/create_token/${chatroomMessageId}`,
+        method: "POST",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+          function_call: functionCall,
+        },
+      });
+      return response.data.data;
+    },
+
+    buyToken: async (
+      chatroomMessageId: string,
+      payload: {
+        sol_amount?: number;
+        eth_amount?: number;
+        sol_mint_address?: string;
+        eth_mint_address?: string;
+      }
+    ): Promise<null> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/blockchain/buy/${chatroomMessageId}`,
+        method: "POST",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+          ...payload,
+        },
+      });
+      return response.data.data;
+    },
+
+    sellToken: async (
+      chatroomMessageId: string,
+      payload: {
+        sol_token_percentage?: number;
+        eth_token_percentage?: number;
+        sol_mint_address?: string;
+        eth_mint_address?: string;
+      }
+    ): Promise<null> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/blockchain/sell/${chatroomMessageId}`,
+        method: "POST",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+          ...payload,
+        },
+      });
+      return response.data.data;
+    },
+
+    withdraw: async (payload: {
+      amount_in_sol?: number;
+      amount_in_eth?: number;
+      withdraw_to_eth_address?: string;
+      withdraw_to_sol_address?: string;
+    }): Promise<null> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: "/blockchain/withdraw",
+        method: "POST",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+          ...payload,
+        },
+      });
+      return response.data.data;
+    },
+  }
+};

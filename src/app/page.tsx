@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { useCharacters, useTelegramUser } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { Character } from '@/lib/validations';
-import { setupTelegramInterface } from '@/lib/telegram';
+import { isOnTelegram, setupTelegramInterface } from '@/lib/telegram';
 import { useRouter } from 'next/navigation';
 
 type FilterType = 'all' | 'male' | 'female' | 'roleplay' | 'chatroom';
@@ -42,6 +42,8 @@ export default function Home() {
     return <LoadingScreen />;
   }
 
+  console.log(isOnTelegram())
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -50,9 +52,8 @@ export default function Home() {
       className="min-h-screen bg-gray-900 text-white px-2 pb-20"
     >
       <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
-
       {/* Character Grid */}
-      <div className="grid grid-cols-2 gap-2 pt-44">
+      <div className={`grid grid-cols-2 gap-2 ${isOnTelegram() ? 'pt-44' : 'pt-24'}`}>
         {filteredCharacters?.map((character, index) => (
           <Link key={character._id} href={`/character/${character._id}`}>
             <CharacterCard 

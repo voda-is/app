@@ -21,6 +21,8 @@ interface CharacterDetailsProps {
 export function CharacterDetails({ character, chatHistoryIds, chatroom, messageBriefs }: CharacterDetailsProps) {
   const router = useRouter();
   const cache = new UserProfilesCache();
+
+  console.log( character, chatHistoryIds, chatroom, messageBriefs)
   
   const [activeTab, setActiveTab] = useState<'about' | 'history'>('about');
   return (

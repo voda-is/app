@@ -11,7 +11,7 @@ declare global {
 }
 
 // telegram user data
-export function getTelegramUser(mock: boolean = false): TelegramUser {
+export function getTelegramUser(mock: boolean = true): TelegramUser {
   if (mock) {
     return {
       id: 7699268464,
@@ -28,9 +28,7 @@ export function getTelegramUser(mock: boolean = false): TelegramUser {
 }
 
 export function notificationOccurred(type: "error" | "success" | "warning") {
-  if (isOnTelegram()) {
-    window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
-  }
+  window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
 }
 
 export function setupTelegramInterface(router: AppRouterInstance) {
@@ -54,11 +52,7 @@ export function setupTelegramInterface(router: AppRouterInstance) {
 }
 
 export function isOnTelegram() {
-  return (
-    window.Telegram &&
-    window.Telegram.WebApp &&
-    window.Telegram.WebApp.initDataUnsafe
-  );
+  return typeof window !== 'undefined' && window.Telegram.WebApp.initDataUnsafe.user != null;
 }
 
 // Example function to generate a Telegram Mini App link

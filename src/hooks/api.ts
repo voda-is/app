@@ -74,20 +74,18 @@ export function useCharacter(id: string | undefined) {
   });
 }
 
-export function useCharacterChatHistory(characterId: string | undefined) {
+export function useCharacterChatHistory(characterId: string) {
   const { data: character } = useCharacter(characterId);
   const { data: user } = useTelegramUser();
 
   return useQuery<string[], Error>({
     queryKey: ["characterChatHistory", characterId],
     queryFn: async () => {
-      if (!characterId) throw new Error("Character ID is required");
-      if (!user) throw new Error("User is required");
-
       if (character) {
         const history = await api.chat.getConversationHistoryIdOnly(
           characterId
         );
+        console.log(history)
         if (history.length === 0) {
           await api.chat.createConversation(characterId);
           return await api.chat.getConversationHistoryIdOnly(characterId);

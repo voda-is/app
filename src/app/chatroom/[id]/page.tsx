@@ -109,6 +109,10 @@ export default function ChatroomPage() {
   
   // Basic Setups
   useEffect(() => {
+    notificationOccurred('success');
+  }, []);
+
+  useEffect(() => {
     if (showTypingIndicator && typingIndicatorRef.current) {
       typingIndicatorRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
@@ -334,8 +338,6 @@ export default function ChatroomPage() {
     return <LoadingScreen />;
   }
 
-  notificationOccurred('success');
-
   return (
     <main className="flex flex-col w-full bg-black min-h-screen">
       <div className="fixed inset-0 z-0">
@@ -370,7 +372,7 @@ export default function ChatroomPage() {
         </div>
 
         {/* Messages Container */}
-        <div className={`flex-1 ${isOnTelegram() ? 'pt-42' : 'pt-32'} pb-24`}>
+        <div className={`flex-1 ${isOnTelegram() ? 'pt-40' : 'pt-32'} pb-24`}>
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">

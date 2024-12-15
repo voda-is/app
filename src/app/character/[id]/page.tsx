@@ -51,7 +51,9 @@ export default function CharacterPage() {
       router.push(`/chat/${chatHistoryIds?.[0]}`);
     }
   }, [createConversationSuccess]);
-
+  useEffect(() => {
+    notificationOccurred('success');
+  }, []);
   const [activeTab, setActiveTab] = useState<'about' | 'history'>('about');
 
   if (characterLoading || historyLoading || createConversationLoading || deleteConversationSuccess ||
@@ -59,8 +61,6 @@ export default function CharacterPage() {
       !id) {
     return <LoadingScreen />;
   }
-
-  notificationOccurred('success');
 
   if (!character || !chatHistoryIds) {
     return null;

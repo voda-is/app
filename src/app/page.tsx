@@ -18,7 +18,7 @@ type FilterType = 'all' | 'male' | 'female' | 'roleplay' | 'chatroom';
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const router = useRouter();
-  const { data: user, isLoading: userLoading } = useTelegramUser();
+  const { data: _, isLoading: userLoading } = useTelegramUser();
   const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
 
   useEffect(() => {
@@ -43,8 +43,6 @@ export default function Home() {
     return <LoadingScreen />;
   }
 
-  console.log(isOnTelegram())
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -53,7 +51,6 @@ export default function Home() {
       className="min-h-screen bg-gray-900 text-white px-2 pb-20"
     >
       <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
-      {/* Character Grid */}
       <div className={`grid grid-cols-2 gap-2 ${isOnTelegram() ? 'pt-44' : 'pt-24'}`}>
         {filteredCharacters?.map((character, index) => (
           <Link key={character._id} href={`/character/${character._id}`}>
@@ -64,8 +61,6 @@ export default function Home() {
           </Link>
         ))}
       </div>
-
-      {/* <BottomNav activeTab={activeNavTab} onTabChange={setActiveNavTab} /> */}
     </motion.div>
   );
 }

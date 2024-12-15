@@ -20,7 +20,7 @@ import { useCharacter,
 
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { isOnTelegram } from "@/lib/telegram";
+import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
 
 export default function CharacterPage() {
   const params = useParams();
@@ -59,6 +59,8 @@ export default function CharacterPage() {
       !id) {
     return <LoadingScreen />;
   }
+
+  notificationOccurred('success');
 
   if (!character || !chatHistoryIds) {
     return null;

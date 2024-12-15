@@ -28,7 +28,9 @@ export function getTelegramUser(): TelegramUser {
 }
 
 export function notificationOccurred(type: "error" | "success" | "warning") {
-  window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
+  if (isOnTelegram()) {
+    window.Telegram.WebApp.HapticFeedback.notificationOccurred(type);
+  }
 }
 
 export function setupTelegramInterface(router: AppRouterInstance) {

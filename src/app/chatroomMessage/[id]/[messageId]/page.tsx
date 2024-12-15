@@ -20,6 +20,7 @@ import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 
 import { User } from "@/lib/validations";
 import { api } from "@/lib/api-client";
+import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
 
 import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
@@ -135,6 +136,8 @@ export default function ChatroomPage() {
     return <LoadingScreen />;
   }
 
+  notificationOccurred('success');
+
   return (
     <main className="flex flex-col w-full bg-black min-h-screen">
       <div className="fixed inset-0 z-0">
@@ -149,8 +152,9 @@ export default function ChatroomPage() {
       </div>
 
       <div className="relative flex flex-col h-full">
-        {/* Header */}
-        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-40">
+        <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 ${
+          isOnTelegram() ? 'h-42' : 'h-32'
+        }`}>
           <Header
             variant="message"
             name={character?.name as string}
@@ -171,7 +175,7 @@ export default function ChatroomPage() {
         </div>
 
         {/* Messages Container */}
-        <div className="flex-1 pt-40 pb-12">
+        <div className={`flex-1 ${isOnTelegram() ? 'pt-42' : 'pt-32'} pb-24`}>
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">

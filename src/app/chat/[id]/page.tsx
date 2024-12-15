@@ -19,7 +19,6 @@ import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 import { api } from "@/lib/api-client";
 import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
 
-
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
@@ -147,6 +146,8 @@ export default function ChatPage() {
     return <LoadingScreen />;
   }
 
+  notificationOccurred('success');
+
   return (
     <main className="flex flex-col w-full bg-black">
       {/* Background Image */}
@@ -165,7 +166,7 @@ export default function ChatPage() {
       <div className="relative top-0 left-0 z-10 flex flex-col">
         {/* Header */}
         <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 ${
-          isOnTelegram() ? 'h-40' : 'h-32'
+          isOnTelegram() ? 'h-42' : 'h-32'
         }`}>
           <Header
             variant="chat"
@@ -184,7 +185,7 @@ export default function ChatPage() {
         </div>
 
         {/* Messages Container */}
-        <div className={`flex-1 ${isOnTelegram() ? 'pt-40' : 'pt-32'} pb-24`}>
+        <div className={`flex-1 ${isOnTelegram() ? 'pt-42' : 'pt-32'} pb-24`}>
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">

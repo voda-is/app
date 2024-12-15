@@ -334,6 +334,8 @@ export default function ChatroomPage() {
     return <LoadingScreen />;
   }
 
+  notificationOccurred('success');
+
   return (
     <main className="flex flex-col w-full bg-black min-h-screen">
       <div className="fixed inset-0 z-0">
@@ -350,7 +352,7 @@ export default function ChatroomPage() {
       <div className="relative flex flex-col h-full">
         {/* Header */}
         <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 ${
-          isOnTelegram() ? 'h-40' : 'h-32'
+          isOnTelegram() ? 'h-42' : 'h-32'
         }`}>
           <Header
             variant="chatroom"
@@ -368,7 +370,7 @@ export default function ChatroomPage() {
         </div>
 
         {/* Messages Container */}
-        <div className={`flex-1 ${isOnTelegram() ? 'pt-40' : 'pt-32'} pb-24`}>
+        <div className={`flex-1 ${isOnTelegram() ? 'pt-42' : 'pt-32'} pb-24`}>
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">

@@ -35,10 +35,16 @@ export function ChatBubble({
 
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
-  const timestamp = new Date(message.createdAt).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const timestamp = useMemo(() => {
+    // Convert Unix seconds to milliseconds
+    const timestampMs = message.createdAt * 1000;
+
+    return new Date(timestampMs).toLocaleString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false, // This will use 12-hour format with AM/PM
+    });
+  }, [message.createdAt]);
 
   // Determine bubble style based on role
   const getBubbleStyle = () => {

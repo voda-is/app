@@ -153,6 +153,11 @@ export function useSendMessage(
 
   return useMutation<null, Error, string>({
     mutationFn: (text: string) => api.chat.sendMessage(conversationId, text),
+    onMutate: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["userPoints"],
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["conversation", conversationId],
@@ -173,6 +178,11 @@ export function useRegenerateLastMessage(
 
   return useMutation<null, Error, void>({
     mutationFn: () => api.chat.regenerateLastMessage(conversationId),
+    onMutate: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["userPoints"],
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["conversation", conversationId],

@@ -3,50 +3,50 @@
 import { motion, useAnimationControls } from "framer-motion";
 import { IoRefresh, IoWarning } from "react-icons/io5";
 import { GiSoundWaves } from "react-icons/gi";
-import { HistoryMessage, TTSEntry } from "@/lib/validations";
+import { ChatHistoryPair, HistoryMessage, TTSEntry } from "@/lib/validations";
 import { FormattedText } from "@/components/FormattedText";
 import { useState, useMemo, useEffect } from "react";
 import { useTTS } from "@/hooks/api";
 import { extractText } from "@/lib/formatText";
 import { hashText } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
+import { ProgressBarButton } from "./ProgressBarButton";
+import Image from "next/image";
+import { Message } from "@/lib/chat-context";
 
-interface ChatBubbleProps extends HistoryMessage {
-  index: number;
-  isLatestReply?: boolean;
+interface ChatBubbleProps {
+  message: Message;
+  useMarkdown?: boolean;
+
   onRetry?: (text: string) => void;
   onRegenerate?: () => void;
   onRate?: (rating: number) => void;
-  enableVoice?: boolean;
-  characterId: string;
 }
 
 export function ChatBubble({
-  role,
-  text,
-  created_at,
-  index,
-  isLatestReply,
+  message,
+  useMarkdown = false,
+
   onRetry,
   onRegenerate,
   onRate,
-  status = "sent",
-  enableVoice = false,
-  characterId,
 }: ChatBubbleProps) {
-  const isUser = role === "user";
-  const isAssistant = role === "assistant";
-  const timestamp = new Date(created_at).toLocaleTimeString([], {
+  if (!message) return null;
+
+  const isUser = message.role === "user";
+  const isAssistant = message.role === "assistant";
+  const timestamp = new Date(message.createdAt).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
 
   // Determine bubble style based on role
   const getBubbleStyle = () => {
-    if (isUser) return "bg-[#10B981] text-black";
+    if (isUser)
+      return "bg-emerald-500/60 backdrop-blur-md border border-emerald-500/20 text-white shadow-lg";
     if (isAssistant)
       return "bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white";
-    return "bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white"; // default style
+    return "bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white";
   };
 
   // State to track the current rating
@@ -56,14 +56,12 @@ export function ChatBubble({
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [hash, setHash] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   // Extract text once and memoize it
-  const ttsText = useMemo(() => extractText(text).join(" "), [text]);
+  const ttsText = useMemo(() => extractText(message.message).join(" "), [message]);
 
   // Calculate hash when text changes
   useEffect(() => {
@@ -117,7 +115,7 @@ export function ChatBubble({
 
   const handleTTSClick = async () => {
     generateTTS(
-      { text: ttsText, characterId },
+      { text: ttsText, characterId: message.character._id || "" },
       {
         onSuccess: (entry) => {
           // Check if the entry.audioBlob is valid
@@ -140,33 +138,35 @@ export function ChatBubble({
     );
   };
 
-  const controls = useAnimationControls();
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className={`flex items-center gap-2 ${
-        isUser ? "justify-end" : "justify-start"
+      transition={{ delay: 0.1 }}
+      className={`flex items-start gap-2 ${
+        isUser ? "flex-row-reverse" : "flex-row"
       }`}
     >
-      {/* Retry indicator - only show for failed user messages */}
-      {isUser && onRetry && status === "error" && (
-        <motion.div
-          whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
-          onClick={() => onRetry(text)}
-        >
-          <IoWarning className="w-5 h-5 text-white" />
-        </motion.div>
-      )}
-
       <div className={`max-w-[90%] ${isUser ? "items-end" : "items-start"}`}>
         <div className={`rounded-2xl px-4 py-2 text-sm ${getBubbleStyle()}`}>
+          {/* Avatar and Message Header */}
+          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
+            <div className="relative w-6 h-6 flex-shrink-0">
+              <Image
+                src={
+                  (isUser ? message.user.profile_photo : message.character.avatar_image_url) || "/bg2.png"
+                }
+                alt={isUser ? "User" : "Assistant"}
+                fill
+                className="object-cover rounded-full"
+              />
+            </div>
+            <span className="text-xs text-white/70">{timestamp}</span>
+          </div>
+
           {/* Message content */}
           <div className="mb-2">
-            {!isUser && enableVoice && !audioBlob && (
+            {!isUser && message.enableVoice && !audioBlob && (
               <button
                 onClick={handleTTSClick}
                 disabled={isTTSLoading}
@@ -204,28 +204,11 @@ export function ChatBubble({
                       setDuration(audioElement.duration);
                     }
                   }}
-                  onPlay={() => {
-                    setIsPlaying(true);
-                    controls.start({
-                      width: "100%",
-                      transition: {
-                        duration: duration - currentTime,
-                        ease: "linear",
-                        type: "tween",
-                      },
-                    });
-                  }}
-                  onPause={() => {
-                    setIsPlaying(false);
-                    controls.stop();
-                    controls.set({
-                      width: `${(currentTime / duration) * 100}%`,
-                    });
-                  }}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
                   onEnded={() => {
                     setIsPlaying(false);
-                    controls.stop();
-                    controls.set({ width: 0 });
+                    setCurrentTime(0);
                   }}
                   onTimeUpdate={() => {
                     if (audioElement) {
@@ -234,7 +217,10 @@ export function ChatBubble({
                   }}
                 />
 
-                <button
+                <ProgressBarButton
+                  isActive={isPlaying}
+                  duration={duration}
+                  progress={currentTime}
                   onClick={() => {
                     if (audioElement) {
                       if (isPlaying) {
@@ -242,7 +228,6 @@ export function ChatBubble({
                       } else {
                         if (audioElement.ended) {
                           audioElement.currentTime = 0;
-                          controls.set({ width: 0 });
                         }
                         audioElement.play().catch((error) => {
                           console.error("Error playing audio:", error);
@@ -250,104 +235,83 @@ export function ChatBubble({
                       }
                     }
                   }}
-                  className="relative flex items-center gap-2 px-3 py-1.5 rounded-lg 
-                    bg-white/10 hover:bg-white/20 active:scale-95
-                    text-white/80 hover:text-white 
-                    transition-all duration-200 overflow-hidden"
                 >
-                  <motion.div
-                    className="absolute left-0 top-0 bottom-0 bg-white/10"
-                    initial={{ width: 0 }}
-                    animate={controls}
+                  <GiSoundWaves
+                    className={`w-5 h-5 ${isPlaying ? "animate-pulse" : ""}`}
                   />
+                  <span className="text-sm font-medium">
+                    {isPlaying ? "Playing..." : "Play Audio"}
+                  </span>
+                  <span className="text-xs text-white/60">
+                    {Math.ceil(duration)}"
+                  </span>
+                </ProgressBarButton>
+              </div>
+            )}
 
-                  <div className="relative flex items-center gap-2">
-                    <GiSoundWaves
-                      className={`w-5 h-5 ${isPlaying ? "animate-pulse" : ""}`}
-                    />
-                    <span className="text-sm font-medium">
-                      {isPlaying ? "Playing..." : "Play Audio"}
-                    </span>
-                    <span className="text-xs text-white/60">
-                      {Math.ceil(duration)}"
-                    </span>
-                  </div>
+            {/* Message Text */}
+            <div className={"pt-2"}>
+              {message && (
+                <FormattedText text={message.message} skipFormatting={isUser} markdown={useMarkdown} />
+              )}
+            </div>
+          </div>
+
+          {/* Controls for assistant messages */}
+          {message.isLatestReply && !isUser && (
+            <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-white/10">
+              {/* Regenerate button */}
+              {onRegenerate && (
+                <button
+                  onClick={onRegenerate}
+                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  <IoRefresh className="w-4 h-4" />
+                  Regenerate
                 </button>
-              </div>
-            )}
+              )}
 
-            {/* Rest of the message content */}
-            <div
-              className={`${
-                enableVoice
-                  ? "border-t border-white/10 pt-4"
-                  : isUser
-                  ? "pt-4"
-                  : ""
-              }`}
-            >
-              {text && <FormattedText text={text} skipFormatting={isUser} />}
-            </div>
-          </div>
-
-          {/* Timestamp and controls container */}
-          <div className="border-t border-white/10 mt-2 pt-2">
-            {/* Timestamp */}
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-xs ${
-                  isUser ? "text-black/70" : "text-white/70"
-                }`}
-              >
-                {timestamp}
-              </span>
-            </div>
-
-            {/* Controls for assistant messages */}
-            {isLatestReply && !isUser && (
-              <div className="flex flex-col gap-2 mt-2">
-                {/* Regenerate button */}
-                {onRegenerate && (
-                  <button
-                    onClick={onRegenerate}
-                    className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
-                  >
-                    <IoRefresh className="w-4 h-4" />
-                    Regenerate
-                  </button>
-                )}
-
-                {/* Rating stars with text */}
-                {onRate && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-400">
-                        Rate this response:
-                      </span>
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <button
-                          key={rating}
-                          onClick={() => {
-                            setCurrentRating(rating);
-                            onRate(rating);
-                          }}
-                          className={`transition-colors ${
-                            rating <= currentRating
-                              ? "text-yellow-400"
-                              : "text-gray-400 hover:text-yellow-400"
-                          }`}
-                        >
-                          ★
-                        </button>
-                      ))}
-                    </div>
+              {/* Rating stars */}
+              {onRate && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-400">
+                      Rate this response:
+                    </span>
+                    {[1, 2, 3, 4, 5].map((rating) => (
+                      <button
+                        key={rating}
+                        onClick={() => {
+                          setCurrentRating(rating);
+                          onRate(rating);
+                        }}
+                        className={`transition-colors ${
+                          rating <= currentRating
+                            ? "text-yellow-400"
+                            : "text-gray-400 hover:text-yellow-400"
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Retry indicator */}
+      {isUser && onRetry && message.status === "error" && (
+        <motion.div
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
+          onClick={() => onRetry(message.message)}
+        >
+          <IoWarning className="w-5 h-5 text-white" />
+        </motion.div>
+      )}
     </motion.div>
   );
 }

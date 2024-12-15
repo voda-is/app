@@ -6,33 +6,37 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "https": "next dev --experimental-https"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
     "axios": "^1.7.8",
+    "classnames": "^2.5.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^11.12.0",
+    "lodash": "^4.17.21",
     "next": "^15.0.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-icons": "^5.3.0",
-    "zod": "^3.23.8",
+    "react-markdown": "^9.0.1",
     "react-modal": "^3.16.1",
-    "classnames": "^2.5.1",
-    "react-spinners": "^0.13.6"
+    "react-spinners": "^0.13.6",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@tanstack/react-query-devtools": "^5.62.0",
+    "@types/lodash": "^4.17.7",
     "@types/node": "^20.17.9",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
+    "@types/react-modal": "^3.16.3",
     "@types/telegram-web-app": "^7.10.1",
     "eslint": "^9.16.0",
     "eslint-config-next": "^15.0.3",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
-    "typescript": "^5.7.2",
-    "@types/react-modal": "^3.16.3"
+    "typescript": "^5.7.2"
   }
 }

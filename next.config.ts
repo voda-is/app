@@ -3,7 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   images: {
-    domains: ['img.fine.wtf'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'img.fine.wtf',
+      },
+    ],
   },
   eslint: {
     ignoreDuringBuilds: true,

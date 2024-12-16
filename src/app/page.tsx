@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -13,7 +13,7 @@ import { useCharacters, useTelegramUser } from '@/hooks/api';
 import { Character } from '@/lib/validations';
 import { isOnTelegram, setupTelegramInterface } from '@/lib/telegram';
 
-type FilterType = 'all' | 'male' | 'female' | 'roleplay' | 'chatroom';
+type FilterType = 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp';
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
@@ -25,19 +25,21 @@ export default function Home() {
     setupTelegramInterface(router);
   }, []);
 
-  const filteredCharacters = (characters as Character[])?.filter(character => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'male' || activeFilter === 'female') {
-      return character.tags[0]?.toLowerCase() === activeFilter;
-    }
-    if (activeFilter === 'roleplay') {
-      return character.metadata.enable_roleplay;
-    }
-    if (activeFilter === 'chatroom') {
-      return character.metadata.enable_chatroom;
-    }
-    return true;
-  });
+  const filteredCharacters = useMemo(() => {
+    if (!characters) return [];
+    
+    return (characters as Character[]).filter(character => {
+      if (activeFilter === 'all') return true;
+      
+      // Safely handle tags array
+      const tags = character.tags || [];
+      if (['zh', 'en', 'kr', 'jp', 'male', 'female'].includes(activeFilter)) {
+        return tags.some(tag => tag?.toLowerCase() === activeFilter);
+      }
+
+      return true;
+    });
+  }, [characters, activeFilter]);
 
   if (charactersLoading || userLoading) {
     return <LoadingScreen />;
@@ -51,8 +53,8 @@ export default function Home() {
       className="min-h-screen bg-gray-900 text-white px-2 pb-20"
     >
       <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
-      <div className={`grid grid-cols-2 gap-2 ${isOnTelegram() ? 'pt-44' : 'pt-24'}`}>
-        {filteredCharacters?.map((character, index) => (
+      <div className={`grid grid-cols-2 gap-2 ${isOnTelegram() ? 'pt-52' : 'pt-32'}`}>
+        {filteredCharacters.map((character, index) => (
           <Link key={character._id} href={`/character/${character._id}`}>
             <CharacterCard 
               character={character} 

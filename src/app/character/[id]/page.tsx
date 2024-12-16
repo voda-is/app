@@ -371,7 +371,7 @@ export default function CharacterPage() {
                 className="flex-1 bg-emerald-300 text-black font-semibold py-4 rounded-2xl flex items-center justify-center gap-2"
               >
                 <IoChatbubbleSharp className="w-5 h-5" />
-                Chatroom ️
+                Chatroom!
               </button>
             )}
           </div>

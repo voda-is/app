@@ -1,15 +1,13 @@
 "use client";
 
-import { motion, useAnimationControls } from "framer-motion";
+import { motion } from "framer-motion";
 import { IoRefresh, IoWarning } from "react-icons/io5";
 import { GiSoundWaves } from "react-icons/gi";
-import { ChatHistoryPair, HistoryMessage, TTSEntry } from "@/lib/validations";
 import { FormattedText } from "@/components/FormattedText";
 import { useState, useMemo, useEffect } from "react";
 import { useTTS } from "@/hooks/api";
 import { extractText } from "@/lib/formatText";
 import { hashText } from "@/lib/utils";
-import { useQuery } from "@tanstack/react-query";
 import { ProgressBarButton } from "./ProgressBarButton";
 import Image from "next/image";
 import { Message } from "@/lib/chat-context";
@@ -36,14 +34,23 @@ export function ChatBubble({
   const isUser = message.role === "user";
   const isAssistant = message.role === "assistant";
   const timestamp = useMemo(() => {
+    if (!message.createdAt) return "Processing...";
+
     // Convert Unix seconds to milliseconds
     const timestampMs = message.createdAt * 1000;
 
-    return new Date(timestampMs).toLocaleString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false, // This will use 12-hour format with AM/PM
-    });
+    try {
+      const formattedDate = new Date(timestampMs).toLocaleString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false, // This will use 12-hour format with AM/PM
+      });
+
+      return formattedDate;
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Processing...";
+    }
   }, [message.createdAt]);
 
   // Determine bubble style based on role
@@ -73,13 +80,6 @@ export function ChatBubble({
   useEffect(() => {
     hashText(ttsText).then(setHash);
   }, [ttsText]);
-
-  // Get cached result
-  const { data: cachedTTS } = useQuery<TTSEntry>({
-    queryKey: ["tts", hash],
-    enabled: !!hash,
-    staleTime: Infinity,
-  });
 
   const audioUrl = useMemo(
     () => (audioBlob ? URL.createObjectURL(audioBlob) : null),

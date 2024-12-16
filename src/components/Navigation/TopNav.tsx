@@ -21,11 +21,11 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
 
   return (
     <div className={`fixed top-0 left-0 right-0 z-10 backdrop-blur-md bg-gray-800/70 ${
-      isOnTelegram() ? 'h-48' : 'h-28'
+      isOnTelegram() ? 'h-48' : 'h-32'
     }`}>
       <div className="overflow-x-auto">
         {/* Points and user info would go here */}
-      {isOnTelegram() && <div className="h-20" />}
+      {isOnTelegram() && <div className="h-24" />}
         <div className="flex flex-col gap-2 p-2">
           {/* Gender Row */}
           <div className="flex gap-2">

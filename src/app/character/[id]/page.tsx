@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { IoChatbubble, IoTime, IoPricetag, IoChatbubbleSharp, IoTrash } from "react-icons/io5";
+import { IoChatbubble, IoTime, IoPricetag, IoChatbubbleSharp, IoTrash, IoShare } from "react-icons/io5";
 import { RiMedalLine } from "react-icons/ri";
 import { HiOutlineExternalLink } from "react-icons/hi";
 import { formatDistance } from 'date-fns';
@@ -20,7 +20,7 @@ import { useCharacter,
 
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
+import { generateTelegramAppLink, isOnTelegram, notificationOccurred } from "@/lib/telegram";
 
 export default function CharacterPage() {
   const params = useParams();
@@ -57,6 +57,13 @@ export default function CharacterPage() {
   useEffect(() => {
     notificationOccurred('success');
   }, []);
+
+  const handleShare = () => {
+    const link = generateTelegramAppLink("finewtf_bot", `c${id}`);
+    // copy to clipboard
+    navigator.clipboard.writeText(link);
+    notificationOccurred('success');
+  };
 
   if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading || isLoading ||
       (character?.metadata.enable_chatroom && (chatroomLoading || messageBriefsLoading || userProfilesLoading)) || 
@@ -116,6 +123,14 @@ export default function CharacterPage() {
           <h1 className="text-2xl font-bold text-white text-center mb-2">
             {character.name}
           </h1>
+          {/* Add Share Button */}
+          <button
+            onClick={handleShare}
+            className="mx-auto flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm text-white transition-colors"
+          >
+            <IoShare className="w-4 h-4" />
+            Share Character
+          </button>
         </div>
 
         {/* Tabs */}
@@ -356,7 +371,7 @@ export default function CharacterPage() {
                 className="flex-1 bg-emerald-300 text-black font-semibold py-4 rounded-2xl flex items-center justify-center gap-2"
               >
                 <IoChatbubbleSharp className="w-5 h-5" />
-                Chatroom ��️
+                Chatroom ️
               </button>
             )}
           </div>

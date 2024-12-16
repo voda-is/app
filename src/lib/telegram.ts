@@ -39,6 +39,8 @@ export function setupTelegramInterface(router: AppRouterInstance) {
     if (startParam.length === 128) {
       const path = "/chatroomMessage/" + startParam.slice(0, 64) + "/" + startParam.slice(64, 128);
       router.push(path);
+    } else if (startParam.length === 65 && startParam.startsWith("c")) {
+      router.push("/character/" + startParam.slice(1));
     } else {
       router.push("/");
     }

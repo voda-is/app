@@ -13,7 +13,7 @@ import { useTelegramUser, useGetAddress, useGetTokenInfo, useCharacterListBrief 
 import { isOnTelegram } from '@/lib/telegram';
 
 export default function ProfilePage() {
-  const { data: user, isLoading } = useTelegramUser();
+  const { data: user, isLoading: isLoadingUser } = useTelegramUser();
   const { data: addresses, isLoading: isLoadingAddresses } = useGetAddress();
   const { data: tokenInfo, isLoading: isLoadingTokenInfo } = useGetTokenInfo();
   const { data: characterListBrief, isLoading: isLoadingCharacterListBrief } = useCharacterListBrief();
@@ -22,15 +22,8 @@ export default function ProfilePage() {
   const [imageError, setImageError] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<'sol' | 'eth' | null>(null);
   const [expandedCard, setExpandedCard] = useState<'sol' | 'eth' | null>(null);
-  const [safeAreaTop, setSafeAreaTop] = useState(0);
 
-  useEffect(() => {
-    if (isOnTelegram() && window.Telegram?.WebApp) {
-      setSafeAreaTop(window.Telegram.WebApp.safeAreaInsets.top);
-    }
-  }, []);
-
-  if (isLoading || isLoadingAddresses || isLoadingTokenInfo || isLoadingCharacterListBrief) {
+  if (isLoadingUser || isLoadingAddresses || isLoadingTokenInfo || isLoadingCharacterListBrief) {
     return <LoadingScreen />;
   }
 

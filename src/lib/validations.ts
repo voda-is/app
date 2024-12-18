@@ -294,3 +294,25 @@ export type SellTokenRecord = z.infer<typeof SellTokenRecordSchema>;
 export type WithdrawRecord = z.infer<typeof WithdrawRecordSchema>;
 export type TransactionRecordTypes = z.infer<typeof TransactionRecordTypesSchema>;
 export type TransactionRecord = z.infer<typeof TransactionRecordSchema>;
+
+// Add TokenInfo schema
+export const TokenInfoSchema = z.object({
+  sol_balance: z.number().int().nonnegative(),
+  eth_balance: z.number().int().nonnegative(),
+  sol_price: z.number().positive(),
+  eth_price: z.number().positive(),
+});
+
+// Add type inference
+export type TokenInfo = z.infer<typeof TokenInfoSchema>;
+
+// Add CharacterListBrief schema
+export const CharacterListBriefSchema = z.object({
+  character_id: CryptoHashSchema,
+  character_name: z.string(),
+  character_image: z.string().optional(),
+  count: z.number().int().nonnegative(),
+});
+
+// Add type inference
+export type CharacterListBrief = z.infer<typeof CharacterListBriefSchema>;

@@ -16,6 +16,10 @@ import {
   TokenCreationRecord,
   BuyTokenRecord,
   SellTokenRecord,
+  TokenInfo,
+  TokenInfoSchema,
+  CharacterListBrief,
+  CharacterListBriefSchema,
 } from "./validations";
 import { z } from "zod";
 import { getTelegramUser } from "@/lib/telegram";
@@ -243,6 +247,18 @@ export const api = {
         },
       });
       return null;
+    },
+    getCharacterListBrief: async (): Promise<CharacterListBrief[]> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: "/conversations/character_list",
+        method: "GET",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return z.array(CharacterListBriefSchema).parse(response.data.data);
     },
     deleteConversation: async (conversationId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
@@ -543,6 +559,19 @@ export const api = {
         },
       });
       return response.data.data;
+    },
+
+    getTokenInfo: async (): Promise<TokenInfo> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: "/token_info",
+        method: "GET",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return TokenInfoSchema.parse(response.data.data);
     },
 
     createToken: async (

@@ -9,6 +9,8 @@ import type {
   Chatroom,
   UserPoints,
   MessageBrief,
+  TokenInfo,
+  CharacterListBrief,
 } from "@/lib/validations";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
@@ -116,6 +118,20 @@ export function useConversation(conversationId: string) {
     refetchInterval: false,
     staleTime: Infinity,
     gcTime: Infinity,
+  });
+}
+
+export function useCharacterListBrief() {
+  return useQuery<CharacterListBrief[]>({
+    queryKey: ["characterListBrief"],
+    queryFn: () => api.chat.getCharacterListBrief(),
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -505,6 +521,20 @@ export function useGetAddress() {
   return useQuery<{ sol_address: string, eth_address: string }>({
     queryKey: ["address"],
     queryFn: () => api.blockchain.getAddress(),
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function useGetTokenInfo() {
+  return useQuery<TokenInfo>({
+    queryKey: ["tokenInfo"],
+    queryFn: () => api.blockchain.getTokenInfo(),
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,

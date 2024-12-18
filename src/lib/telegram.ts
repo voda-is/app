@@ -14,7 +14,7 @@ declare global {
 export function getTelegramUser(): TelegramUser {
   if (!isOnTelegram()) {
     return {
-      id: 7699268464,
+      id: 111111,
       first_name: "Test",
     };
   }
@@ -38,8 +38,10 @@ export function setupTelegramInterface(router: AppRouterInstance) {
   if (startParam) {
     if (startParam.length === 128) {
       const path = "/chatroomMessage/" + startParam.slice(0, 64) + "/" + startParam.slice(64, 128);
+      window.Telegram.WebApp.initDataUnsafe.start_param = "";
       router.push(path);
     } else if (startParam.length === 65 && startParam.startsWith("c")) {
+      window.Telegram.WebApp.initDataUnsafe.start_param = "";
       router.push("/character/" + startParam.slice(1));
     } else {
       router.push("/");

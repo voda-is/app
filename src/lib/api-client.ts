@@ -24,6 +24,7 @@ import {
 } from "./validations";
 import { z } from "zod";
 import { getTelegramUser } from "@/lib/telegram";
+import { UserProfilesCache } from "./userProfilesCache";
 
 class APIError extends Error {
   constructor(message: string, public status: number, public code: string) {
@@ -162,6 +163,7 @@ export const api = {
 
   user: {
     register: async () => {
+      const cache = new UserProfilesCache();
       const telegramUser = getTelegramUser();
       // Create and validate the payload
       const payload = UserPayloadSchema.parse({
@@ -178,15 +180,6 @@ export const api = {
         data: payload,
       });
 
-      // const responseClaimFreePoints = await apiProxy.post('', {
-      //   path: '/user/points/free',
-      //   method: 'POST',
-      //   data: {
-      //     user_id: telegramUser.id.toString(),
-      //     stripUserId: true,
-      //   },
-      // });
-
       // throw if response is not ok
       if (response.status !== 200) {
         throw new Error("Failed to register user");
@@ -197,6 +190,8 @@ export const api = {
         method: "GET",
         data: { user_id: telegramUser.id.toString() },
       });
+
+      cache.addUser(userResponse.data.data);
 
       return userResponse.data.data;
     },

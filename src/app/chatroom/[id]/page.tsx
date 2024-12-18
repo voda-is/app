@@ -64,13 +64,14 @@ export default function ChatroomPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingIndicatorRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
   const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
+
   const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
   const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
   const { data: hijackCost, isLoading: hijackCostLoading } = useHijackCost(chatroomId);
   const { data: userProfiles, isLoading: userProfilesLoading } = useUserProfiles(chatroom!, chatroomMessages!);
-  const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
   const { data: userPoints } = useUserPoints();
   const claimStatus = userPoints 
     ? getNextClaimTime(userPoints.free_claimed_balance_updated_at)
@@ -150,13 +151,13 @@ export default function ChatroomPage() {
       !chatroomLoading &&
       !chatroomMessagesLoading &&
       !userProfilesLoading &&
-      !userProfilesLoading &&
       !telegramUserLoading &&
       !hijackCostLoading &&
       !characterLoading &&
       !startNewConversationPending &&
       !telegramInterfaceLoading
     ) {
+      console.log("userProfiles", userProfiles);
       setIsReady(true);
     }
   }, [

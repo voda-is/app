@@ -33,7 +33,7 @@ import { Launched } from '@/components/Launched';
 
 export default function ChatroomPage() {
   const params = useParams();
-  const chatroomId = params?.id as string;
+  const chatroomId = params?.chatroomId as string;
   const messageId = params?.messageId as string;
   const router = useRouter();
   // Luanch Sequence:

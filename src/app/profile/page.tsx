@@ -18,7 +18,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { CharacterCard } from '@/components/profiles/CharacterCard';
 import { WalletCard } from '@/components/profiles/WalletCard';
 import { useTelegramUser, useGetAddress, useGetTokenInfo, useCharacterListBrief, useUserPoints, useClaimFreePoints, useTelegramInterface } from '@/hooks/api';
-import { isOnTelegram } from '@/lib/telegram';
+import { isOnTelegram, notificationOccurred } from '@/lib/telegram';
 import { PointsCard } from '@/components/profiles/PointsCard';
 import { PointsSystemGuide } from '@/components/profiles/PointsSystemGuide';
 import { ReferralCampaignCard } from '@/components/profiles/ReferralCampaignCard';
@@ -43,6 +43,10 @@ function ProfileContent() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  useEffect(() => {
+    notificationOccurred('success');
+  }, []);
 
   useEffect(() => {
     const tab = searchParams.get('tab');

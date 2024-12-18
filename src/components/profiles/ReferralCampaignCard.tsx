@@ -4,7 +4,7 @@ import { useGenerateReferralUrl } from '@/hooks/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function ReferralCampaignCard() {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const { 
     mutate: generateUrl, 

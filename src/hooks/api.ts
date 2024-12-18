@@ -499,3 +499,18 @@ export function useGetMessageBrief(chatroomId: string) {
     refetchOnReconnect: false,
   });
 }
+
+// Blockchain related hooks
+export function useGetAddress() {
+  return useQuery<{ sol_address: string, eth_address: string }>({
+    queryKey: ["address"],
+    queryFn: () => api.blockchain.getAddress(),
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}

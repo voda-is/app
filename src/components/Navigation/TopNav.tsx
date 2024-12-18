@@ -24,8 +24,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       isOnTelegram() ? 'h-52' : 'h-32'
     }`}>
       <div className="overflow-x-auto">
-        {/* Points and user info would go here */}
-      {isOnTelegram() && <div className="h-24" />}
+        {isOnTelegram() && <div className="h-24" />}
         <div className="flex flex-col gap-2 p-2">
           {/* Gender Row */}
           <div className="flex gap-2">
@@ -33,7 +32,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id as 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp')}
-                className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors
+                className={`flex-shrink-0 px-4 py-2 rounded-xl transition-colors
                   ${activeTab === tab.id 
                     ? 'bg-emerald-400 text-gray-900'
                     : 'bg-gray-700/50 text-gray-200 hover:bg-gray-700'
@@ -50,7 +49,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
               <button
                 key={tab.id}
                 onClick={() => onTabChange(tab.id as 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp')}
-                className={`flex-shrink-0 px-4 py-2 rounded-full transition-colors
+                className={`flex-shrink-0 px-4 py-2 rounded-xl transition-colors
                   ${activeTab === tab.id 
                     ? 'bg-emerald-400 text-gray-900'
                     : 'bg-gray-700/50 text-gray-200 hover:bg-gray-700'

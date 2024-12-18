@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { CharacterCard } from '@/components/CharacterCard';
 import { TopNav } from '@/components/Navigation/TopNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { BottomNav } from '@/components/Navigation/BottomNav';
 
 import { useCharacters, useTelegramUser } from '@/hooks/api';
 import { Character } from '@/lib/validations';
@@ -50,7 +51,7 @@ export default function Home() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gray-900 text-white px-2 pb-20"
+      className="min-h-screen bg-gray-900 text-white px-2 pb-24"
     >
       <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
       <div className={`grid grid-cols-2 gap-2 ${isOnTelegram() ? 'pt-52' : 'pt-32'}`}>
@@ -63,6 +64,7 @@ export default function Home() {
           </Link>
         ))}
       </div>
+      <BottomNav />
     </motion.div>
   );
 }

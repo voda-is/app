@@ -192,7 +192,7 @@ export const api = {
       });
       return response.data.data;
     },
-    claimFreePoints: async (): Promise<number> => {
+    claimFreePoints: async (): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
         path: "/user/points/free",

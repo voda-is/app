@@ -99,7 +99,7 @@ export default function CharacterPage() {
       <div className="relative z-10 flex flex-col min-h-screen">
         {/* Profile Section */}
         <div className="px-4 mb-6">
-          <div className="relative w-24 h-24 mb-4 mx-auto">
+          <div className="relative w-24 h-24 mb-4 mx-auto" onClick={() => router.push('/')}>
             <Image
               src={character?.avatar_image_url || '/bg2.png'}
               alt={character.name}
@@ -107,7 +107,6 @@ export default function CharacterPage() {
               className="rounded-2xl object-cover"
             />
             <button 
-              onClick={() => router.push('/')}
               className="absolute -bottom-2 -left-2 w-8 h-8 bg-gray-600/40 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg"
             >
               <svg 

@@ -200,7 +200,8 @@ export const UserPointsSchema = z.object({
   
   free_claimed_balance: z.number().int().nonnegative(),
   redeemed_balance: z.record(CryptoHashSchema, z.number().int().nonnegative()),
-  
+  total_burnt_balance: z.number().int().nonnegative(),
+
   paid_balance_updated_at: TimestampSchema,
   free_claimed_balance_updated_at: TimestampSchema,
   redeemed_balance_updated_at: TimestampSchema,

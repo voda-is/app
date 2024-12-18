@@ -544,3 +544,14 @@ export function useGetTokenInfo() {
     refetchOnReconnect: false,
   });
 }
+
+export function useClaimFreePoints() {
+  const queryClient = useQueryClient();
+
+  return useMutation<null, Error, void>({
+    mutationFn: () => api.user.claimFreePoints(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userPoints"] });
+    },
+  });
+}

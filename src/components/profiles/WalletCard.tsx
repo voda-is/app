@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IoChevronDown, IoCopy, IoCheckmark } from 'react-icons/io5';
 import type { TokenInfo } from '@/lib/validations';
 
-interface TokenCardProps {
+interface WalletCardProps {
   type: 'sol' | 'eth';
   address: string;
   tokenInfo?: TokenInfo;
@@ -14,7 +14,7 @@ interface TokenCardProps {
   onCopy: (text: string, type: 'sol' | 'eth') => void;
 }
 
-export function TokenCard({ 
+export function WalletCard({ 
   type, 
   address, 
   tokenInfo,
@@ -22,7 +22,7 @@ export function TokenCard({
   setExpandedCard,
   copiedAddress,
   onCopy 
-}: TokenCardProps) {
+}: WalletCardProps) {
   const isExpanded = expandedCard === type;
   const balance = type === 'sol' ? tokenInfo?.sol_balance : tokenInfo?.eth_balance;
   const price = type === 'sol' ? tokenInfo?.sol_price : tokenInfo?.eth_price;
@@ -48,12 +48,14 @@ export function TokenCard({
   return (
     <motion.div 
       className="bg-white/20 backdrop-blur-md rounded-xl overflow-hidden"
-      initial={false}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ 
         backgroundColor: isExpanded ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+        opacity: 1, y: 0
       }}
-      whileTap={{ scale: 0.995 }}
+      whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.2 }}
+      whileHover={{ scale: 1.02 }}
     >
       <div className="p-4">
         <div className="flex items-center justify-between">

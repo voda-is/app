@@ -1,6 +1,8 @@
 import { User } from "@/lib/validations";
-import { FiAward, FiClock } from "react-icons/fi";
+import { FiAward, FiClock, FiInfo } from "react-icons/fi";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 type Props = {
   isExpanded: boolean;
@@ -21,6 +23,13 @@ export function PointsExpandedView({
   canClaim,
   onClaim,
 }: Props) {
+  const router = useRouter();
+
+  const handleProfileClick = () => {
+    router.push('/profile?tab=points');
+    onClose();
+  };
+
   return (
     <div
       className={`fixed inset-0 z-50 transition-all duration-300 ${
@@ -53,20 +62,32 @@ export function PointsExpandedView({
           </div>
 
           {user && (
-            <div className="flex flex-col items-center w-full mb-8">
-              <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white/10 mb-3">
+            <button 
+              onClick={handleProfileClick}
+              className="flex flex-col items-center w-full mb-6 group transition-all active:scale-98"
+            >
+              <div className="relative w-20 h-20 mb-3">
                 <Image
                   src={user.profile_photo || "/bg2.png"}
                   alt={user.first_name}
                   fill
-                  className="object-cover"
-                  sizes="80px"
+                  className="object-cover rounded-full border-2 border-white/10 group-hover:border-emerald-300/50 transition-all"
                 />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gray-600/40 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                  <svg 
+                    className="w-4 h-4 text-emerald-300" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
-              <span className="text-white text-xl font-medium">
+              <span className="text-white text-xl font-medium group-hover:text-emerald-300 transition-colors">
                 {user.first_name}
               </span>
-            </div>
+            </button>
           )}
 
           <div className="w-full space-y-4">
@@ -106,6 +127,16 @@ export function PointsExpandedView({
             >
               {canClaim ? 'Claim Free Points' : `Claim Available in ${nextClaimTime}`}
             </button>
+
+            {/* Add link to profile at the bottom */}
+            <Link
+              href="/profile?tab=points"
+              className="w-full flex items-center justify-center gap-2 text-white/60 hover:text-white transition-colors mt-4"
+              onClick={onClose}
+            >
+              <FiInfo className="w-4 h-4" />
+              <span className="text-sm">View detailed points guide</span>
+            </Link>
           </div>
         </div>
       </div>

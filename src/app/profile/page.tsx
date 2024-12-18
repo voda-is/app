@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
@@ -23,7 +24,7 @@ import { PointsCard } from '@/components/profiles/PointsCard';
 
 type TabType = 'conversations' | 'wallet' | 'points';
 
-export default function ProfilePage() {
+function ProfileContent() {
   const { data: user, isLoading: isLoadingUser } = useTelegramUser();
   const { data: addresses, isLoading: isLoadingAddresses } = useGetAddress();
   const { data: tokenInfo, isLoading: isLoadingTokenInfo } = useGetTokenInfo();
@@ -342,5 +343,13 @@ export default function ProfilePage() {
 
       <BottomNav />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <ProfileContent />
+    </Suspense>
   );
 } 

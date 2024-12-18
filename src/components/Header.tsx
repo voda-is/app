@@ -45,7 +45,7 @@ export function Header({
   const handleShare = async () => {
     // Generate the deep link
     const path = `/chatroomMessage/${chatroomId}/${messageId}`;
-    const shareLink = generateTelegramAppLink("test_finewtf_bot", path);
+    const shareLink = await generateTelegramAppLink("finewtf_bot", path, "chatroom_message");
     
     try {
       await navigator.clipboard.writeText(shareLink);

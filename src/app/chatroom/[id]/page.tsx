@@ -19,6 +19,7 @@ import {
   useUserPoints,
   useStartNewConversation,
   useRegenerateLastMessageToChatroom,
+  useTelegramInterface,
 } from "@/hooks/api";
 
 import { User } from "@/lib/validations";
@@ -62,7 +63,8 @@ export default function ChatroomPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingIndicatorRef = useRef<HTMLDivElement>(null);
-
+  const router = useRouter();
+  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
   const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
   const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useChatroomMessages(chatroomId);
@@ -152,7 +154,8 @@ export default function ChatroomPage() {
       !telegramUserLoading &&
       !hijackCostLoading &&
       !characterLoading &&
-      !startNewConversationPending
+      !startNewConversationPending &&
+      !telegramInterfaceLoading
     ) {
       setIsReady(true);
     }
@@ -163,6 +166,7 @@ export default function ChatroomPage() {
     telegramUserLoading,
     hijackCostLoading,
     startNewConversationPending,
+    telegramInterfaceLoading,
   ]);
 
   // Populate items

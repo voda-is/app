@@ -1,3 +1,4 @@
+import { api } from "./api-client";
 import type { TelegramUser } from "./validations";
 import { TelegramUserSchema } from "./validations";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
@@ -33,18 +34,15 @@ export function notificationOccurred(type: "error" | "success" | "warning") {
   }
 }
 
-export function setupTelegramInterface(router: AppRouterInstance) {
+export async function setupTelegramInterface(router: AppRouterInstance) {
   const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
   if (startParam) {
-    if (startParam.length === 128) {
-      const path = "/chatroomMessage/" + startParam.slice(0, 64) + "/" + startParam.slice(64, 128);
-      window.Telegram.WebApp.initDataUnsafe.start_param = "";
-      router.push(path);
-    } else if (startParam.length === 65 && startParam.startsWith("c")) {
-      window.Telegram.WebApp.initDataUnsafe.start_param = "";
-      router.push("/character/" + startParam.slice(1));
-    } else {
+    if (startParam.length !== 64) {
       router.push("/");
+    } else {
+      const urlId = startParam;
+      const { url } = await api.url.get(urlId);
+      router.push(url.path);
     }
   }
   window.Telegram.WebApp.ready();
@@ -55,6 +53,8 @@ export function setupTelegramInterface(router: AppRouterInstance) {
     router.back();
   });
   notificationOccurred("success");
+
+  return null;
 }
 
 export function isOnTelegram() {
@@ -62,7 +62,7 @@ export function isOnTelegram() {
 }
 
 // Example function to generate a Telegram Mini App link
-export function generateTelegramAppLink(botUsername: string, path: string): string {
-  const p = path.replace("chatroomMessage", "").split("/").join("");
-  return `https://t.me/${botUsername}?startapp=${p}`;
+export async function generateTelegramAppLink(botUsername: string, path: string, urlType: string): Promise<string> {
+  const urlId = await api.url.create(path, urlType);
+  return `https://t.me/${botUsername}?startapp=${urlId}`;
 }

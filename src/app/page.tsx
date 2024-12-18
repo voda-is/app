@@ -10,7 +10,7 @@ import { TopNav } from '@/components/Navigation/TopNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { BottomNav } from '@/components/Navigation/BottomNav';
 
-import { useCharacters, useTelegramUser } from '@/hooks/api';
+import { useCharacters, useTelegramInterface, useTelegramUser } from '@/hooks/api';
 import { Character } from '@/lib/validations';
 import { isOnTelegram, setupTelegramInterface } from '@/lib/telegram';
 
@@ -19,12 +19,10 @@ type FilterType = 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp';
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const router = useRouter();
-  const { data: _, isLoading: userLoading } = useTelegramUser();
+  
   const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
-
-  useEffect(() => {
-    setupTelegramInterface(router);
-  }, []);
+  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
+  const { data: _tgUser, isLoading: userLoading } = useTelegramUser();
 
   const filteredCharacters = useMemo(() => {
     if (!characters) return [];
@@ -42,7 +40,7 @@ export default function Home() {
     });
   }, [characters, activeFilter]);
 
-  if (charactersLoading || userLoading) {
+  if (charactersLoading || userLoading || telegramInterfaceLoading) {
     return <LoadingScreen />;
   }
 

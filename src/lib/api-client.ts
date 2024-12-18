@@ -20,6 +20,7 @@ import {
   TokenInfoSchema,
   CharacterListBrief,
   CharacterListBriefSchema,
+  Url,
 } from "./validations";
 import { z } from "zod";
 import { getTelegramUser } from "@/lib/telegram";
@@ -127,6 +128,38 @@ apiProxy.interceptors.response.use(
 
 // API interface
 export const api = {
+  url: {
+    get: async (urlId: string): Promise<{
+      url: Url,
+      referral_success: boolean,
+    }> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/url/${urlId}`,
+        method: "GET",
+        data: {
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data;
+    },
+    create: async (path: string, urlType: string): Promise<string> => {
+      const telegramUser = getTelegramUser();
+      const response = await apiProxy.post("", {
+        path: `/url`,
+        method: "POST",
+        data: {
+          path,
+          url_type: urlType,
+          user_id: telegramUser.id.toString(),
+          stripUserId: true,
+        },
+      });
+      return response.data.data["url_id"];
+    },
+  },
+
   user: {
     register: async () => {
       const telegramUser = getTelegramUser();

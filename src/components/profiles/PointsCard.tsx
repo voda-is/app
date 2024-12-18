@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { IoStarOutline, IoTrendingUpOutline } from 'react-icons/io5';
 import { FiClock } from 'react-icons/fi';
 import type { UserPoints } from '@/lib/validations';
+import { getAvailableBalance } from '@/lib/utils';
 
 interface PointsCardProps {
   userPoints: UserPoints;
@@ -28,9 +29,7 @@ export function PointsCard({ userPoints, nextClaimTime, canClaim, onClaim, isCla
     return burntBalance % 100;
   };
 
-  const totalAvailablePoints = 
-    userPoints.paid_avaliable_balance + 
-    userPoints.free_claimed_balance;
+  const totalAvailablePoints = getAvailableBalance(userPoints);
 
   const level = calculateLevel(userPoints.total_burnt_balance);
   const progress = calculateProgress(userPoints.total_burnt_balance);

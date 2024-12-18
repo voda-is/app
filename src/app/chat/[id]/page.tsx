@@ -2,10 +2,18 @@
 
 import Image from "next/image";
 import { useQueryClient } from "@tanstack/react-query";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 
-import { useCharacter, useConversation, useRegenerateLastMessage, useSendMessage, useTelegramUser, useUserPoints } from '@/hooks/api';
+import { 
+  useCharacter, 
+  useConversation, 
+  useRegenerateLastMessage, 
+  useSendMessage, 
+  useTelegramInterface, 
+  useTelegramUser, 
+  useUserPoints 
+} from '@/hooks/api';
 
 import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
@@ -22,6 +30,7 @@ import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
+  const router = useRouter();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingIndicatorRef = useRef<HTMLDivElement>(null);
@@ -29,6 +38,7 @@ export default function ChatPage() {
 
   // Fetch initial data
   const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
+  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
   const { data: conversation, isLoading: historyLoading } = useConversation(id);
   const characterId = conversation?.character_id;
   const { data: character, isLoading: characterLoading } = useCharacter(characterId);
@@ -86,10 +96,10 @@ export default function ChatPage() {
 
   // Data Ready
   useEffect(() => {
-    if (!telegramUserLoading && !characterLoading && !historyLoading) {
+    if (!telegramUserLoading && !characterLoading && !historyLoading && !telegramInterfaceLoading) {
       setIsReady(true);
     }
-  }, [telegramUserLoading, characterLoading, historyLoading]);
+  }, [telegramUserLoading, characterLoading, historyLoading, telegramInterfaceLoading]);
 
 
   // Set initial messages when conversation loads

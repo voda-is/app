@@ -317,3 +317,18 @@ export const CharacterListBriefSchema = z.object({
 
 // Add type inference
 export type CharacterListBrief = z.infer<typeof CharacterListBriefSchema>;
+
+// URL Schema
+export const UrlSchema = z.object({
+  _id: CryptoHashSchema,
+  created_at: TimestampSchema,
+  
+  url_type: z.string(),
+  created_by: CryptoHashSchema,
+  used_by: z.array(CryptoHashSchema),
+  
+  path: z.string(),
+});
+
+// Add type inference
+export type Url = z.infer<typeof UrlSchema>;

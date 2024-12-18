@@ -2,25 +2,26 @@
 
 import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { 
   IoPersonCircle, 
   IoChatbubbleEllipsesOutline, 
   IoWalletOutline,
   IoStarOutline,
-  IoTrendingUpOutline
 } from 'react-icons/io5';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import { BottomNav } from '@/components/Navigation/BottomNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { CharacterCard } from '@/components/profiles/CharacterCard';
 import { WalletCard } from '@/components/profiles/WalletCard';
-import { useTelegramUser, useGetAddress, useGetTokenInfo, useCharacterListBrief, useUserPoints, useClaimFreePoints } from '@/hooks/api';
+import { useTelegramUser, useGetAddress, useGetTokenInfo, useCharacterListBrief, useUserPoints, useClaimFreePoints, useTelegramInterface } from '@/hooks/api';
 import { isOnTelegram } from '@/lib/telegram';
 import { PointsCard } from '@/components/profiles/PointsCard';
+import { PointsSystemGuide } from '@/components/profiles/PointsSystemGuide';
+import { ReferralCampaignCard } from '@/components/profiles/ReferralCampaignCard';
 
 type TabType = 'conversations' | 'wallet' | 'points';
 
@@ -30,7 +31,6 @@ function ProfileContent() {
   const { data: tokenInfo, isLoading: isLoadingTokenInfo } = useGetTokenInfo();
   const { data: characterListBrief, isLoading: isLoadingCharacterListBrief } = useCharacterListBrief();
   const { data: userPoints, isLoading: isLoadingUserPoints } = useUserPoints();
-
   const { mutate: claimPoints, isPending: isClaimingPointsPending } = useClaimFreePoints();
 
   const [nextClaimTime, setNextClaimTime] = useState<string>('');
@@ -40,7 +40,6 @@ function ProfileContent() {
   const [imageError, setImageError] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<'sol' | 'eth' | null>(null);
   const [expandedCard, setExpandedCard] = useState<'sol' | 'eth' | null>(null);
-  const [expandedSection, setExpandedSection] = useState<'rewards' | 'usage' | 'coming-soon' | null>(null);
 
   const searchParams = useSearchParams();
 
@@ -242,99 +241,8 @@ function ProfileContent() {
                     Loading points...
                   </div>
                 )}
-                <div className="bg-white/20 backdrop-blur-md rounded-xl p-4">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <IoStarOutline className="w-4 h-4" />
-                    Points System Guide
-                  </h3>
-                  
-                  <div className="grid gap-3">
-                    {/* Daily Rewards Section */}
-                    <div 
-                      className="bg-white/10 rounded-xl p-3 cursor-pointer transition-colors hover:bg-white/20"
-                      onClick={() => setExpandedSection(expandedSection === 'rewards' ? null : 'rewards')}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-emerald-400/20 flex items-center justify-center">
-                          <IoTrendingUpOutline className="w-4 h-4 text-emerald-500" />
-                        </div>
-                        <h4 className="text-sm font-medium text-gray-800">Daily Rewards</h4>
-                      </div>
-                      
-                      {expandedSection === 'rewards' && (
-                        <div className="mt-3 bg-white/10 rounded-lg p-3">
-                          <div className="flex flex-col">
-                            <div className="text-sm font-semibold text-emerald-500">+100 points</div>
-                            <div className="text-xs text-gray-700">Free points every 24 hours</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Points Usage Section */}
-                    <div 
-                      className="bg-white/10 rounded-xl p-3 cursor-pointer transition-colors hover:bg-white/20"
-                      onClick={() => setExpandedSection(expandedSection === 'usage' ? null : 'usage')}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-sky-400/20 flex items-center justify-center">
-                          <IoChatbubbleEllipsesOutline className="w-4 h-4 text-sky-500" />
-                        </div>
-                        <h4 className="text-sm font-medium text-gray-800">Points Usage</h4>
-                      </div>
-
-                      {expandedSection === 'usage' && (
-                        <div className="mt-3 space-y-2">
-                          {[
-                            { cost: '-1 point', action: 'Send a message to any character' },
-                            { cost: '-1 point', action: 'Regenerate a character reply' }
-                          ].map((item, index) => (
-                            <div 
-                              key={index}
-                              className="bg-white/10 rounded-lg p-3"
-                            >
-                              <div className="flex flex-col">
-                                <div className="text-sm font-semibold text-sky-500">{item.cost}</div>
-                                <div className="text-xs text-gray-700">{item.action}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Coming Soon Section */}
-                    <div 
-                      className="bg-white/10 rounded-xl p-3 cursor-pointer transition-colors hover:bg-white/20"
-                      onClick={() => setExpandedSection(expandedSection === 'coming-soon' ? null : 'coming-soon')}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-rose-400/20 flex items-center justify-center">
-                          <IoStarOutline className="w-4 h-4 text-rose-500" />
-                        </div>
-                        <h4 className="text-sm font-medium text-gray-800">Coming Soon</h4>
-                      </div>
-
-                      {expandedSection === 'coming-soon' && (
-                        <div className="mt-3 space-y-2">
-                          {[
-                            'Special campaign rewards for active users',
-                            'Community events with bonus points opportunities',
-                            'Referral program with point rewards'
-                          ].map((feature, index) => (
-                            <div 
-                              key={index}
-                              className="bg-white/10 rounded-lg p-3 flex items-center gap-2"
-                            >
-                              <div className="w-1 h-1 rounded-full bg-rose-400" />
-                              <div className="text-xs text-gray-700">{feature}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ReferralCampaignCard />
+                <PointsSystemGuide />
               </div>
             )}
           </div>
@@ -347,6 +255,13 @@ function ProfileContent() {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
+
+  if (telegramInterfaceLoading) {
+    return <LoadingScreen />;
+  }
+
   return (
     <Suspense fallback={<LoadingScreen />}>
       <ProfileContent />

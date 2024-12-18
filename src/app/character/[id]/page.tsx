@@ -15,6 +15,7 @@ import { useCharacter,
   useCreateConversation,
   useDeleteConversation,
   useGetMessageBrief,
+  useTelegramInterface,
   useUserProfilesRaw
 } from "@/hooks/api";
 
@@ -30,6 +31,7 @@ export default function CharacterPage() {
 
   const [activeTab, setActiveTab] = useState<'about' | 'history'>('about');
   const [isLoading, setIsLoading] = useState(false);
+  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
   const { data: chatHistoryIds, isLoading: historyLoading } = useCharacterChatHistory(id);
   const { data: character, isLoading: characterLoading } = useCharacter(id);
   const { data: chatroom, isLoading: chatroomLoading } = useChatroomWithCharacter(
@@ -58,8 +60,8 @@ export default function CharacterPage() {
     notificationOccurred('success');
   }, []);
 
-  const handleShare = () => {
-    const link = generateTelegramAppLink("finewtf_bot", `c${id}`);
+  const handleShare = async () => {
+    const link = await generateTelegramAppLink("finewtf_bot", `character/${id}`, "share_character");
     // copy to clipboard
     navigator.clipboard.writeText(link);
     notificationOccurred('success');
@@ -67,7 +69,7 @@ export default function CharacterPage() {
 
   if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading || isLoading ||
       (character?.metadata.enable_chatroom && (chatroomLoading || messageBriefsLoading || userProfilesLoading)) || 
-      !id) {
+      !id || telegramInterfaceLoading) {
     return <LoadingScreen />;
   }
 

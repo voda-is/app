@@ -12,6 +12,7 @@ import {
   useUserProfiles,
   useUserPoints,
   useGetMessage,
+  useTelegramInterface,
 } from "@/hooks/api";
 
 import { UserProfilesCache } from "@/lib/userProfilesCache";
@@ -43,6 +44,7 @@ export default function ChatroomPage() {
   // 5. fetch user profiles from server or cache
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
 
   const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
@@ -86,7 +88,8 @@ export default function ChatroomPage() {
       !userProfilesLoading &&
       !userProfilesLoading &&
       !telegramUserLoading &&
-      !characterLoading
+      !characterLoading &&
+      !telegramInterfaceLoading
     ) {
       setIsReady(true);
     }
@@ -96,6 +99,7 @@ export default function ChatroomPage() {
     userProfilesLoading,
     telegramUserLoading,
     characterLoading,
+    telegramInterfaceLoading,
   ]);
 
   // Populate items

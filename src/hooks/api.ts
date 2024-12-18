@@ -11,10 +11,13 @@ import type {
   MessageBrief,
   TokenInfo,
   CharacterListBrief,
+  Url,
 } from "@/lib/validations";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
+import { generateTelegramAppLink, setupTelegramInterface } from "@/lib/telegram";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 // User related hooks
 export function useTelegramUser() {
@@ -28,6 +31,18 @@ export function useTelegramUser() {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+  });
+}
+
+export function useTelegramInterface(router: AppRouterInstance) {
+  return useQuery<null, Error>({
+    queryKey: ["telegramInterface"],
+    queryFn: () => setupTelegramInterface(router),
+    enabled: !!router,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 }
 
@@ -552,6 +567,15 @@ export function useClaimFreePoints() {
     mutationFn: () => api.user.claimFreePoints(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userPoints"] });
+    },
+  });
+}
+
+export function useGenerateReferralUrl() {
+  return useMutation({
+    mutationFn: async () => {
+      const url = await generateTelegramAppLink("finewtf_bot", "/profile?tabs=points", "referral");
+      return url;
     },
   });
 }

@@ -42,6 +42,7 @@ function ProfileContent() {
   const [expandedCard, setExpandedCard] = useState<'sol' | 'eth' | null>(null);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -200,8 +201,15 @@ function ProfileContent() {
                     ))}
                   </div>
                 ) : (
-                  <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 text-center text-gray-700">
-                    No conversations yet
+                  <div className="bg-white/20 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
+                    <div className="text-gray-700">No conversations yet</div>
+                    <button
+                      onClick={() => router.push('/')}
+                      className="bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors rounded-lg px-6 py-3 text-sm font-medium text-emerald-600 flex items-center justify-center gap-2 mx-auto"
+                    >
+                      <IoChatbubbleEllipsesOutline className="w-4 h-4" />
+                      Start Your First Chat
+                    </button>
                   </div>
                 )}
               </>

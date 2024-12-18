@@ -44,6 +44,7 @@ export async function setupTelegramInterface(router: AppRouterInstance) {
       const { url } = await api.url.get(urlId);
       router.push(url.path);
     }
+    window.Telegram.WebApp.initDataUnsafe.start_param = undefined;
   }
   window.Telegram.WebApp.ready();
   window.Telegram.WebApp.expand();

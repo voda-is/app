@@ -4,7 +4,7 @@ import { FiChevronDown } from 'react-icons/fi';
 import { IoStarOutline, IoChatbubbleEllipsesOutline, IoTrendingUpOutline } from 'react-icons/io5';
 
 export function PointsSystemGuide() {
-  const [isGuideExpanded, setIsGuideExpanded] = useState(true);
+  const [isGuideExpanded, setIsGuideExpanded] = useState(false);
   const [expandedSection, setExpandedSection] = useState<'rewards' | 'usage' | 'coming-soon' | null>(null);
 
   return (

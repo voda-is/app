@@ -31,10 +31,6 @@ function ProfileContent() {
   const { data: tokenInfo, isLoading: isLoadingTokenInfo } = useGetTokenInfo();
   const { data: characterListBrief, isLoading: isLoadingCharacterListBrief } = useCharacterListBrief();
   const { data: userPoints, isLoading: isLoadingUserPoints } = useUserPoints();
-  const { mutate: claimPoints, isPending: isClaimingPointsPending } = useClaimFreePoints();
-
-  const [nextClaimTime, setNextClaimTime] = useState<string>('');
-  const [canClaim, setCanClaim] = useState(false);
 
   const [activeTab, setActiveTab] = useState<TabType>('conversations');
   const [imageError, setImageError] = useState(false);
@@ -54,35 +50,6 @@ function ProfileContent() {
       setActiveTab(tab as TabType);
     }
   }, [searchParams]);
-
-  useEffect(() => {
-    const checkClaimStatus = () => {
-      if (!userPoints?.free_claimed_balance_updated_at) {
-        setCanClaim(true);
-        setNextClaimTime('');
-        return;
-      }
-
-      const now = Math.floor(Date.now() / 1000); // Convert to seconds
-      const lastClaim = userPoints.free_claimed_balance_updated_at;
-      const timeUntilNextClaim = (lastClaim + 24 * 60 * 60) - now; // 24 hours in seconds
-
-      if (timeUntilNextClaim <= 0) {
-        setCanClaim(true);
-        setNextClaimTime('');
-      } else {
-        setCanClaim(false);
-        // Convert remaining seconds to hours and minutes
-        const hours = Math.floor(timeUntilNextClaim / (60 * 60));
-        const minutes = Math.floor((timeUntilNextClaim % (60 * 60)) / 60);
-        setNextClaimTime(`${hours}h ${minutes}m`);
-      }
-    };
-
-    checkClaimStatus();
-    const interval = setInterval(checkClaimStatus, 60000); // Update every minute
-    return () => clearInterval(interval);
-  }, [userPoints?.free_claimed_balance_updated_at]);
 
   if (isLoadingUser || isLoadingAddresses || isLoadingTokenInfo || isLoadingCharacterListBrief || isLoadingUserPoints) {
     return <LoadingScreen />;
@@ -243,10 +210,6 @@ function ProfileContent() {
                 {userPoints ? (
                   <PointsCard 
                     userPoints={userPoints}
-                    nextClaimTime={nextClaimTime}
-                    canClaim={canClaim}
-                    onClaim={claimPoints}
-                    isClaimingPointsPending={isClaimingPointsPending}
                   />
                 ) : (
                   <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 text-center text-gray-700">

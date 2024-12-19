@@ -268,7 +268,7 @@ export default function CharacterPage() {
                                   rel="noopener noreferrer"
                                   className="hover:underline flex items-center gap-1"
                                 >
-                                  {"@test_account"}
+                                  @{cache.getUser(brief.wrapped_by)?.username || "Anonymous"}
                                   <HiOutlineExternalLink className="w-4 h-4" />
                                 </a>
                               </p>

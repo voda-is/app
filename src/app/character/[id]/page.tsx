@@ -60,11 +60,26 @@ export default function CharacterPage() {
     notificationOccurred('success');
   }, []);
 
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+
   const handleShare = async () => {
-    const link = await generateTelegramAppLink("finewtf_bot", `character/${id}`, "share_character");
-    // copy to clipboard
-    await navigator.clipboard.writeText(link);
-    notificationOccurred('success');
+    try {
+      setIsSharing(true);
+      const link = await generateTelegramAppLink("finewtf_bot", `character/${id}`, "share_character");
+      await navigator.clipboard.writeText(link);
+      setShareSuccess(true);
+      notificationOccurred('success');
+      
+      // Reset success state after 2 seconds
+      setTimeout(() => {
+        setShareSuccess(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to share:', error);
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading || isLoading ||
@@ -127,10 +142,28 @@ export default function CharacterPage() {
           {/* Add Share Button */}
           <button
             onClick={handleShare}
-            className="mx-auto flex items-center justify-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full text-sm text-white transition-colors"
+            disabled={isSharing}
+            className={`mx-auto flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm transition-colors ${
+              shareSuccess
+                ? 'bg-emerald-500/20 text-emerald-300'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
           >
-            <IoShare className="w-4 h-4" />
-            Share Character
+            {isSharing ? (
+              <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" />
+            ) : shareSuccess ? (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                Copied!
+              </>
+            ) : (
+              <>
+                <IoShare className="w-4 h-4" />
+                Share Character
+              </>
+            )}
           </button>
         </div>
 

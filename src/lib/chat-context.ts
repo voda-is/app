@@ -222,7 +222,7 @@ export class ChatContextWithUnknownUser {
 
 function parseResponse(text: string): { evaluation?: string; response?: string } {
   try {
-    const evaluationMatch = text.match(/<memecoin_evaluation>([\s\S]*?)<\/memecoin_evaluation>/);
+    const evaluationMatch = text.match(/<pitch_analysis>([\s\S]*?)<\/pitch_analysis>/);
     const responseMatch = text.match(/<response>([\s\S]*?)<\/response>/);
 
     // If neither tag is found, return the original text as the response

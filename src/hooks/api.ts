@@ -504,6 +504,10 @@ export function useRegisterHijack(chatroomId: string) {
   const queryClient = useQueryClient();
   return useMutation<null, Error, { cost: number }>({
     mutationFn: (hijackCost: { cost: number }) => api.chatroom.registerHijack(chatroomId, hijackCost),
+    onMutate: () => {
+      queryClient.invalidateQueries({ queryKey: ['userPoints'] });
+      queryClient.invalidateQueries({ queryKey: ['hijackCost'] });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
     },
@@ -515,6 +519,10 @@ export function useHijackChatroom(chatroomId: string) {
   return useMutation<null, Error, void>({
     mutationFn: () => {
       return api.chatroom.hijackChatroom(chatroomId);
+    },
+    onMutate: () => {
+      queryClient.invalidateQueries({ queryKey: ['userPoints'] });
+      queryClient.invalidateQueries({ queryKey: ['hijackCost'] });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });

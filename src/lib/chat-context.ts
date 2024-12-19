@@ -14,6 +14,8 @@ export interface Message {
   enableVoice: boolean;
 
   isLatestReply: boolean;
+  evaluation?: string;
+  response?: string;
 }
 // TODO: maybe we can merge these two classes
 export class ChatContext {
@@ -55,8 +57,10 @@ export class ChatContext {
         isLatestReply: false,
       });
 
+      const parsed = parseResponse(pair[1].text);
       m.push({
-        message: pair[1].text,
+        message: parsed.response || pair[1].text,
+        evaluation: parsed.evaluation,
         createdAt: pair[1].created_at,
 
         user: this.user,
@@ -142,6 +146,8 @@ export class ChatContextWithUnknownUser {
       m = [this.injectFirstMessage(this.defaultUserId, createdAt)];
     }
 
+    console.log("injectHistoryMessages", m);
+
     messages.forEach((pair) => {
       const userId = pair[0].user_id;
       const user = this.userCache.getUser(userId);
@@ -161,8 +167,10 @@ export class ChatContextWithUnknownUser {
         isLatestReply: false,
       });
 
+      const parsed = parseResponse(pair[1].text);
       m.push({
-        message: pair[1].text,
+        message: parsed.response || pair[1].text,
+        evaluation: parsed.evaluation,
         createdAt: pair[1].created_at,
 
         user: user,
@@ -209,5 +217,32 @@ export class ChatContextWithUnknownUser {
   public markLastMessageAsError(messages: Message[]): Message[] {
     messages[messages.length - 1].status = "error";
     return messages;
+  }
+}
+
+function parseResponse(text: string): { evaluation?: string; response?: string } {
+  try {
+    const evaluationMatch = text.match(/<memecoin_evaluation>([\s\S]*?)<\/memecoin_evaluation>/);
+    const responseMatch = text.match(/<response>([\s\S]*?)<\/response>/);
+
+    // If neither tag is found, return the original text as the response
+    if (!evaluationMatch && !responseMatch) {
+      return {
+        response: text,
+        evaluation: undefined
+      };
+    }
+
+    return {
+      evaluation: evaluationMatch ? evaluationMatch[1].trim() : undefined,
+      response: responseMatch ? responseMatch[1].trim() : undefined
+    };
+  } catch (error) {
+    console.warn('Failed to parse response format:', error);
+    // Fallback to treating the entire text as the response
+    return {
+      response: text,
+      evaluation: undefined
+    };
   }
 }

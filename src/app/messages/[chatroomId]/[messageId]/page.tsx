@@ -200,7 +200,7 @@ export default function ChatroomPage() {
                 onRegenerate={() => {}}
                 onRetry={() => {}}
                 onRate={() => {}}
-                useMarkdown={true}
+                isChatroom={true}
               />
             ))}
             {/* Launched component */}

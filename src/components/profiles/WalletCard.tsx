@@ -35,7 +35,7 @@ export function WalletCard({
   };
 
   const formatBalance = (balance: number) => {
-    return (balance / 1_000_000).toFixed(2);
+    return (balance / 1_000_000_000).toFixed(2);
   };
 
   const formatPrice = (price: number) => {
@@ -127,7 +127,7 @@ export function WalletCard({
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-700">Value:</span>
                   <span className="font-medium text-gray-900">
-                    {formatPrice((balance || 0) * (price || 0) / 1_000_000)}
+                    {formatPrice((balance || 0) * (price || 0) / 1_000_000_000)}
                   </span>
                 </div>
               </motion.div>

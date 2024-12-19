@@ -579,3 +579,19 @@ export function useGenerateReferralUrl() {
     },
   });
 }
+
+interface LaunchTokenParams {
+  messageId: string;
+  deployOnPumpFun: boolean;
+  // deployOnBase: boolean;
+}
+
+export function useLaunchToken(onSuccess: () => void) {
+  return useMutation({
+    mutationFn: async ({ messageId, deployOnPumpFun }: LaunchTokenParams) => {
+      const response = await api.blockchain.createToken(messageId, deployOnPumpFun);
+      return response;
+    },
+    onSuccess: onSuccess,
+  });
+}

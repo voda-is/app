@@ -6,16 +6,12 @@ import {
   validateResponse,
   CharacterSchema,
   ConversationHistory,
-  HistoryMessage,
   ChatroomMessages,
   Chatroom,
   User,
   UserPoints,
   MessageBrief,
   FunctionCall,
-  TokenCreationRecord,
-  BuyTokenRecord,
-  SellTokenRecord,
   TokenInfo,
   TokenInfoSchema,
   CharacterListBrief,
@@ -333,7 +329,7 @@ export const api = {
       conversationId: string,
       text: string
     ): Promise<null> => {
-      console.log("sending message", text);
+
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
         path: `/chat/${conversationId}`,
@@ -413,7 +409,6 @@ export const api = {
           stripUserId: true,
         },
       });
-      console.log("response", response.data.data);
       return response.data.data;
     },
     getChatroom: async (chatroomId: string): Promise<Chatroom> => {
@@ -497,7 +492,6 @@ export const api = {
       hijackCost: { cost: number }
     ): Promise<null> => {
       const telegramUser = getTelegramUser();
-      console.log("registering hijack", characterId, telegramUser);
 
       const response = await apiProxy.post("", {
         path: `/chatroom/register_hijack/${characterId}`,
@@ -512,7 +506,6 @@ export const api = {
     },
     hijackChatroom: async (characterId: string): Promise<null> => {
       const telegramUser = getTelegramUser();
-      console.log("hijacking chatroom", characterId, telegramUser);
       const response = await apiProxy.post("", {
         path: `/chatroom/hijack/${characterId}`,
         method: "POST",
@@ -521,7 +514,6 @@ export const api = {
           stripUserId: true,
         },
       });
-      console.log("response", response.data.data);
       return response.data.data;
     },
     chat: async (chatroomId: string, message: string): Promise<null> => {
@@ -604,7 +596,8 @@ export const api = {
 
     createToken: async (
       chatroomMessageId: string,
-      functionCall: FunctionCall
+      deployOnPumpFun: boolean,
+      // deployOnBase: boolean,
     ): Promise<null> => {
       const telegramUser = getTelegramUser();
       const response = await apiProxy.post("", {
@@ -613,7 +606,8 @@ export const api = {
         data: {
           user_id: telegramUser.id.toString(),
           stripUserId: true,
-          function_call: functionCall,
+          deploy_on_pumpfun: deployOnPumpFun,
+          // deploy_on_base: deployOnBase,
         },
       });
       return response.data.data;

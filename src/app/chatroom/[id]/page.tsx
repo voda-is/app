@@ -383,10 +383,27 @@ export default function ChatroomPage() {
             <div className="flex justify-center">
               <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
                 <div className="text-lg font-semibold mb-2 text-center text-pink-300">
-                  Public Chatroom
+                  Welcome to the Launch Party! 🚀
+                </div>
+                <div className="text-left mb-4 text-gray-200">
+                  Join the most exciting memecoin launch ever! Chat with others, take control of the conversation, 
+                  and become part of history. Here's how it works:
                 </div>
                 <div className="text-sm leading-relaxed text-gray-100">
-                  {character?.description}
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li className="leading-relaxed">Each message costs <span className="text-pink-300 font-medium">2 points</span>, 
+                      and you'll need the same amount to regenerate a message</li>
+                    <li className="leading-relaxed">Want to take the stage? You can hijack conversations starting at 
+                      <span className="text-pink-300 font-medium"> 10 points</span> - price goes up as more people join the fun!</li>
+                    <li className="leading-relaxed">When you initiate a hijack, there's a <span className="text-pink-300 font-medium">20-second window</span> where 
+                      others can outbid you or the current speaker can defend their position</li>
+                    <li className="leading-relaxed">Be quick and strategic - your hijack attempt might fail if someone 
+                      outbids you during this period</li>
+                    <li className="leading-relaxed">Current speakers can defend their position by matching the 
+                      hijack bid</li>
+                    <li className="leading-relaxed">Remember: hijack points aren't refundable if your attempt fails, 
+                      so bid wisely!</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -398,7 +415,7 @@ export default function ChatroomPage() {
                 onRegenerate={handleRegenerate}
                 onRetry={handleRetry}
                 onRate={handleRate}
-                useMarkdown={true}
+                isChatroom={true}
               />
             ))}
             {/* Launched component */}

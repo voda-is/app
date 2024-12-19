@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { IoChatbubble, IoTime, IoPricetag, IoChatbubbleSharp, IoTrash, IoShare } from "react-icons/io5";
+import { IoChatbubble, IoTime, IoPricetag, IoTrash, IoShare } from "react-icons/io5";
 import { RiMedalLine } from "react-icons/ri";
 import { HiOutlineExternalLink } from "react-icons/hi";
 import { formatDistance } from 'date-fns';
@@ -224,14 +224,18 @@ export default function CharacterPage() {
                       className="flex flex-col p-6 space-y-4 text-left bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl w-full"
                     >
                       {brief.is_wrapped && brief.function_call ? (
-                        <div className="space-y-4 text-white w-full" onClick={() => router.push(`/chatroomMessage/${chatroom?._id}/${brief.id}`)}  >
-                          {/* Token Header */}
+                        <div className="space-y-4 text-white w-full" onClick={() => router.push(`/messages/${chatroom?._id}/${brief.id}`)}  >
+                          {/* Token Header with View Details */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <RiMedalLine className="w-5 h-5 text-emerald-400" />
                               <h3 className="text-lg font-semibold text-emerald-400">
                                 LAUNCHED!
                               </h3>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-emerald-400">
+                              <span>View Details</span>
+                              <HiOutlineExternalLink className="w-4 h-4" />
                             </div>
                           </div>
 
@@ -264,17 +268,11 @@ export default function CharacterPage() {
                                   rel="noopener noreferrer"
                                   className="hover:underline flex items-center gap-1"
                                 >
-                                  {`@${cache.getUser(brief.wrapped_by)?.username}` || 'Anonymous'}
+                                  @{cache.getUser(brief.wrapped_by)?.username || "Anonymous"}
                                   <HiOutlineExternalLink className="w-4 h-4" />
                                 </a>
                               </p>
                             </div>
-                          </div>
-
-                          {/* View Details Link */}
-                          <div className="flex items-center justify-between text-sm text-gray-300 pt-2">
-                            <span>View Launch Details</span>
-                            <HiOutlineExternalLink className="w-4 h-4 text-gray-400" />
                           </div>
                         </div>
                       ) : (
@@ -371,8 +369,8 @@ export default function CharacterPage() {
                 onClick={() => router.push(`/chatroom/${chatroom?._id}`)}
                 className="flex-1 bg-emerald-300 text-black font-semibold py-4 rounded-2xl flex items-center justify-center gap-2"
               >
-                <IoChatbubbleSharp className="w-5 h-5" />
-                Chatroom!
+                <RiMedalLine className="w-5 h-5" />
+                Launch Token!
               </button>
             )}
           </div>

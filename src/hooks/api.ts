@@ -318,7 +318,6 @@ export function useChatroom(chatroomId: string) {
     queryKey: ["chatroom", chatroomId],
     queryFn: async () => {
       const result = await api.chatroom.getChatroom(chatroomId);
-      console.log("result", result);
       if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },
@@ -501,6 +500,36 @@ export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: 
   });
 }
 
+export function useRegisterHijack(chatroomId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<null, Error, { cost: number }>({
+    mutationFn: (hijackCost: { cost: number }) => api.chatroom.registerHijack(chatroomId, hijackCost),
+    onMutate: () => {
+      queryClient.invalidateQueries({ queryKey: ['userPoints'] });
+      queryClient.invalidateQueries({ queryKey: ['hijackCost'] });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+    },
+  });
+}
+
+export function useHijackChatroom(chatroomId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<null, Error, void>({
+    mutationFn: () => {
+      return api.chatroom.hijackChatroom(chatroomId);
+    },
+    onMutate: () => {
+      queryClient.invalidateQueries({ queryKey: ['userPoints'] });
+      queryClient.invalidateQueries({ queryKey: ['hijackCost'] });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+    },
+  });
+}
+
 export function useGetMessage(messageId: string) {
   return useQuery<ChatroomMessages>({
     queryKey: ["chatroomMessage", messageId],
@@ -577,5 +606,21 @@ export function useGenerateReferralUrl() {
       const url = await generateTelegramAppLink("finewtf_bot", "/profile?tabs=points", "referral");
       return url;
     },
+  });
+}
+
+interface LaunchTokenParams {
+  messageId: string;
+  deployOnPumpFun: boolean;
+  // deployOnBase: boolean;
+}
+
+export function useLaunchToken(onSuccess: () => void) {
+  return useMutation({
+    mutationFn: async ({ messageId, deployOnPumpFun }: LaunchTokenParams) => {
+      const response = await api.blockchain.createToken(messageId, deployOnPumpFun);
+      return response;
+    },
+    onSuccess: onSuccess,
   });
 }

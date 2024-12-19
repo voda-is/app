@@ -14,6 +14,7 @@ export class UserProfilesCache {
   };
 
   async ensureUserProfiles(userIds: string[]) {
+    console.log("ensureUserProfiles", userIds);
     const missingIds = userIds.filter((id) => !this.hasUser(id));
     if (missingIds.length > 0) {
       const users = await api.user.getUsers(missingIds);

@@ -179,7 +179,7 @@ export default function ChatroomPage() {
         </div>
 
         {/* Messages Container */}
-        <div className={`flex-1 ${isOnTelegram() ? 'pt-42' : 'pt-32'} pb-24`}>
+        <div className={`flex-1 ${isOnTelegram() ? 'pt-48' : 'pt-32'} pb-24`}>
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">
@@ -200,7 +200,7 @@ export default function ChatroomPage() {
                 onRegenerate={() => {}}
                 onRetry={() => {}}
                 onRate={() => {}}
-                useMarkdown={true}
+                isChatroom={true}
               />
             ))}
             {/* Launched component */}

@@ -1,21 +1,21 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { IoRefresh, IoWarning } from "react-icons/io5";
 import { GiSoundWaves } from "react-icons/gi";
 import { FormattedText } from "@/components/FormattedText";
 import { useState, useMemo, useEffect } from "react";
 import { useTTS } from "@/hooks/api";
 import { extractText } from "@/lib/formatText";
-import { hashText } from "@/lib/utils";
 import { ProgressBarButton } from "./ProgressBarButton";
 import Image from "next/image";
 import { Message } from "@/lib/chat-context";
+import { FiChevronDown } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
 
 interface ChatBubbleProps {
   message: Message;
-  useMarkdown?: boolean;
-
+  isChatroom?: boolean;
   onRetry?: (text: string) => void;
   onRegenerate?: () => void;
   onRate?: (rating: number) => void;
@@ -23,8 +23,7 @@ interface ChatBubbleProps {
 
 export function ChatBubble({
   message,
-  useMarkdown = false,
-
+  isChatroom = false,
   onRetry,
   onRegenerate,
   onRate,
@@ -67,7 +66,6 @@ export function ChatBubble({
 
   const { mutate: generateTTS, isPending: isTTSLoading } = useTTS();
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [hash, setHash] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
@@ -75,11 +73,6 @@ export function ChatBubble({
 
   // Extract text once and memoize it
   const ttsText = useMemo(() => extractText(message.message).join(" "), [message]);
-
-  // Calculate hash when text changes
-  useEffect(() => {
-    hashText(ttsText).then(setHash);
-  }, [ttsText]);
 
   const audioUrl = useMemo(
     () => (audioBlob ? URL.createObjectURL(audioBlob) : null),
@@ -143,6 +136,8 @@ export function ChatBubble({
       }
     );
   };
+
+  const [isEvaluationExpanded, setIsEvaluationExpanded] = useState(false);
 
   return (
     <motion.div
@@ -258,19 +253,56 @@ export function ChatBubble({
             {/* Message Text */}
             <div className={"pt-2"}>
               {message && (
-                <FormattedText text={message.message} skipFormatting={isUser} markdown={useMarkdown} />
+                <FormattedText text={message.message} skipFormatting={isUser} isChatroom={isChatroom} />
               )}
             </div>
           </div>
 
-          {/* Controls for assistant messages */}
-          {message.isLatestReply && !isUser && (
+          {/* Evaluation Section */}
+          {message.evaluation && !isUser && (
+            <div className="w-full border-t border-white/10 pt-2 mt-2">
+              <button
+                onClick={() => setIsEvaluationExpanded(!isEvaluationExpanded)}
+                className="w-full flex items-center gap-1 text-xs text-white/70 hover:text-white transition-colors"
+              >
+                <FiChevronDown 
+                  className={`w-4 h-4 transition-transform duration-300 ${
+                    isEvaluationExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+                {isEvaluationExpanded ? 'Hide Evaluation' : 'Show Evaluation'}
+              </button>
+              
+              <AnimatePresence>
+                {isEvaluationExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-2">
+                      <div className="prose prose-sm max-w-none text-white prose-headings:text-white prose-headings:font-semibold prose-headings:mt-0 prose-p:my-1 prose-li:my-0 prose-strong:text-white/90">
+                        <ReactMarkdown className={`whitespace-pre-wrap overflow-hidden`}>
+                          {message.evaluation}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Action Buttons - Separate Section */}
+          {!isUser && message.status === "success" && message.isLatestReply && (
             <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-white/10">
               {/* Regenerate button */}
               {onRegenerate && (
                 <button
                   onClick={onRegenerate}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+                  className="flex items-center gap-1 text-xs text-white/70 hover:text-white transition-colors"
                 >
                   <IoRefresh className="w-4 h-4" />
                   Regenerate
@@ -281,7 +313,7 @@ export function ChatBubble({
               {onRate && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-white/70">
                       Rate this response:
                     </span>
                     {[1, 2, 3, 4, 5].map((rating) => (
@@ -294,7 +326,7 @@ export function ChatBubble({
                         className={`transition-colors ${
                           rating <= currentRating
                             ? "text-yellow-400"
-                            : "text-gray-400 hover:text-yellow-400"
+                            : "text-white/40 hover:text-yellow-400"
                         }`}
                       >
                         ★
@@ -305,19 +337,19 @@ export function ChatBubble({
               )}
             </div>
           )}
+
+          {/* Retry indicator */}
+          {isUser && onRetry && message.status === "error" && (
+            <motion.div
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
+              onClick={() => onRetry(message.message)}
+            >
+              <IoWarning className="w-5 h-5 text-white" />
+            </motion.div>
+          )}
         </div>
       </div>
-
-      {/* Retry indicator */}
-      {isUser && onRetry && message.status === "error" && (
-        <motion.div
-          whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/30 backdrop-blur-lg border border-red-500/20 shadow-lg cursor-pointer"
-          onClick={() => onRetry(message.message)}
-        >
-          <IoWarning className="w-5 h-5 text-white" />
-        </motion.div>
-      )}
     </motion.div>
   );
 }

@@ -5,16 +5,55 @@ import { IoStarOutline, IoTrendingUpOutline } from 'react-icons/io5';
 import { FiClock } from 'react-icons/fi';
 import type { UserPoints } from '@/lib/validations';
 import { getAvailableBalance } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { useClaimFreePoints } from '@/hooks/api';
 
 interface PointsCardProps {
   userPoints: UserPoints;
-  nextClaimTime: string;
-  canClaim: boolean;
-  onClaim: () => void;
-  isClaimingPointsPending: boolean;
 }
 
-export function PointsCard({ userPoints, nextClaimTime, canClaim, onClaim, isClaimingPointsPending }: PointsCardProps) {
+export function PointsCard({ userPoints }: PointsCardProps) {
+  const { mutate: claimPoints, isPending: isClaimingPointsPending, isError: isClaimingPointsError } = useClaimFreePoints();
+
+  const [canClaim, setCanClaim] = useState(false);
+  const [nextClaimTime, setNextClaimTime] = useState<string>('');
+
+  useEffect(() => {
+    if (isClaimingPointsError) {
+      alert('Failed to claim free points');
+    }
+  }, [isClaimingPointsError]);
+
+  useEffect(() => {
+    const checkClaimStatus = () => {
+      if (!userPoints?.free_claimed_balance_updated_at) {
+        setCanClaim(true);
+        setNextClaimTime('');
+        return;
+      }
+
+      const now = Math.floor(Date.now() / 1000); // Convert to seconds
+      const lastClaim = userPoints.free_claimed_balance_updated_at;
+      const timeUntilNextClaim = (lastClaim + 24 * 60 * 60) - now; // 24 hours in seconds
+
+      if (timeUntilNextClaim <= 0) {
+        setCanClaim(true);
+        setNextClaimTime('');
+      } else {
+        setCanClaim(false);
+        // Convert remaining seconds to hours and minutes
+        const hours = Math.floor(timeUntilNextClaim / (60 * 60));
+        const minutes = Math.floor((timeUntilNextClaim % (60 * 60)) / 60);
+        setNextClaimTime(`${hours}h ${minutes}m`);
+      }
+    };
+  
+    checkClaimStatus();
+    const interval = setInterval(checkClaimStatus, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [userPoints?.free_claimed_balance_updated_at]);
+  
+  
   const formatPoints = (points: number) => {
     return new Intl.NumberFormat('en-US').format(points);
   };
@@ -91,7 +130,7 @@ export function PointsCard({ userPoints, nextClaimTime, canClaim, onClaim, isCla
                 </span>
               </div>
               <button
-                onClick={onClaim}
+                onClick={() => claimPoints()}
                 disabled={!canClaim || isClaimingPointsPending}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   canClaim && !isClaimingPointsPending

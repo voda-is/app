@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { debounce } from "lodash";
 
@@ -20,6 +20,8 @@ import {
   useStartNewConversation,
   useRegenerateLastMessageToChatroom,
   useTelegramInterface,
+  useHijackChatroom,
+  useRegisterHijack,
 } from "@/hooks/api";
 
 import { User } from "@/lib/validations";
@@ -62,7 +64,6 @@ export default function ChatroomPage() {
   // 2. call API to join chatroom
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingIndicatorRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
   const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
@@ -79,6 +80,9 @@ export default function ChatroomPage() {
 
   const { mutate: joinChatroom, isPending: joinChatroomPending } = useJoinChatroom(chatroomId);
   const { mutate: leaveChatroom, isPending: leaveChatroomPending } = useLeaveChatroom(chatroomId);
+  const { mutate: hijackChatroom, isPending: hijackChatroomPending } = useHijackChatroom(chatroomId);
+  const { mutate: registerHijack, isPending: registerHijackPending } = useRegisterHijack(chatroomId);
+
   const { mutate: sendMessage, isPending: sendMessagePending, isSuccess: sendMessageSuccess } = useSendMessageToChatroom(chatroomId, (error) => {
     console.error("Failed to send message:", error);
     setMessages(chatContext.markLastMessageAsError(messages));
@@ -99,7 +103,6 @@ export default function ChatroomPage() {
   const [currentUsers, setCurrentUsers] = useState<User[]>([]);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   const [isCurrentSpeaker, setIsCurrentSpeaker] = useState(false);
-  const [hijackProgress, setHijackProgress] = useState(0);
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
   
@@ -109,31 +112,42 @@ export default function ChatroomPage() {
   const [isUsersExpanded, setIsUsersExpanded] = useState(false);
   const [isPointsExpanded, setIsPointsExpanded] = useState(false);
 
-  
+  // NOTE: are we gonna display the hijack progress
+  const hijackOngoing = useMemo(() => {
+    return !chatroomMessages?.is_wrapped && chatroom?.user_hijacking;
+  }, [chatroomMessages, chatroom]);
+
+  const hijackBack = useMemo(() => {
+    return hijackOngoing && isCurrentSpeaker;
+  }, [hijackOngoing, isCurrentSpeaker]);
+
+  // Add state for countdown
+  const [timeLeft, setTimeLeft] = useState<number>(HIJACK_DURATION);
+
   // Basic Setups
   useEffect(() => {
     notificationOccurred('success');
   }, []);
 
-  useEffect(() => {
-    if (showTypingIndicator && typingIndicatorRef.current) {
-      typingIndicatorRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
-  }, [showTypingIndicator]);
-
-  // Initial scroll to bottom when messages load
-  useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
-    }
-  }, [messages.length === 0]); // Will only run when messages first load (changes from 0 to non-0)
-
-  // Scroll on successful message send or regenerate
-  useEffect(() => {
-    if ((sendMessageSuccess || regenerateLastMessageSuccess || sendMessagePending || regenerateLastMessagePending) && messagesEndRef.current) {
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [sendMessageSuccess, regenerateLastMessageSuccess]);
+  }
+  useEffect(() => {
+    if (showTypingIndicator || messages.length > 0
+      || sendMessageSuccess || regenerateLastMessageSuccess
+      || sendMessagePending || regenerateLastMessagePending
+    ) {
+      scrollToBottom();
+    }
+  }, [showTypingIndicator, messages, sendMessageSuccess, regenerateLastMessageSuccess, sendMessagePending, regenerateLastMessagePending]);
+
+  useEffect(() => {
+    if (registerHijackPending) {
+      setDisableActions(true);
+    }
+  }, [registerHijackPending]);
 
   useEffect(() => {
     if (sendMessagePending) {
@@ -157,7 +171,6 @@ export default function ChatroomPage() {
       !startNewConversationPending &&
       !telegramInterfaceLoading
     ) {
-      console.log("userProfiles", userProfiles);
       setIsReady(true);
     }
   }, [
@@ -172,7 +185,7 @@ export default function ChatroomPage() {
 
   // Populate items
   useEffect(() => {
-    if (!isReady || !chatroom || !chatroomMessages || !userProfiles) return;
+    if (!isReady || !chatroom || !chatroomMessages || !userProfiles || !userPoints || !hijackCost) return;
     setMessages(
       chatContext.injectHistoryMessages(
         chatroomMessages.history,
@@ -185,7 +198,17 @@ export default function ChatroomPage() {
       currentUsers.push(cache.getUser(id) as User); // always exists
     });
     setCurrentUsers(currentUsers);
-  }, [isReady, chatroom, chatroomMessages, userProfiles]);
+    setIsCurrentSpeaker(chatroom.user_on_stage === telegramUser?._id);
+    if (chatroom.user_on_stage === telegramUser?._id) {
+      if (getAvailableBalance(userPoints) < 1) {
+        setDisableActions(true);
+      }
+    } else {
+      if (getAvailableBalance(userPoints) < hijackCost?.cost) {
+        setDisableActions(true);
+      }
+    }
+  }, [isReady, chatroom, chatroomMessages, userProfiles, userPoints, hijackCost]);
 
   // Show toast for new user
   const showNewUserToast = useCallback((username: string) => {
@@ -242,22 +265,6 @@ export default function ChatroomPage() {
     return leaveChatroom;
   }, [chatroomId, telegramUser?._id]);
 
-  const handleHijack = useCallback(
-    debounce(async () => {
-      console.log("hijacking 🌻chatroom", disableActions);
-      if (disableActions) return;
-      const hijackResponse: any = await api.chatroom.registerHijack(
-        chatroomId,
-        hijackCost as { cost: number }
-      );
-
-      if (hijackResponse?.status === 200) {
-        setDisableActions(true);
-      }
-    }, 300), // 300ms 的防抖时间
-    [disableActions, chatroomId, hijackCost]
-  );
-
   const handleSendMessage = async () => {
     const trimmedMessage = inputMessage.trim();
     if (!trimmedMessage) return;
@@ -291,31 +298,30 @@ export default function ChatroomPage() {
     // await api.chatroom.reactToMessage(chatroomId, type);
   };
 
-  // Add this effect to handle hijack progress
+  // Replace the progress bar effect with countdown timer
   useEffect(() => {
     if (!chatroom?.user_hijacking || !chatroom?.hijacking_time) return;
 
     const now = Math.floor(Date.now() / 1000);
     const elapsedTime = now - chatroom.hijacking_time;
+    const remainingTime = Math.max(HIJACK_DURATION - elapsedTime, 0);
     
-    // Don't start if already completed
-    if (elapsedTime >= HIJACK_DURATION) return;
-    
-    // Set initial progress (0 to HIJACK_DURATION)
-    setHijackProgress(elapsedTime);
+    // Set initial time
+    setTimeLeft(remainingTime);
 
-    // Start interval to update progress
-    const interval = setInterval(() => {
-      const currentElapsed = Math.floor(Date.now() / 1000) - (chatroom.hijacking_time || 0);
-      if (currentElapsed >= HIJACK_DURATION) {
-        clearInterval(interval);
-        setHijackProgress(HIJACK_DURATION);
-      } else {
-        setHijackProgress(currentElapsed);
-      }
+    // Update countdown every second
+    const intervalId = setInterval(() => {
+      setTimeLeft(prev => {
+        const newTime = Math.max(prev - 1, 0);
+        if (newTime === 0) {
+          hijackChatroom();
+          clearInterval(intervalId);
+        }
+        return newTime;
+      });
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(intervalId);
   }, [chatroom?.user_hijacking, chatroom?.hijacking_time]);
 
   const handleClaimPoints = async () => {
@@ -363,7 +369,7 @@ export default function ChatroomPage() {
         }`}>
           <Header
             variant="chatroom"
-            name={character?.name as string}
+            name={`[TESTNET] ${character?.name}`}
             image={character?.avatar_image_url || "/bg2.png"}
             userCount={currentUsers.length}
             recentUsers={currentUsers}
@@ -383,10 +389,27 @@ export default function ChatroomPage() {
             <div className="flex justify-center">
               <div className="bg-white/5 backdrop-blur-md border border-white/10 shadow-lg text-white p-6 rounded-2xl max-w-md">
                 <div className="text-lg font-semibold mb-2 text-center text-pink-300">
-                  Public Chatroom
+                  Welcome to the Launch Party! 🚀
+                </div>
+                <div className="text-left mb-4 text-gray-200">
+                  Join the most exciting memecoin launch ever! Chat with others, take control of the conversation, 
+                  and become part of history. Here's how it works:
                 </div>
                 <div className="text-sm leading-relaxed text-gray-100">
-                  {character?.description}
+                  <ul className="list-disc pl-4 space-y-2">
+                    <li className="leading-relaxed">Each message costs <span className="text-pink-300 font-medium">2 points</span>, 
+                      and you'll need the same amount to regenerate a message</li>
+                    <li className="leading-relaxed">Want to take the stage? You can hijack conversations starting at 
+                      <span className="text-pink-300 font-medium"> 10 points</span> - price goes up as more people join the fun!</li>
+                    <li className="leading-relaxed">When you initiate a hijack, there's a <span className="text-pink-300 font-medium">20-second window</span> where 
+                      others can outbid you or the current speaker can defend their position</li>
+                    <li className="leading-relaxed">Be quick and strategic - your hijack attempt might fail if someone 
+                      outbids you during this period</li>
+                    <li className="leading-relaxed">Current speakers can defend their position by matching the 
+                      hijack bid</li>
+                    <li className="leading-relaxed">Remember: hijack points aren't refundable if your attempt fails, 
+                      so bid wisely!</li>
+                  </ul>
                 </div>
               </div>
             </div>
@@ -398,7 +421,7 @@ export default function ChatroomPage() {
                 onRegenerate={handleRegenerate}
                 onRetry={handleRetry}
                 onRate={handleRate}
-                useMarkdown={true}
+                isChatroom={true}
               />
             ))}
             {/* Launched component */}
@@ -413,47 +436,48 @@ export default function ChatroomPage() {
 
             {/* Typing Indicator */}
             {showTypingIndicator && (
-              <div ref={typingIndicatorRef} className="mb-4">
+              <div className="mb-4">
                 <TypingIndicator />
               </div>
             )}
 
-            <div ref={messagesEndRef} className="h-1" />
+            <div ref={messagesEndRef} className={`${hijackOngoing ? 'h-10' : 'h-1'}`} />
           </div>
         </div>
 
         {/* Only show hijack progress if not wrapped */}
-        {!chatroomMessages?.is_wrapped && chatroom?.user_hijacking && (
-          <div className="fixed bottom-20 left-0 right-0 pb-5 pt-5 z-20 px-6 backdrop-blur-md bg-black/50">
-            <ProgressBarButton
-              isActive={true}
-              duration={HIJACK_DURATION}
-              progress={hijackProgress}
-              onClick={async () => {
-                try {
-                  await api.chatroom.hijackChatroom(chatroomId);
-                  setIsCurrentSpeaker(true);
-                  notificationOccurred("success");
-                } catch (error) {
-                  console.error("Failed to hijack conversation:", error);
-                }
-              }}
-              onComplete={() => setHijackProgress(0)}
-              className="w-full justify-center text-white font-medium text-base"
-            >
+        {/* !chatroomMessages?.is_wrapped && chatroom?.user_hijacking */}
+        {hijackOngoing && (
+          <div className="fixed bottom-20 pb-2 left-0 right-0 z-10">
+            <div className="w-full py-4 px-6 bg-white/5 backdrop-blur-md border-t border-white/10 text-white font-medium text-base flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <img
-                  src={cache.getUser(chatroom.user_hijacking)?.profile_photo || "/bg2.png"}
+                  src={cache.getUser(chatroom?.user_hijacking || "")?.profile_photo || "/bg2.png"}
                   alt="User avatar"
                   className="w-6 h-6 rounded-full"
                 />
-                <span>
-                  {hijackProgress >= HIJACK_DURATION 
-                    ? "GET ON STAGE NOW!" 
-                    : `${cache.getUser(chatroom.user_hijacking)?.first_name || "User"} is hijacking the conversation...`}
+                <span className="text-gray-200">
+                  {timeLeft === 0 
+                    ? "Finalizing hijack!" 
+                    : `${cache.getUser(chatroom?.user_hijacking || "")?.first_name || "User"} is hijacking (${timeLeft}s)`}
                 </span>
               </div>
-            </ProgressBarButton>
+
+              {
+                hijackBack && (
+                  <button 
+                    className={`px-8 py-1.5 rounded-lg transition-all duration-200 min-w-[160px] ${
+                      disableActions 
+                        ? 'bg-gray-600 cursor-not-allowed opacity-50' 
+                        : 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/20'
+                    }`}
+                    onClick={() => registerHijack({ cost: hijackCost?.cost || 0 })}
+                    disabled={disableActions}>
+                    {disableActions ? 'Not Enough Points' : 'Hijack Back!'}
+                  </button>
+                )
+              }
+            </div>
           </div>
         )}
 
@@ -472,7 +496,7 @@ export default function ChatroomPage() {
               <ChatroomFooter
                 isCurrentSpeaker={isCurrentSpeaker}
                 hijackCost={hijackCost as unknown as { cost: number }}
-                onHijack={handleHijack}
+                onHijack={registerHijack}
                 onReaction={handleReaction}
                 disabled={disableActions}
               />

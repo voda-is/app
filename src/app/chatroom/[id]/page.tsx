@@ -64,7 +64,6 @@ export default function ChatroomPage() {
   // 2. call API to join chatroom
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingIndicatorRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
   const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
@@ -104,7 +103,6 @@ export default function ChatroomPage() {
   const [currentUsers, setCurrentUsers] = useState<User[]>([]);
   const [showTypingIndicator, setShowTypingIndicator] = useState(false);
   const [isCurrentSpeaker, setIsCurrentSpeaker] = useState(false);
-  const [hijackProgress, setHijackProgress] = useState(0);
   const [inputMessage, setInputMessage] = useState("");
   const [disableActions, setDisableActions] = useState(false);
   
@@ -131,25 +129,25 @@ export default function ChatroomPage() {
     notificationOccurred('success');
   }, []);
 
-  useEffect(() => {
-    if (showTypingIndicator && typingIndicatorRef.current) {
-      typingIndicatorRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
-    }
-  }, [showTypingIndicator]);
-
-  // Initial scroll to bottom when messages load
-  useEffect(() => {
-    if (messages.length > 0 && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
-    }
-  }, [messages.length === 0]); // Will only run when messages first load (changes from 0 to non-0)
-
-  // Scroll on successful message send or regenerate
-  useEffect(() => {
-    if ((sendMessageSuccess || regenerateLastMessageSuccess || sendMessagePending || regenerateLastMessagePending) && messagesEndRef.current) {
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
-  }, [sendMessageSuccess, regenerateLastMessageSuccess]);
+  }
+  useEffect(() => {
+    if (showTypingIndicator || messages.length > 0
+      || sendMessageSuccess || regenerateLastMessageSuccess
+      || sendMessagePending || regenerateLastMessagePending
+    ) {
+      scrollToBottom();
+    }
+  }, [showTypingIndicator, messages, sendMessageSuccess, regenerateLastMessageSuccess, sendMessagePending, regenerateLastMessagePending]);
+
+  useEffect(() => {
+    if (registerHijackPending) {
+      setDisableActions(true);
+    }
+  }, [registerHijackPending]);
 
   useEffect(() => {
     if (sendMessagePending) {
@@ -438,7 +436,7 @@ export default function ChatroomPage() {
 
             {/* Typing Indicator */}
             {showTypingIndicator && (
-              <div ref={typingIndicatorRef} className="mb-4">
+              <div className="mb-4">
                 <TypingIndicator />
               </div>
             )}
@@ -468,9 +466,14 @@ export default function ChatroomPage() {
               {
                 hijackBack && (
                   <button 
-                    className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 px-8 py-1.5 rounded-lg transition-all duration-200 shadow-lg shadow-pink-500/20 min-w-[160px]"
-                    onClick={() => registerHijack({ cost: hijackCost?.cost || 0 })}>
-                    Hijack Back!
+                    className={`px-8 py-1.5 rounded-lg transition-all duration-200 min-w-[160px] ${
+                      disableActions 
+                        ? 'bg-gray-600 cursor-not-allowed opacity-50' 
+                        : 'bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 shadow-lg shadow-pink-500/20'
+                    }`}
+                    onClick={() => registerHijack({ cost: hijackCost?.cost || 0 })}
+                    disabled={disableActions}>
+                    {disableActions ? 'Not Enough Points' : 'Hijack Back!'}
                   </button>
                 )
               }

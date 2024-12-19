@@ -29,7 +29,7 @@ export function ReferralCampaignCard() {
   const handleCopyReferral = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!referralUrl) {
-      generateUrl();
+      generateUrl({ path: "/profile?tabs=points", type: "referral" });
       return;
     }
 

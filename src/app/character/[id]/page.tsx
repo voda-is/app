@@ -16,7 +16,8 @@ import { useCharacter,
   useDeleteConversation,
   useGetMessageBrief,
   useTelegramInterface,
-  useUserProfilesRaw
+  useUserProfilesRaw,
+  useGenerateReferralUrl
 } from "@/hooks/api";
 
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -46,6 +47,7 @@ export default function CharacterPage() {
     character?.metadata.enable_chatroom ? messageBriefs || [] : []
   );
 
+  
   const { mutate: createConversation, isPending: createConversationLoading, isSuccess: createConversationSuccess } = useCreateConversation(id);
   const { mutate: deleteConversation, isPending: deleteConversationLoading, isSuccess: deleteConversationSuccess } = useDeleteConversation(id);
   useEffect(() => {
@@ -63,18 +65,26 @@ export default function CharacterPage() {
   const [isSharing, setIsSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
+  const { 
+    mutate: generateUrl, 
+    data: referralUrl, 
+    isPending: isGeneratingUrl 
+  } = useGenerateReferralUrl();
+
   const handleShare = async () => {
     try {
       setIsSharing(true);
-      const link = await generateTelegramAppLink("finewtf_bot", `character/${id}`, "share_character");
-      await navigator.clipboard.writeText(link);
-      setShareSuccess(true);
-      notificationOccurred('success');
-      
-      // Reset success state after 2 seconds
-      setTimeout(() => {
-        setShareSuccess(false);
-      }, 2000);
+      generateUrl({ path: `character/${id}`, type: "share_character" });
+      if (referralUrl) {
+        await navigator.clipboard.writeText(referralUrl);
+        setShareSuccess(true);
+        notificationOccurred('success');
+        
+        // Reset success state after 2 seconds
+        setTimeout(() => {
+          setShareSuccess(false);
+        }, 2000);
+      }
     } catch (error) {
       console.error('Failed to share:', error);
     } finally {
@@ -142,14 +152,14 @@ export default function CharacterPage() {
           {/* Add Share Button */}
           <button
             onClick={handleShare}
-            disabled={isSharing}
+            disabled={isSharing || isGeneratingUrl}
             className={`mx-auto flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm transition-colors ${
               shareSuccess
                 ? 'bg-emerald-500/20 text-emerald-300'
                 : 'bg-white/10 hover:bg-white/20 text-white'
             }`}
           >
-            {isSharing ? (
+            {isSharing || isGeneratingUrl ? (
               <div className="animate-spin w-4 h-4 border-2 border-white/20 border-t-white rounded-full" />
             ) : shareSuccess ? (
               <>

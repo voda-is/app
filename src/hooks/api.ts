@@ -601,9 +601,9 @@ export function useClaimFreePoints() {
 }
 
 export function useGenerateReferralUrl() {
-  return useMutation({
-    mutationFn: async () => {
-      const url = await generateTelegramAppLink("finewtf_bot", "/profile?tabs=points", "referral");
+  return useMutation<string, Error, { path: string, type: string }>({
+    mutationFn: async ({ path, type }: { path: string, type: string }) => {
+      const url = await generateTelegramAppLink("finewtf_bot", path, type);
       return url;
     },
   });

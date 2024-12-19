@@ -318,7 +318,6 @@ export function useChatroom(chatroomId: string) {
     queryKey: ["chatroom", chatroomId],
     queryFn: async () => {
       const result = await api.chatroom.getChatroom(chatroomId);
-      console.log("result", result);
       if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },
@@ -498,6 +497,28 @@ export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: 
       }
     },
     onError: isError,
+  });
+}
+
+export function useRegisterHijack(chatroomId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<null, Error, { cost: number }>({
+    mutationFn: (hijackCost: { cost: number }) => api.chatroom.registerHijack(chatroomId, hijackCost),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+    },
+  });
+}
+
+export function useHijackChatroom(chatroomId: string) {
+  const queryClient = useQueryClient();
+  return useMutation<null, Error, void>({
+    mutationFn: () => {
+      return api.chatroom.hijackChatroom(chatroomId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
+    },
   });
 }
 

@@ -1,7 +1,7 @@
 interface ChatroomFooterProps {
   isCurrentSpeaker: boolean;
   hijackCost: { cost: number };
-  onHijack: () => void;
+  onHijack: (hijackCost: { cost: number }) => void;
   onReaction: (type: string) => void;
   disabled?: boolean;
 }
@@ -27,7 +27,7 @@ export function ChatroomFooter({
       <div className="flex items-center justify-between w-full space-x-3">
         {/* Hijack Button */}
         <button
-          onClick={onHijack}
+          onClick={() => onHijack({ cost: hijackCost.cost })}
           disabled={disabled}
           className="flex-1 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white px-6 py-4 rounded-xl flex items-center justify-center space-x-4 disabled:opacity-50 transition-colors"
         >

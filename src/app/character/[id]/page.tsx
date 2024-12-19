@@ -63,7 +63,7 @@ export default function CharacterPage() {
   const handleShare = async () => {
     const link = await generateTelegramAppLink("finewtf_bot", `character/${id}`, "share_character");
     // copy to clipboard
-    navigator.clipboard.writeText(link);
+    await navigator.clipboard.writeText(link);
     notificationOccurred('success');
   };
 

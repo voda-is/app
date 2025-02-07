@@ -603,7 +603,7 @@ export function useClaimFreePoints() {
 export function useGenerateReferralUrl() {
   return useMutation<string, Error, { path: string, type: string }>({
     mutationFn: async ({ path, type }: { path: string, type: string }) => {
-      const url = await generateTelegramAppLink("finewtf_bot", path, type);
+      const url = await generateTelegramAppLink("voda_is_bot", path, type);
       return url;
     },
   });

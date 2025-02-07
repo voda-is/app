@@ -22,7 +22,7 @@ import { useCharacter,
 
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { generateTelegramAppLink, isOnTelegram, notificationOccurred } from "@/lib/telegram";
+import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
 
 export default function CharacterPage() {
   const params = useParams();

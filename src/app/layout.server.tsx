@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Fine",
-  description: "Fine AI Characters",
+  title: "Voda AI",
+  description: "Voda AI Characters",
 }; 

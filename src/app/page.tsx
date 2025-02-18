@@ -4,25 +4,30 @@ import { motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 import { CharacterCard } from '@/components/CharacterCard';
 import { TopNav } from '@/components/Navigation/TopNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { BottomNav } from '@/components/Navigation/BottomNav';
 
-import { useCharacters, useTelegramInterface, useTelegramUser } from '@/hooks/api';
+import { useCharacters } from '@/hooks/api';
 import { Character } from '@/lib/validations';
-import { isOnTelegram, setupTelegramInterface } from '@/lib/telegram';
 
 type FilterType = 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp';
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const router = useRouter();
+  const { data: session, status } = useSession();
   
   const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
-  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
-  const { data: _tgUser, isLoading: userLoading } = useTelegramUser();
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
 
   const filteredCharacters = useMemo(() => {
     if (!characters) return [];
@@ -30,7 +35,6 @@ export default function Home() {
     return (characters as Character[]).filter(character => {
       if (activeFilter === 'all') return true;
       
-      // Safely handle tags array
       const tags = character.tags || [];
       if (['zh', 'en', 'kr', 'jp', 'male', 'female'].includes(activeFilter)) {
         return tags.some(tag => tag?.toLowerCase() === activeFilter);
@@ -40,7 +44,7 @@ export default function Home() {
     });
   }, [characters, activeFilter]);
 
-  if (charactersLoading || userLoading || telegramInterfaceLoading) {
+  if (charactersLoading || status === 'loading') {
     return <LoadingScreen />;
   }
 
@@ -49,19 +53,29 @@ export default function Home() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gray-900 text-white px-2 pb-24"
+      className="min-h-screen bg-gray-900 text-white"
     >
       <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
-      <div className={`grid grid-cols-2 gap-2 ${isOnTelegram() ? 'pt-52' : 'pt-32'}`}>
-        {filteredCharacters.map((character, index) => (
-          <Link key={character._id} href={`/character/${character._id}`}>
-            <CharacterCard 
-              character={character} 
-              index={index} 
-            />
-          </Link>
-        ))}
-      </div>
+      
+      <main className="max-w-7xl mx-auto px-4">
+        <div className="pt-36 pb-32">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {filteredCharacters.map((character, index) => (
+              <Link 
+                key={character._id} 
+                href={`/character/${character._id}`}
+                className="transform transition-transform hover:scale-105 rounded-lg"
+              >
+                <CharacterCard 
+                  character={character} 
+                  index={index} 
+                />
+              </Link>
+            ))}
+          </div>
+        </div>
+      </main>
+
       <BottomNav />
     </motion.div>
   );

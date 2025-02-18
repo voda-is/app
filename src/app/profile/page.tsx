@@ -12,6 +12,7 @@ import {
 } from 'react-icons/io5';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { signOut, useSession } from 'next-auth/react';
 
 import { BottomNav } from '@/components/Navigation/BottomNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
@@ -26,6 +27,7 @@ import { ReferralCampaignCard } from '@/components/profiles/ReferralCampaignCard
 type TabType = 'conversations' | 'wallet' | 'points';
 
 function ProfileContent() {
+  const { data: session } = useSession();
   const { data: user, isLoading: isLoadingUser } = useTelegramUser();
   const { data: addresses, isLoading: isLoadingAddresses } = useGetAddress();
   const { data: tokenInfo, isLoading: isLoadingTokenInfo } = useGetTokenInfo();
@@ -84,6 +86,15 @@ function ProfileContent() {
       >
         {isOnTelegram() && <div className="h-24" />}
 
+        {/* Debug Session Info */}
+        <div className="px-4 mb-4">
+          <div className="bg-black/10 backdrop-blur-sm rounded-lg p-4 overflow-auto">
+            <p className="text-xs font-mono whitespace-pre-wrap">
+              {JSON.stringify(session, null, 2)}
+            </p>
+          </div>
+        </div>
+
         {/* Profile Section */}
         <div className="px-4 mb-6">
           <div className="relative w-24 h-24 mb-4 mx-auto">
@@ -110,9 +121,16 @@ function ProfileContent() {
           <h1 className="text-2xl font-bold text-gray-900 text-center mb-2">
             {user?.first_name || 'Anonymous'}
           </h1>
-          <p className="text-gray-700 text-sm text-center mb-6">
+          <p className="text-gray-700 text-sm text-center mb-4">
             @{user?.username || 'anonymous'}
           </p>
+          
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            className="mx-auto block px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-colors text-sm font-medium text-gray-900"
+          >
+            Sign Out
+          </button>
         </div>
 
         {/* Tabs */}

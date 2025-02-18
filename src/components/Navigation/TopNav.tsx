@@ -24,7 +24,7 @@ export function TopNav({ activeTab, onTabChange }: TopNavProps) {
       isOnTelegram() ? 'h-52' : 'h-32'
     }`}>
       <div className="overflow-x-auto">
-        {isOnTelegram() && <div className="h-24" />}
+        {isOnTelegram() ? <div className="h-24" /> : <div className="h-4" />}
         <div className="flex flex-col gap-2 p-2">
           {/* Gender Row */}
           <div className="flex gap-2">

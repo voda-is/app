@@ -37,11 +37,11 @@ export function InputBar({ message, onChange, onSend, placeholder, disabled }: I
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.4 }}
-      className="p-4 backdrop-blur-md bg-black/20"
+      className="p-4 md:p-0 backdrop-blur-md bg-black/20 md:bg-transparent"
     >
-      <div className={`flex items-center gap-2 backdrop-blur-md bg-white/10 rounded-full px-4 py-2 ${disabled ? 'opacity-50' : ''}`}>
+      <div className={`flex items-center gap-2 backdrop-blur-md bg-white/10 rounded-full px-4 py-2 md:px-6 md:py-3 ${disabled ? 'opacity-50' : ''}`}>
         <button className="text-gray-400">
-          <IoMic size={20} />
+          <IoMic className="w-5 h-5 md:w-6 md:h-6" />
         </button>
         <textarea
           ref={textareaRef}
@@ -51,7 +51,7 @@ export function InputBar({ message, onChange, onSend, placeholder, disabled }: I
           onChange={(e) => onChange(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder={placeholder}
-          className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none resize-none overflow-y-auto scrollbar-none"
+          className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none resize-none overflow-y-auto scrollbar-none md:text-lg"
           style={{
             height: '24px',
             lineHeight: '24px',
@@ -60,7 +60,7 @@ export function InputBar({ message, onChange, onSend, placeholder, disabled }: I
           }}
         />
         <button className="text-gray-400">
-          <IoFlash size={20} />
+          <IoFlash className="w-5 h-5 md:w-6 md:h-6" />
         </button>
         <AnimatePresence mode="wait">
           {message.trim() ? (
@@ -70,9 +70,9 @@ export function InputBar({ message, onChange, onSend, placeholder, disabled }: I
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
               onClick={onSend}
-              className="bg-[#FDB777] text-black rounded-full p-2"
+              className="bg-[#FDB777] text-black rounded-full p-2 md:p-3"
             >
-              <IoSend size={20} />
+              <IoSend className="w-5 h-5 md:w-6 md:h-6" />
             </motion.button>
           ) : (
             <motion.button
@@ -80,9 +80,9 @@ export function InputBar({ message, onChange, onSend, placeholder, disabled }: I
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
-              className="bg-white/20 rounded-full p-2 text-gray-400"
+              className="bg-white/20 rounded-full p-2 md:p-3 text-gray-400"
             >
-              <IoAdd size={20} />
+              <IoAdd className="w-5 h-5 md:w-6 md:h-6" />
             </motion.button>
           )}
         </AnimatePresence>

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { SessionProvider } from "next-auth/react"
 
 import { setupTelegramInterface } from "@/lib/telegram";
+import { useUser } from "@/hooks/api";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,6 +23,7 @@ export default function RootLayout({
   useEffect(() => {
     setupTelegramInterface(router);
   }, []);
+
   return (
     <html lang="en">
       <head>

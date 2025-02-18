@@ -1,33 +1,23 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 
 import { CharacterCard } from '@/components/CharacterCard';
 import { TopNav } from '@/components/Navigation/TopNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { BottomNav } from '@/components/Navigation/BottomNav';
 
-import { useCharacters } from '@/hooks/api';
+import { useCharacters, useUser } from '@/hooks/api';
 import { Character } from '@/lib/validations';
 
 type FilterType = 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp';
 
 export default function Home() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
-  const router = useRouter();
-  const { data: session, status } = useSession();
-  
   const { data: characters, isLoading: charactersLoading } = useCharacters(10, 0);
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
+  const { data: user, isLoading: userLoading } = useUser();
 
   const filteredCharacters = useMemo(() => {
     if (!characters) return [];
@@ -44,9 +34,11 @@ export default function Home() {
     });
   }, [characters, activeFilter]);
 
-  if (charactersLoading || status === 'loading') {
+  if (charactersLoading || userLoading) {
     return <LoadingScreen />;
   }
+
+  console.log("user", user);
 
   return (
     <motion.div

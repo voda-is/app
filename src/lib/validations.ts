@@ -4,10 +4,24 @@ import { z } from 'zod';
 export const CryptoHashSchema = z.string();
 export const TimestampSchema = z.number().int().positive();
 
+
+export const OAuthUserSchema = z.object({
+  id: z.string(),
+  username: z.string(),
+  firstName: z.string(),
+
+  lastName: z.string().nullable(),
+  image: z.string().nullable(),
+  provider: z.string().nullable()
+});
+
+export type OAuthUser = z.infer<typeof OAuthUserSchema>;
+
 // User schema
 export const UserSchema = z.object({
   _id: CryptoHashSchema,
   user_id: z.string(),
+  user_provider: z.enum(['google', 'x', 'telegram']),
   username: z.string().optional(),
   first_name: z.string(),
   last_name: z.string().optional(),

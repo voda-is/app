@@ -48,6 +48,7 @@ const handler = NextAuth({
           token.lastName = ''; // Empty last name as requested
           token.picture = twitterProfile.data.profile_image_url;
           token.sub = twitterProfile.data.id; // Twitter ID
+          token.provider = 'x';
         }
       }
 

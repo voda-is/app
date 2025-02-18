@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useCharacter,
   useChatroom,
-  useTelegramUser,
+  useUser,
   useUserProfiles,
   useUserPoints,
   useGetMessage,
@@ -30,12 +30,13 @@ import { UsersExpandedView } from "@/components/UsersExpandedView";
 import { Toast } from "@/components/Toast";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
 import { Launched } from '@/components/Launched';
-
+import { useSession } from "next-auth/react";
 export default function ChatroomPage() {
   const params = useParams();
   const chatroomId = params?.chatroomId as string;
   const messageId = params?.messageId as string;
   const router = useRouter();
+  const {data: session} = useSession();
   // Luanch Sequence:
   // 1. get chatroom info
   // 2. get character info
@@ -50,14 +51,14 @@ export default function ChatroomPage() {
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
   const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useGetMessage(messageId);
   const { data: userProfiles, isLoading: userProfilesLoading } = useUserProfiles(chatroom!, chatroomMessages!);
-  const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
+  const { data: user, isLoading: userLoading } = useUser();
   const { data: userPoints } = useUserPoints();
   const claimStatus = userPoints 
     ? getNextClaimTime(userPoints.free_claimed_balance_updated_at)
     : { canClaim: false, timeLeft: "Loading..." };
 
   const cache = new UserProfilesCache();
-  const chatContext = new ChatContextWithUnknownUser(character!, telegramUser?._id as string);
+  const chatContext = new ChatContextWithUnknownUser(character!, user?._id as string);
   const queryClient = useQueryClient();
 
   const [isReady, setIsReady] = useState(false); // all data to be fetched from remote is ready
@@ -86,8 +87,7 @@ export default function ChatroomPage() {
       !chatroomLoading &&
       !chatroomMessagesLoading &&
       !userProfilesLoading &&
-      !userProfilesLoading &&
-      !telegramUserLoading &&
+      !userLoading &&
       !characterLoading &&
       !telegramInterfaceLoading
     ) {
@@ -97,7 +97,7 @@ export default function ChatroomPage() {
     chatroomLoading,
     chatroomMessagesLoading,
     userProfilesLoading,
-    telegramUserLoading,
+    userLoading,
     characterLoading,
     telegramInterfaceLoading,
   ]);
@@ -121,7 +121,7 @@ export default function ChatroomPage() {
 
   const handleClaimPoints = async () => {
     try {
-      await api.user.claimFreePoints();
+      await api.user.claimFreePoints(session);
       queryClient.invalidateQueries({ queryKey: ["userPoints"] });
       // Optionally show a success toast
       setToastMessage("Points claimed successfully!");
@@ -234,7 +234,7 @@ export default function ChatroomPage() {
         <PointsExpandedView
           isExpanded={isPointsExpanded}
           onClose={() => setIsPointsExpanded(false)}
-          user={telegramUser}
+          user={user}
           points={userPoints ? getAvailableBalance(userPoints) : 0}
           nextClaimTime={claimStatus.timeLeft}
           canClaim={claimStatus.canClaim}

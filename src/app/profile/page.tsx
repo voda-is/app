@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { 
   IoPersonCircle, 
@@ -12,13 +12,13 @@ import {
 } from 'react-icons/io5';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { signOut, useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 
 import { BottomNav } from '@/components/Navigation/BottomNav';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { CharacterCard } from '@/components/profiles/CharacterCard';
 import { WalletCard } from '@/components/profiles/WalletCard';
-import { useTelegramUser, useGetAddress, useGetTokenInfo, useCharacterListBrief, useUserPoints, useClaimFreePoints, useTelegramInterface } from '@/hooks/api';
+import { useUser, useGetAddress, useGetTokenInfo, useCharacterListBrief, useUserPoints, useTelegramInterface } from '@/hooks/api';
 import { isOnTelegram, notificationOccurred } from '@/lib/telegram';
 import { PointsCard } from '@/components/profiles/PointsCard';
 import { PointsSystemGuide } from '@/components/profiles/PointsSystemGuide';
@@ -27,8 +27,7 @@ import { ReferralCampaignCard } from '@/components/profiles/ReferralCampaignCard
 type TabType = 'conversations' | 'wallet' | 'points';
 
 function ProfileContent() {
-  const { data: session } = useSession();
-  const { data: user, isLoading: isLoadingUser } = useTelegramUser();
+  const { data: user, isLoading: isLoadingUser } = useUser();
   const { data: addresses, isLoading: isLoadingAddresses } = useGetAddress();
   const { data: tokenInfo, isLoading: isLoadingTokenInfo } = useGetTokenInfo();
   const { data: characterListBrief, isLoading: isLoadingCharacterListBrief } = useCharacterListBrief();
@@ -85,15 +84,6 @@ function ProfileContent() {
         className="relative min-h-screen pt-8"
       >
         {isOnTelegram() && <div className="h-24" />}
-
-        {/* Debug Session Info */}
-        <div className="px-4 mb-4">
-          <div className="bg-black/10 backdrop-blur-sm rounded-lg p-4 overflow-auto">
-            <p className="text-xs font-mono whitespace-pre-wrap">
-              {JSON.stringify(session, null, 2)}
-            </p>
-          </div>
-        </div>
 
         {/* Profile Section */}
         <div className="px-4 mb-6">

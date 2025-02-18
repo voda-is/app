@@ -11,19 +11,20 @@ import type {
   MessageBrief,
   TokenInfo,
   CharacterListBrief,
-  Url,
 } from "@/lib/validations";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
 import { generateTelegramAppLink, setupTelegramInterface } from "@/lib/telegram";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { useSession } from "next-auth/react";
 
 // User related hooks
-export function useTelegramUser() {
+export function useUser() {
+  const { data: session } = useSession();
   return useQuery<User, Error>({
     queryKey: ["user"],
-    queryFn: api.user.register,
+    queryFn: () => api.user.register(session),
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,
@@ -35,9 +36,10 @@ export function useTelegramUser() {
 }
 
 export function useTelegramInterface(router: AppRouterInstance) {
+  const { data: session } = useSession();
   return useQuery<null, Error>({
     queryKey: ["telegramInterface"],
-    queryFn: () => setupTelegramInterface(router),
+    queryFn: () => setupTelegramInterface(router, session),
     enabled: !!router,
     retry: 1,
     refetchInterval: false,
@@ -48,9 +50,10 @@ export function useTelegramInterface(router: AppRouterInstance) {
 
 // User points related hooks
 export function useUserPoints() {
+  const { data: session } = useSession();
   return useQuery<UserPoints, Error>({
     queryKey: ["userPoints"],
-    queryFn: () => api.user.getUserPoints(),
+    queryFn: () => api.user.getUserPoints(session),
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,
@@ -63,9 +66,10 @@ export function useUserPoints() {
 
 // Character related hooks
 export function useCharacters(limit: number, offset: number) {
+  const { data: session } = useSession();
   return useQuery<Character[], Error>({
     queryKey: ["characters"],
-    queryFn: () => api.characters.list(limit, offset),
+    queryFn: () => api.characters.list(limit, offset, session),
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,
@@ -77,9 +81,10 @@ export function useCharacters(limit: number, offset: number) {
 }
 
 export function useCharacter(id: string | undefined) {
+  const { data: session } = useSession();
   return useQuery<Character, Error>({
     queryKey: ["characters", id],
-    queryFn: () => api.characters.get(id!),
+    queryFn: () => api.characters.get(id!, session),
     enabled: !!id,
     retry: 1,
     refetchInterval: false,
@@ -93,19 +98,21 @@ export function useCharacter(id: string | undefined) {
 
 export function useCharacterChatHistory(characterId: string) {
   const { data: character } = useCharacter(characterId);
-  const { data: user } = useTelegramUser();
+  const { data: user } = useUser();
+  const { data: session } = useSession(); 
 
   return useQuery<string[], Error>({
     queryKey: ["characterChatHistory", characterId],
     queryFn: async () => {
       if (character) {
         const history = await api.chat.getConversationHistoryIdOnly(
-          characterId
+          characterId,
+          session
         );
         console.log(history)
         if (history.length === 0) {
-          await api.chat.createConversation(characterId);
-          return await api.chat.getConversationHistoryIdOnly(characterId);
+          await api.chat.createConversation(characterId, session);
+          return await api.chat.getConversationHistoryIdOnly(characterId, session);
         } else {
           return history;
         }
@@ -125,9 +132,10 @@ export function useCharacterChatHistory(characterId: string) {
 }
 
 export function useConversation(conversationId: string) {
+  const { data: session } = useSession();
   return useQuery<ConversationHistory, Error>({
     queryKey: ["conversation", conversationId],
-    queryFn: () => api.chat.getConversation(conversationId),
+    queryFn: () => api.chat.getConversation(conversationId, session),
     enabled: !!conversationId,
     retry: 1,
     refetchInterval: false,
@@ -137,9 +145,10 @@ export function useConversation(conversationId: string) {
 }
 
 export function useCharacterListBrief() {
+  const { data: session } = useSession();
   return useQuery<CharacterListBrief[]>({
     queryKey: ["characterListBrief"],
-    queryFn: () => api.chat.getCharacterListBrief(),
+    queryFn: () => api.chat.getCharacterListBrief(session),
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,
@@ -152,9 +161,10 @@ export function useCharacterListBrief() {
 
 export function useCreateConversation(characterId: string) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, void>({
-    mutationFn: () => api.chat.createConversation(characterId),
+    mutationFn: () => api.chat.createConversation(characterId, session  ),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["characterChatHistory", characterId],
@@ -165,9 +175,10 @@ export function useCreateConversation(characterId: string) {
 
 export function useDeleteConversation(characterId: string) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, string>({
-    mutationFn: (conversationId: string) => api.chat.deleteConversation(conversationId),
+    mutationFn: (conversationId: string) => api.chat.deleteConversation(conversationId, session ),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["characterChatHistory", characterId],
@@ -181,9 +192,10 @@ export function useSendMessage(
   isError: (error: Error) => void
 ) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, string>({
-    mutationFn: (text: string) => api.chat.sendMessage(conversationId, text),
+    mutationFn: (text: string) => api.chat.sendMessage(conversationId, text, session),
     onMutate: () => {
       queryClient.invalidateQueries({
         queryKey: ["userPoints"],
@@ -206,9 +218,10 @@ export function useRegenerateLastMessage(
   isError: (error: Error) => void
 ) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, void>({
-    mutationFn: () => api.chat.regenerateLastMessage(conversationId),
+    mutationFn: () => api.chat.regenerateLastMessage(conversationId, session  ),
     onMutate: () => {
       queryClient.invalidateQueries({
         queryKey: ["userPoints"],
@@ -229,6 +242,7 @@ export function useRegenerateLastMessage(
 // TTS related hooks
 export function useTTS() {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<
     TTSEntry,
@@ -246,7 +260,7 @@ export function useTTS() {
       }
 
       // Generate new audio if not cached
-      const audioBlob = await api.tts.generateSpeech(text, characterId);
+      const audioBlob = await api.tts.generateSpeech(text, characterId, session);
       const result = { text, audioBlob, status: "complete" as const };
 
       // Cache the result
@@ -294,11 +308,12 @@ export function useTTS() {
 
 // Chatroom related hooks
 export function useChatroomWithCharacter(characterId: string) {
+  const { data: session } = useSession();
   return useQuery<Chatroom>({
     queryKey: ["chatroomCharacter", characterId],
     queryFn: async () => {
       if (!characterId) throw new Error("Invalid character ID");
-      const result = await api.chatroom.generateFromCharacter(characterId);
+      const result = await api.chatroom.generateFromCharacter(characterId, session);
       if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },
@@ -314,10 +329,11 @@ export function useChatroomWithCharacter(characterId: string) {
 }
 
 export function useChatroom(chatroomId: string) {
+  const { data: session } = useSession();
   return useQuery<Chatroom>({
     queryKey: ["chatroom", chatroomId],
     queryFn: async () => {
-      const result = await api.chatroom.getChatroom(chatroomId);
+      const result = await api.chatroom.getChatroom(chatroomId, session);
       if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },
@@ -333,9 +349,10 @@ export function useChatroom(chatroomId: string) {
 }
 
 export function useChatroomMessages(chatroomId: string) {
+  const { data: session } = useSession();
   return useQuery<ChatroomMessages | null>({
     queryKey: ["chatroomMessages", chatroomId],
-    queryFn: () => api.chatroom.getChatroomMessages(chatroomId),
+    queryFn: () => api.chatroom.getChatroomMessages(chatroomId, session),
     enabled: !!chatroomId,
     retry: 1,
     refetchInterval: false,
@@ -348,9 +365,10 @@ export function useChatroomMessages(chatroomId: string) {
 }
 
 export function useHijackCost(chatroomId: string) {
+  const { data: session } = useSession();
   return useQuery<{ cost: number }>({
     queryKey: ["hijackCost", chatroomId],
-    queryFn: () => api.chatroom.getHijackCost(chatroomId),
+    queryFn: () => api.chatroom.getHijackCost(chatroomId, session),
     enabled: !!chatroomId,
     retry: 1,
     refetchInterval: false,
@@ -418,11 +436,12 @@ export function useUserProfilesRaw(messageBriefs: MessageBrief[]) {
 
 export function useJoinChatroom(chatroomId: string | undefined) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, void>({
     mutationFn: () => {
       if (!chatroomId) throw new Error("Invalid chatroom ID");
-      return api.chatroom.joinChatroom(chatroomId);
+      return api.chatroom.joinChatroom(chatroomId, session  );
     },
     onSuccess: () => {
       if (chatroomId) {
@@ -434,11 +453,12 @@ export function useJoinChatroom(chatroomId: string | undefined) {
 
 export function useLeaveChatroom(chatroomId: string | undefined) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, void>({
     mutationFn: () => {
       if (!chatroomId) throw new Error("Invalid chatroom ID");
-      return api.chatroom.leaveChatroom(chatroomId);
+      return api.chatroom.leaveChatroom(chatroomId, session  );
     },
     onSuccess: () => {
       if (chatroomId) {
@@ -450,11 +470,12 @@ export function useLeaveChatroom(chatroomId: string | undefined) {
 
 export function useStartNewConversation(chatroomId: string) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<boolean, Error, void>({
     mutationFn: () => {
       if (!chatroomId) throw new Error("Invalid chatroom ID");
-      return api.chatroom.maybeCreateChatroomMessages(chatroomId);
+      return api.chatroom.maybeCreateChatroomMessages(chatroomId, session  );
     },
     onSuccess: () => {
       if (chatroomId) {
@@ -472,9 +493,10 @@ export function useSendMessageToChatroom(
   isError: (error: Error) => void
 ) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, string>({
-    mutationFn: (text: string) => api.chatroom.chat(chatroomId, text),
+    mutationFn: (text: string) => api.chatroom.chat(chatroomId, text, session   ),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["chatroomMessages", chatroomId],
@@ -486,10 +508,11 @@ export function useSendMessageToChatroom(
 
 export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: (error: Error) => void) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
 
   return useMutation<null, Error, void>({
     mutationFn: () => {
-      return api.chatroom.regenerateLastMessage(chatroomId);
+      return api.chatroom.regenerateLastMessage(chatroomId, session   );
     },
     onSuccess: () => {
       if (chatroomId) {
@@ -502,8 +525,9 @@ export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: 
 
 export function useRegisterHijack(chatroomId: string) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
   return useMutation<null, Error, { cost: number }>({
-    mutationFn: (hijackCost: { cost: number }) => api.chatroom.registerHijack(chatroomId, hijackCost),
+    mutationFn: (hijackCost: { cost: number }) => api.chatroom.registerHijack(chatroomId, hijackCost, session  ),
     onMutate: () => {
       queryClient.invalidateQueries({ queryKey: ['userPoints'] });
       queryClient.invalidateQueries({ queryKey: ['hijackCost'] });
@@ -516,9 +540,10 @@ export function useRegisterHijack(chatroomId: string) {
 
 export function useHijackChatroom(chatroomId: string) {
   const queryClient = useQueryClient();
+  const { data: session } = useSession();
   return useMutation<null, Error, void>({
     mutationFn: () => {
-      return api.chatroom.hijackChatroom(chatroomId);
+      return api.chatroom.hijackChatroom(chatroomId, session    );
     },
     onMutate: () => {
       queryClient.invalidateQueries({ queryKey: ['userPoints'] });
@@ -531,9 +556,10 @@ export function useHijackChatroom(chatroomId: string) {
 }
 
 export function useGetMessage(messageId: string) {
+  const { data: session } = useSession();
   return useQuery<ChatroomMessages>({
     queryKey: ["chatroomMessage", messageId],
-    queryFn: () => api.chatroom.getMessage(messageId),
+    queryFn: () => api.chatroom.getMessage(messageId, session),
     enabled: !!messageId,
     retry: 1,
     refetchInterval: false,
@@ -546,9 +572,10 @@ export function useGetMessage(messageId: string) {
 }
 
 export function useGetMessageBrief(chatroomId: string) {
+  const { data: session } = useSession();
   return useQuery<MessageBrief[]>({
     queryKey: ["messageBrief", chatroomId],
-    queryFn: () => api.chatroom.getMessageBrief(chatroomId),
+    queryFn: () => api.chatroom.getMessageBrief(chatroomId, session),
     enabled: !!chatroomId,
     retry: 1,
     refetchInterval: false,
@@ -562,9 +589,10 @@ export function useGetMessageBrief(chatroomId: string) {
 
 // Blockchain related hooks
 export function useGetAddress() {
+  const { data: session } = useSession();
   return useQuery<{ sol_address: string, eth_address: string }>({
     queryKey: ["address"],
-    queryFn: () => api.blockchain.getAddress(),
+    queryFn: () => api.blockchain.getAddress(session),
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,
@@ -576,9 +604,10 @@ export function useGetAddress() {
 }
 
 export function useGetTokenInfo() {
+  const { data: session } = useSession();
   return useQuery<TokenInfo>({
     queryKey: ["tokenInfo"],
-    queryFn: () => api.blockchain.getTokenInfo(),
+    queryFn: () => api.blockchain.getTokenInfo(session),
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,
@@ -591,9 +620,9 @@ export function useGetTokenInfo() {
 
 export function useClaimFreePoints() {
   const queryClient = useQueryClient();
-
+  const { data: session } = useSession();
   return useMutation<null, Error, void>({
-    mutationFn: () => api.user.claimFreePoints(),
+    mutationFn: () => api.user.claimFreePoints(session),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userPoints"] });
     },
@@ -601,9 +630,10 @@ export function useClaimFreePoints() {
 }
 
 export function useGenerateReferralUrl() {
+  const { data: session } = useSession();
   return useMutation<string, Error, { path: string, type: string }>({
     mutationFn: async ({ path, type }: { path: string, type: string }) => {
-      const url = await generateTelegramAppLink("voda_is_bot", path, type);
+      const url = await generateTelegramAppLink("voda_is_bot", path, type, session);
       return url;
     },
   });
@@ -616,9 +646,10 @@ interface LaunchTokenParams {
 }
 
 export function useLaunchToken(onSuccess: () => void) {
+  const { data: session } = useSession();
   return useMutation({
     mutationFn: async ({ messageId, deployOnPumpFun }: LaunchTokenParams) => {
-      const response = await api.blockchain.createToken(messageId, deployOnPumpFun);
+      const response = await api.blockchain.createToken(messageId, deployOnPumpFun, session);
       return response;
     },
     onSuccess: onSuccess,

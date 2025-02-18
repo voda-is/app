@@ -82,24 +82,22 @@ export default function CharacterPage() {
     }
   }, [createConversationSuccess, historyLoading, chatHistoryIds]);
 
-  const handleShare = async () => {
-    try {
-      setIsSharing(true);
-      generateUrl({ path: `character/${id}`, type: "share_character" });
-      if (referralUrl) {
-        await navigator.clipboard.writeText(referralUrl);
-        setShareSuccess(true);
-        notificationOccurred('success');
-        
-        setTimeout(() => {
-          setShareSuccess(false);
-        }, 2000);
-      }
-    } catch (error) {
-      console.error('Failed to share:', error);
-    } finally {
+  useEffect(() => {
+    if (referralUrl) {
       setIsSharing(false);
+      navigator.clipboard.writeText(referralUrl);
+      setShareSuccess(true);
+      notificationOccurred('success');
+      
+      setTimeout(() => {
+        setShareSuccess(false);
+      }, 2000);
     }
+  }, [referralUrl]);
+
+  const handleShare = async () => {
+    setIsSharing(true);
+    generateUrl({ path: `character/${id}`, type: "share_character" });
   };
 
   if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading || isLoading ||

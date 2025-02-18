@@ -26,7 +26,7 @@ export default function DesktopLayout(props: ChatLayoutProps) {
   return (
     <main className="flex h-screen overflow-hidden bg-[radial-gradient(#4B5563_1px,transparent_1px)] [background-size:16px_16px]">
       {/* Left Section with Back Button and Points Display */}
-      <div className="flex flex-col w-[40%] max-w-[520px] m-8 space-y-4">
+      <div className="flex flex-col w-[40%] max-w-[520px] m-8 ml-16 space-y-4">
         <div className="flex justify-between items-center">
           <button
             onClick={() => router.push(`/character/${props.character?._id}`)}

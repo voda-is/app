@@ -107,7 +107,7 @@ export default function MobileLayout(props: ChatLayoutProps) {
         <PointsExpandedView
           isExpanded={props.isPointsExpanded}
           onClose={() => props.setIsPointsExpanded(false)}
-          user={props.telegramUser}
+          user={props.user}
           points={props.userPoints ? getAvailableBalance(props.userPoints) : 0}
           nextClaimTime={props.claimStatus.timeLeft}
           canClaim={props.claimStatus.canClaim}

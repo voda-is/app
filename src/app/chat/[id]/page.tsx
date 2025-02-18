@@ -10,7 +10,7 @@ import {
   useRegenerateLastMessage, 
   useSendMessage, 
   useTelegramInterface, 
-  useTelegramUser, 
+  useUser, 
   useUserPoints 
 } from '@/hooks/api';
 
@@ -24,10 +24,11 @@ import { notificationOccurred } from "@/lib/telegram";
 import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
 import { Character } from "@/lib/validations";
+import { useSession } from "next-auth/react";
 
 export interface ChatLayoutProps {
   id: string;
-  telegramUser: any;
+  user: any;
   character: Character;
   conversation: any;
   messages: any[];
@@ -52,17 +53,17 @@ export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
-
+  const {data: session} = useSession();
   const queryClient = useQueryClient();
 
   // Fetch initial data
-  const { data: telegramUser, isLoading: telegramUserLoading } = useTelegramUser();
+  const { data: user, isLoading: userLoading } = useUser();
   const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
   const { data: conversation, isLoading: historyLoading } = useConversation(id);
   const characterId = conversation?.character_id;
   const { data: character, isLoading: characterLoading } = useCharacter(characterId);
 
-  const chatContext = new ChatContext(character!, telegramUser!);
+  const chatContext = new ChatContext(character!, user!);
   const { mutate: sendMessage, isPending: sendMessagePending, isSuccess: sendMessageSuccess } = useSendMessage(id, (error) => {
     console.error('Failed to send message:', error);
     notificationOccurred('error');
@@ -95,10 +96,10 @@ export default function ChatPage() {
 
   // Data Ready
   useEffect(() => {
-    if (!telegramUserLoading && !characterLoading && !historyLoading && !telegramInterfaceLoading) {
+    if (!userLoading && !characterLoading && !historyLoading && !telegramInterfaceLoading) {
       setIsReady(true);
     }
-  }, [telegramUserLoading, characterLoading, historyLoading, telegramInterfaceLoading]);
+  }, [userLoading, characterLoading, historyLoading, telegramInterfaceLoading]);
 
 
   // Set initial messages when conversation loads
@@ -157,7 +158,7 @@ export default function ChatPage() {
 
   const handleClaimPoints = async () => {
     try {
-      await api.user.claimFreePoints();
+      await api.user.claimFreePoints(session);
       queryClient.invalidateQueries({ queryKey: ["userPoints"] });
     } catch (error) {
       console.error("Failed to claim points:", error);
@@ -175,7 +176,7 @@ export default function ChatPage() {
 
   const layoutProps: ChatLayoutProps = {
     id,
-    telegramUser,
+    user,
     character: character as Character,
     conversation,
     messages,

@@ -1,3 +1,4 @@
+import { Session } from "next-auth";
 import { api } from "./api-client";
 import type { TelegramUser } from "./validations";
 import { TelegramUserSchema } from "./validations";
@@ -34,14 +35,14 @@ export function notificationOccurred(type: "error" | "success" | "warning") {
   }
 }
 
-export async function setupTelegramInterface(router: AppRouterInstance) {
+export async function setupTelegramInterface(router: AppRouterInstance, session: Session | null) {
   const startParam = window.Telegram.WebApp.initDataUnsafe.start_param;
   if (startParam) {
     if (startParam.length !== 64) {
       router.push("/");
     } else {
       const urlId = startParam;
-      const { url } = await api.url.get(urlId);
+      const { url } = await api.url.get(urlId, session);
       router.push(url.path);
     }
     window.Telegram.WebApp.initDataUnsafe.start_param = undefined;
@@ -63,7 +64,7 @@ export function isOnTelegram() {
 }
 
 // Example function to generate a Telegram Mini App link
-export async function generateTelegramAppLink(botUsername: string, path: string, urlType: string): Promise<string> {
-  const urlId = await api.url.create(path, urlType);
+export async function generateTelegramAppLink(botUsername: string, path: string, urlType: string, session: Session | null): Promise<string> {
+  const urlId = await api.url.create(path, urlType, session);
   return `https://t.me/${botUsername}?startapp=${urlId}`;
 }

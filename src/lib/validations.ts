@@ -21,7 +21,7 @@ export type OAuthUser = z.infer<typeof OAuthUserSchema>;
 export const UserSchema = z.object({
   _id: CryptoHashSchema,
   user_id: z.string(),
-  user_provider: z.enum(['google', 'x', 'telegram']),
+  provider: z.enum(['google', 'x', 'telegram']),
   username: z.string().optional(),
   first_name: z.string(),
   last_name: z.string().optional(),

@@ -17,7 +17,7 @@ export function BottomNav() {
     <>
       {/* Mobile Bottom Navigation */}
       <div className="fixed sm:hidden bottom-0 left-0 right-0 z-50">
-        <nav className="flex items-center justify-around p-4 backdrop-blur-md bg-gray-800/30">
+        <nav className="flex items-center justify-around p-4 backdrop-blur-md bg-gray-600/30">
           <button
             onClick={() => router.push('/')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors

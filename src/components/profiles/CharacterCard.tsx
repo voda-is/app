@@ -15,7 +15,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
 
   return (
     <motion.div 
-      className="bg-white/20 backdrop-blur-md rounded-xl overflow-hidden"
+      className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
@@ -31,17 +31,17 @@ export function CharacterCard({ character }: CharacterCardProps) {
               className="rounded-full object-cover"
             />
           ) : (
-            <div className="w-full h-full rounded-full bg-white/30 flex items-center justify-center">
-              <IoPersonCircle className="w-8 h-8 text-gray-900" />
+            <div className="w-full h-full rounded-full bg-white/10 flex items-center justify-center">
+              <IoPersonCircle className="w-8 h-8 text-gray-100" />
             </div>
           )}
         </div>
         
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-900 truncate">
+          <h3 className="font-medium text-gray-100 truncate">
             {character.character_name}
           </h3>
-          <p className="text-sm text-gray-700 flex items-center gap-1">
+          <p className="text-sm text-gray-300 flex items-center gap-1">
             <IoChatbubble className="w-4 h-4" />
             {character.count} conversation{character.count !== 1 ? 's' : ''}
           </p>
@@ -49,7 +49,7 @@ export function CharacterCard({ character }: CharacterCardProps) {
 
         <button
           onClick={() => router.push(`/character/${character.character_id}`)}
-          className="p-2 rounded-lg bg-white/30 hover:bg-white/40 transition-colors text-gray-900 text-sm font-medium"
+          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-gray-100 text-sm font-medium"
         >
           View
         </button>

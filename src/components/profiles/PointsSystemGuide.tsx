@@ -8,22 +8,18 @@ export function PointsSystemGuide() {
   const [expandedSection, setExpandedSection] = useState<'rewards' | 'usage' | 'coming-soon' | null>(null);
 
   return (
-    <div className="bg-white/20 backdrop-blur-md rounded-xl p-4">
+    <div className="bg-white/10 backdrop-blur-md rounded-xl p-4">
       <button
         onClick={() => setIsGuideExpanded(!isGuideExpanded)}
-        className="w-full flex items-center justify-between text-sm font-semibold text-gray-900"
+        className="w-full flex items-center justify-between text-sm font-semibold text-gray-100"
       >
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-rose-400/20 flex items-center justify-center">
-            <IoStarOutline className="w-4 h-4 text-rose-500" />
+            <IoStarOutline className="w-4 h-4 text-rose-400" />
           </div>
-          <h3 className="text-sm font-semibold text-gray-900">Points System Guide</h3>
+          <h3 className="text-sm font-semibold text-gray-100">Points System Guide</h3>
         </div>
-        <FiChevronDown 
-          className={`w-5 h-5 transition-transform duration-300 ${
-            isGuideExpanded ? 'rotate-180' : ''
-          }`}
-        />
+        <FiChevronDown className={`w-5 h-5 text-gray-100 transition-transform duration-300 ${isGuideExpanded ? 'rotate-180' : ''}`} />
       </button>
       
       <AnimatePresence>
@@ -43,11 +39,11 @@ export function PointsSystemGuide() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-emerald-400/20 flex items-center justify-center">
-                    <IoTrendingUpOutline className="w-4 h-4 text-emerald-500" />
+                    <IoTrendingUpOutline className="w-4 h-4 text-emerald-400" />
                   </div>
-                  <h4 className="text-sm font-medium text-gray-800">Daily Rewards</h4>
+                  <h4 className="text-sm font-medium text-gray-100">Daily Rewards</h4>
                   <FiChevronDown 
-                    className={`w-5 h-5 ml-auto transition-transform duration-300 ${
+                    className={`w-5 h-5 ml-auto text-gray-100 transition-transform duration-300 ${
                       expandedSection === 'rewards' ? 'rotate-180' : ''
                     }`}
                   />
@@ -64,8 +60,8 @@ export function PointsSystemGuide() {
                     >
                       <div className="mt-3 bg-white/10 rounded-lg p-3">
                         <div className="flex flex-col">
-                          <div className="text-sm font-semibold text-emerald-500">+100 points</div>
-                          <div className="text-xs text-gray-700">Free points automatically every 24 hours</div>
+                          <div className="text-sm font-semibold text-emerald-400">+100 points</div>
+                          <div className="text-xs text-gray-300">Free points automatically every 24 hours</div>
                         </div>
                       </div>
                     </motion.div>
@@ -80,9 +76,9 @@ export function PointsSystemGuide() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-sky-400/20 flex items-center justify-center">
-                    <IoChatbubbleEllipsesOutline className="w-4 h-4 text-sky-500" />
+                    <IoChatbubbleEllipsesOutline className="w-4 h-4 text-sky-400" />
                   </div>
-                  <h4 className="text-sm font-medium text-gray-800">Points Usage</h4>
+                  <h4 className="text-sm font-medium text-gray-100">Points Usage</h4>
                   <FiChevronDown 
                     className={`w-5 h-5 ml-auto transition-transform duration-300 ${
                       expandedSection === 'usage' ? 'rotate-180' : ''
@@ -102,15 +98,16 @@ export function PointsSystemGuide() {
                       <div className="mt-3 space-y-2">
                         {[
                           { cost: '-1 point', action: 'Send a message to any character' },
-                          { cost: '-1 point', action: 'Regenerate a character reply' }
+                          { cost: '-1 point', action: 'Regenerate a character reply' },
+                          { cost: '-5 point', action: 'Generate a voice message' },
                         ].map((item, index) => (
                           <div 
                             key={index}
                             className="bg-white/10 rounded-lg p-3"
                           >
                             <div className="flex flex-col">
-                              <div className="text-sm font-semibold text-sky-500">{item.cost}</div>
-                              <div className="text-xs text-gray-700">{item.action}</div>
+                              <div className="text-sm font-semibold text-sky-400">{item.cost}</div>
+                              <div className="text-xs text-gray-300">{item.action}</div>
                             </div>
                           </div>
                         ))}
@@ -127,9 +124,9 @@ export function PointsSystemGuide() {
               >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-rose-400/20 flex items-center justify-center">
-                    <IoStarOutline className="w-4 h-4 text-rose-500" />
+                    <IoStarOutline className="w-4 h-4 text-rose-400" />
                   </div>
-                  <h4 className="text-sm font-medium text-gray-800">Coming Soon</h4>
+                  <h4 className="text-sm font-medium text-gray-100">Coming Soon</h4>
                   <FiChevronDown 
                     className={`w-5 h-5 ml-auto transition-transform duration-300 ${
                       expandedSection === 'coming-soon' ? 'rotate-180' : ''
@@ -157,7 +154,7 @@ export function PointsSystemGuide() {
                             className="bg-white/10 rounded-lg p-3 flex items-center gap-2"
                           >
                             <div className="w-1 h-1 rounded-full bg-rose-400" />
-                            <div className="text-xs text-gray-700">{feature}</div>
+                            <div className="text-xs text-gray-300">{feature}</div>
                           </div>
                         ))}
                       </div>

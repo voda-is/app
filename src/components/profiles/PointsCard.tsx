@@ -76,7 +76,7 @@ export function PointsCard({ userPoints }: PointsCardProps) {
 
   return (
     <motion.div 
-      className="bg-white/20 backdrop-blur-md rounded-xl overflow-hidden"
+      className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
@@ -84,23 +84,23 @@ export function PointsCard({ userPoints }: PointsCardProps) {
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-white/30 flex items-center justify-center">
-              <IoStarOutline className="w-6 h-6 text-gray-900" />
+            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+              <IoStarOutline className="w-6 h-6 text-gray-100" />
             </div>
             <div>
-              <h3 className="font-medium text-gray-900">Available Points</h3>
-              <p className="text-sm text-gray-700">Level {level}</p>
+              <h3 className="font-medium text-gray-100">Available Points</h3>
+              <p className="text-sm text-gray-300">Level {level}</p>
             </div>
           </div>
           <div className="text-right">
             {isClaimingPointsPending ? (
               <div className="h-8 w-24 bg-gray-500/20 rounded animate-pulse" />
             ) : (
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold text-gray-100">
                 {formatPoints(totalAvailablePoints)}
               </p>
             )}
-            <div className="flex items-center gap-1 text-sm text-emerald-600">
+            <div className="flex items-center gap-1 text-sm text-emerald-400">
               <IoTrendingUpOutline className="w-4 h-4" />
               <span>Active</span>
             </div>
@@ -108,15 +108,13 @@ export function PointsCard({ userPoints }: PointsCardProps) {
         </div>
 
         <div className="space-y-2">
-          <div className="w-full bg-white/20 rounded-full h-2">
+          <div className="w-full bg-white/10 rounded-full h-2">
             <div 
               className="bg-gradient-to-r from-emerald-400 to-sky-400 h-2 rounded-full transition-all duration-300"
-              style={{ 
-                width: `${Math.min((progress / 100) * 100, 100)}%`
-              }}
+              style={{ width: `${Math.min((progress / 100) * 100, 100)}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-gray-700">
+          <div className="flex justify-between text-xs text-gray-300">
             <span>Level {level}</span>
             <span>{pointsToNextLevel} points to Level {level + 1}</span>
           </div>
@@ -124,8 +122,8 @@ export function PointsCard({ userPoints }: PointsCardProps) {
           <div className="mt-4 space-y-3">
             <div className="flex items-center justify-between bg-white/10 rounded-lg p-3">
               <div className="flex items-center gap-2">
-                <FiClock className="text-emerald-500 text-lg" />
-                <span className="text-sm text-gray-700">
+                <FiClock className="text-emerald-400 text-lg" />
+                <span className="text-sm text-gray-300">
                   {canClaim ? "Free points available!" : `Next claim in ${nextClaimTime}`}
                 </span>
               </div>
@@ -134,15 +132,15 @@ export function PointsCard({ userPoints }: PointsCardProps) {
                 disabled={!canClaim || isClaimingPointsPending}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   canClaim && !isClaimingPointsPending
-                    ? 'bg-emerald-400/80 hover:bg-emerald-400 text-white' 
-                    : 'bg-gray-500/30 text-gray-600 cursor-not-allowed'
+                    ? 'bg-emerald-400/20 hover:bg-emerald-400/30 text-emerald-400' 
+                    : 'bg-gray-500/20 text-gray-400 cursor-not-allowed'
                 }`}
               >
                 {isClaimingPointsPending ? (
                   <div className="w-12 h-4 flex items-center justify-center">
-                    <div className="w-1 h-1 bg-gray-600 rounded-full animate-bounce mr-1" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1 h-1 bg-gray-600 rounded-full animate-bounce mr-1" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1 h-1 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce mr-1" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce mr-1" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 ) : canClaim ? 'Claim' : 'Wait'}
               </button>

@@ -47,10 +47,10 @@ export function WalletCard({
 
   return (
     <motion.div 
-      className="bg-white/20 backdrop-blur-md rounded-xl overflow-hidden"
+      className="bg-white/10 backdrop-blur-md rounded-xl overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ 
-        backgroundColor: isExpanded ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)',
+        backgroundColor: isExpanded ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.1)',
         opacity: 1, y: 0
       }}
       whileTap={{ scale: 0.98 }}
@@ -60,8 +60,8 @@ export function WalletCard({
       <div className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex-1 mr-4">
-            <h3 className="font-medium text-gray-900">{name}</h3>
-            <p className="text-sm text-gray-700 font-mono mt-1">
+            <h3 className="font-medium text-gray-100">{name}</h3>
+            <p className="text-sm text-gray-300 font-mono mt-1">
               {formatAddress(address)}
             </p>
           </div>
@@ -70,26 +70,26 @@ export function WalletCard({
               initial={false}
               animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className="p-2 rounded-lg bg-white/30 hover:bg-white/40 transition-colors"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 setExpandedCard(isExpanded ? null : type);
               }}
             >
-              <IoChevronDown className="w-5 h-5 text-gray-900" />
+              <IoChevronDown className="w-5 h-5 text-gray-100" />
             </motion.button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onCopy(address, type);
               }}
-              className="p-2 rounded-lg bg-white/30 hover:bg-white/40 transition-colors"
+              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
               title="Copy address"
             >
               {copiedAddress === type ? (
-                <IoCheckmark className="w-5 h-5 text-green-600" />
+                <IoCheckmark className="w-5 h-5 text-emerald-400" />
               ) : (
-                <IoCopy className="w-5 h-5 text-gray-900" />
+                <IoCopy className="w-5 h-5 text-gray-100" />
               )}
             </button>
           </div>
@@ -105,7 +105,7 @@ export function WalletCard({
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-2 border-t border-gray-900/10">
+            <div className="px-4 pb-4 pt-2 border-t border-white/10">
               <motion.div
                 initial={{ y: -10 }}
                 animate={{ y: 0 }}
@@ -113,20 +113,20 @@ export function WalletCard({
                 className="space-y-3"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700">Balance:</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-sm text-gray-300">Balance:</span>
+                  <span className="font-medium text-gray-100">
                     {formatBalance(balance || 0)} {type.toUpperCase()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700">Price:</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-sm text-gray-300">Price:</span>
+                  <span className="font-medium text-gray-100">
                     {formatPrice(price || 0)}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-700">Value:</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="text-sm text-gray-300">Value:</span>
+                  <span className="font-medium text-gray-100">
                     {formatPrice((balance || 0) * (price || 0) / 1_000_000_000)}
                   </span>
                 </div>

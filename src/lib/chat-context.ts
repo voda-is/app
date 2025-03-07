@@ -146,8 +146,6 @@ export class ChatContextWithUnknownUser {
       m = [this.injectFirstMessage(this.defaultUserId, createdAt)];
     }
 
-    console.log("injectHistoryMessages", m);
-
     messages.forEach((pair) => {
       const userId = pair[0].user_id;
       const user = this.userCache.getUser(userId);

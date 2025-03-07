@@ -9,7 +9,6 @@ import {
   useConversation, 
   useRegenerateLastMessage, 
   useSendMessage, 
-  useTelegramInterface, 
   useUser, 
   useUserPoints 
 } from '@/hooks/api';
@@ -18,13 +17,11 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 
 import { ChatContext, Message } from "@/lib/chat-context";
 import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
-import { api } from "@/lib/api-client";
-import { notificationOccurred } from "@/lib/telegram";
+import { api, useUserId } from "@/lib/api-client";
 
 import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
 import { Character } from "@/lib/validations";
-import { useSession } from "next-auth/react";
 
 export interface ChatLayoutProps {
   id: string;
@@ -52,13 +49,11 @@ export interface ChatLayoutProps {
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
-  const router = useRouter();
-  const {data: session} = useSession();
+  const userId = useUserId();
   const queryClient = useQueryClient();
 
   // Fetch initial data
   const { data: user, isLoading: userLoading } = useUser();
-  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
   const { data: conversation, isLoading: historyLoading } = useConversation(id);
   const characterId = conversation?.character_id;
   const { data: character, isLoading: characterLoading } = useCharacter(characterId);
@@ -66,13 +61,11 @@ export default function ChatPage() {
   const chatContext = new ChatContext(character!, user!);
   const { mutate: sendMessage, isPending: sendMessagePending, isSuccess: sendMessageSuccess } = useSendMessage(id, (error) => {
     console.error('Failed to send message:', error);
-    notificationOccurred('error');
     setMessages(chatContext.markLastMessageAsError(messages));
   });
 
   const { mutate: regenerateLastMessage, isPending: regenerateLastMessagePending, isSuccess: regenerateLastMessageSuccess } = useRegenerateLastMessage(id, (error) => {
     console.error('Failed to regenerate message:', error);
-    notificationOccurred('error');
     setMessages(chatContext.markLastMessageAsError(messages));
   });
 
@@ -86,20 +79,15 @@ export default function ChatPage() {
   const [isPointsExpanded, setIsPointsExpanded] = useState(false);
   const { data: userPoints } = useUserPoints();
   const claimStatus = userPoints 
-    ? getNextClaimTime(userPoints.free_claimed_balance_updated_at)
+    ? getNextClaimTime(userPoints.free_balance_claimed_at)
     : { canClaim: false, timeLeft: "Loading..." };
-
-  // Basic Setups
-  useEffect(() => {
-    notificationOccurred('success');
-  }, []);
 
   // Data Ready
   useEffect(() => {
-    if (!userLoading && !characterLoading && !historyLoading && !telegramInterfaceLoading) {
+    if (!userLoading && !characterLoading && !historyLoading) {
       setIsReady(true);
     }
-  }, [userLoading, characterLoading, historyLoading, telegramInterfaceLoading]);
+  }, [userLoading, characterLoading, historyLoading]);
 
 
   // Set initial messages when conversation loads
@@ -108,7 +96,7 @@ export default function ChatPage() {
       setMessages(chatContext.injectHistoryMessages(conversation.history, conversation.created_at));
     }
   }, [conversation, isReady]);
-
+ 
   useEffect(() => {
     if (sendMessagePending || regenerateLastMessagePending) {
       setShowTypingIndicator(true);
@@ -122,7 +110,6 @@ export default function ChatPage() {
   // Handle Send Message
   const handleSendMessage = async () => {    
     if (!hasEnoughPoints()) {
-      notificationOccurred('error');
       return;
     }
     
@@ -136,7 +123,6 @@ export default function ChatPage() {
 
   const handleRegenerate = async () => {
     if (!hasEnoughPoints()) {
-      notificationOccurred('error');
       return;
     }
 
@@ -158,11 +144,10 @@ export default function ChatPage() {
 
   const handleClaimPoints = async () => {
     try {
-      await api.user.claimFreePoints(session);
+      await api.user.claimFreePoints(userId as string);
       queryClient.invalidateQueries({ queryKey: ["userPoints"] });
     } catch (error) {
       console.error("Failed to claim points:", error);
-
     }
   };
 

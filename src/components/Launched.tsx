@@ -5,7 +5,6 @@ import { IoChevronDownOutline } from 'react-icons/io5';
 import { HiOutlineExternalLink } from 'react-icons/hi';
 import { RiMedalLine, RiLoader4Line } from 'react-icons/ri';
 import { FiExternalLink } from 'react-icons/fi';
-import { useLaunchToken } from '@/hooks/api';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface LaunchedProps {
@@ -24,9 +23,9 @@ export function Launched({
   const queryClient = useQueryClient();
   const [isReasoningExpanded, setIsReasoningExpanded] = useState(false);
 
-  const { mutate: launchToken, isPending: isLaunching } = useLaunchToken(() => {
-    queryClient.invalidateQueries({ queryKey: ["chatroomMessages", chatroomId] });
-  });
+  // const { mutate: launchToken, isPending: isLaunching } = useLaunchToken(() => {
+  //   queryClient.invalidateQueries({ queryKey: ["chatroomMessages", chatroomId] });
+  // });
   const isWrapped = messages.is_wrapped;
   const isTokenLaunched = !!messages.sol_mint_address && !!messages.sol_create_tx_hash;
 
@@ -124,23 +123,21 @@ export function Launched({
           </>
         ) : (
           <button 
-            onClick={() => launchToken({ 
-              messageId: messages._id, 
-              deployOnPumpFun: true,
-            })}
-            disabled={isLaunching}
+            onClick={() => console.log('launching')}
+            disabled={false}
             className="w-full px-8 py-2.5 bg-emerald-500/80 hover:bg-emerald-500/90 disabled:bg-emerald-500/50 
               disabled:cursor-not-allowed text-white rounded-xl font-medium transition-colors backdrop-blur-sm
               flex items-center justify-center gap-2"
           >
-            {isLaunching ? (
+            {/* {isLaunching ? (
               <>
                 <RiLoader4Line className="w-5 h-5 animate-spin" />
                 <span>Launching on Solana...</span>
               </>
             ) : (
               <span>Launch on Solana</span>
-            )}
+            )} */}
+            <span>Launch on Solana</span>
           </button>
         )}
       </div>

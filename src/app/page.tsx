@@ -38,8 +38,6 @@ export default function Home() {
     return <LoadingScreen />;
   }
 
-  console.log("user", user);
-
   return (
     <motion.div
       initial={{ opacity: 0 }}

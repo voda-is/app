@@ -21,9 +21,8 @@ import {
   OAuthUserSchema,
 } from "./validations";
 import { z } from "zod";
-import { getTelegramUser } from "@/lib/telegram";
 import { UserProfilesCache } from "./userProfilesCache";
-import { Session } from "next-auth";
+import { useAccount } from 'wagmi';
 
 class APIError extends Error {
   constructor(message: string, public status: number, public code: string) {
@@ -126,20 +125,10 @@ apiProxy.interceptors.response.use(
   }
 );
 
-export const getUserId = (session: Session | null): string => {
-  const maybeTelegramUser = getTelegramUser();
-  if (maybeTelegramUser.id !== 111111) {
-    return `telegram:${maybeTelegramUser.id}`;
-  }
-
-  const oauthUser = OAuthUserSchema.parse(session?.user);
-  return `${oauthUser.provider}:${oauthUser.id}`;
-}
-
 // API interface
 export const api = {
   url: {
-    get: async (urlId: string, session: Session | null): Promise<{
+    get: async (urlId: string, address: string): Promise<{
       url: Url,
       referral_success: boolean,
     }> => {
@@ -147,20 +136,20 @@ export const api = {
         path: `/url/${urlId}`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    create: async (path: string, urlType: string, session: Session | null): Promise<string> => {
+    create: async (path: string, urlType: string, address: string): Promise<string> => {
       const response = await apiProxy.post("", {
         path: `/url`,
         method: "POST",
         data: {
           path,
           url_type: urlType,
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
@@ -169,40 +158,23 @@ export const api = {
   },
 
   user: {
-    register: async (session: Session | null) => {
+    register: async (address: string) => {
       const cache = new UserProfilesCache();
-      const telegramUser = getTelegramUser();
-      const userId = getUserId(session);
-      let payload: UserPayload;
-      if (telegramUser.id !== 111111) {
-        payload = UserPayloadSchema.parse({
-          user_id: userId,
-          user_provider: 'telegram',
-          username: telegramUser.username,
-          first_name: telegramUser.first_name,
-          last_name: telegramUser.last_name,
-          profile_photo: telegramUser.photo_url,
-        });
-      } else {
-        const oauthUser = OAuthUserSchema.parse(session?.user);
-
-        payload = UserPayloadSchema.parse({
-          user_id: userId,
-          user_provider: oauthUser.provider,
-          username: oauthUser.username,
-          first_name: oauthUser.firstName,
-          last_name: oauthUser.lastName,
-          profile_photo: oauthUser.image,
-        });
-      }
-
+      
+      const name = `0x${address.split("0x")[1].slice(0, 4)}`;
       const response = await apiProxy.post("", {
         path: "/user",
         method: "POST",
-        data: payload,
+        data: {
+          user_id: address,
+          network_name: 'sei',
+          username: name,
+          first_name: name,
+          last_name: '',
+          profile_photo: '',
+        },
       });
 
-      // throw if response is not ok
       if (response.status !== 200) {
         throw new Error("Failed to register user");
       }
@@ -210,42 +182,42 @@ export const api = {
       const userResponse = await apiProxy.post("", {
         path: "/user",
         method: "GET",
-        data: { user_id: getUserId(session) },
+        data: { user_id: address },
       });
 
       cache.addUser(userResponse.data.data);
 
       return userResponse.data.data;
     },
-    getUsers: async (userIds: string[], session: Session | null): Promise<User[]> => {
+    getUsers: async (userIds: string[], address: string): Promise<User[]> => {
       const response = await apiProxy.post("", {
         path: "/users",
         method: "POST",
         data: {
           user_ids: userIds,
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getUserPoints: async (session: Session | null): Promise<UserPoints> => {
+    getUserPoints: async (address: string): Promise<UserPoints> => {
       const response = await apiProxy.post("", {
         path: "/user/points",
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    claimFreePoints: async (session: Session | null): Promise<null> => {
+    claimFreePoints: async (address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: "/user/points/free",
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
@@ -254,7 +226,7 @@ export const api = {
   },
 
   characters: {
-    list: async (limit: number, offset: number, session: Session | null) => {
+    list: async (limit: number, offset: number) => {
       const response = await apiProxy.post("", {
         path: "/characters",
         method: "GET",
@@ -269,7 +241,7 @@ export const api = {
       return response.data.data;
     },
 
-    get: async (id: string, session: Session | null) => {
+    get: async (id: string) => {
       const response = await apiProxy.post("", {
         path: `/character/${id}`,
         method: "GET",
@@ -282,91 +254,81 @@ export const api = {
   },
 
   chat: {
-    createConversation: async (characterId: string, session: Session | null): Promise<null> => {
+    createConversation: async (characterId: string, address: string): Promise<null> => {
       await apiProxy.post("", {
         path: `/conversations/${characterId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
           is_public: false,
         },
       });
       return null;
     },
-    getCharacterListBrief: async (session: Session | null): Promise<CharacterListBrief[]> => {
+    getCharacterListBrief: async (address: string): Promise<CharacterListBrief[]> => {
       const response = await apiProxy.post("", {
         path: "/conversations/character_list",
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return z.array(CharacterListBriefSchema).parse(response.data.data);
     },
-    deleteConversation: async (conversationId: string, session: Session | null): Promise<null> => {
+    deleteConversation: async (conversationId: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/conversation/${conversationId}`,
         method: "DELETE",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getConversationHistoryIdOnly: async (
-      characterId: string,
-      session: Session | null
-    ): Promise<string[]> => {
+    getConversationHistoryIdOnly: async (characterId: string, address: string): Promise<string[]> => {
       const response = await apiProxy.post("", {
         path: `/conversations/id_only/${characterId}`,
         method: "GET",
         data: {
-          limit: 10,
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
+          limit: 10,
         },
       });
       return response.data.data["conversation_ids"];
     },
-    getConversation: async (
-      conversationId: string,
-      session: Session | null
-    ): Promise<ConversationHistory> => {
+    getConversation: async (conversationId: string, address: string): Promise<ConversationHistory> => {
       const response = await apiProxy.post("", {
         path: `/conversation/${conversationId}`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    sendMessage: async (
-      conversationId: string,
-      text: string,
-      session: Session | null
-    ): Promise<null> => {
+    sendMessage: async (conversationId: string, text: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/chat/${conversationId}`,
         method: "POST",
         data: {
           message: text,
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return null;
     },
-    regenerateLastMessage: async (conversationId: string, session: Session | null): Promise<null> => {
+    regenerateLastMessage: async (conversationId: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/regenerate_last_message/${conversationId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
@@ -375,27 +337,20 @@ export const api = {
   },
 
   tts: {
-    generateSpeech: async (
-      message: string,
-      characterId: string,
-      session: Session | null
-    ): Promise<Blob> => {
-      // Use fetch directly instead of axios for better binary handling
+    generateSpeech: async (text: string, characterId: string, address: string): Promise<Blob> => {
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          path: `/tts/${characterId}`,
+          method: "POST",
           data: {
-            path: `/tts/${characterId}`,
-            method: "POST",
-            data: {
-              user_id: getUserId(session),
-              stripUserId: true,
-              message,
-              isStream: true,
-            },
+            user_id: address,
+            stripUserId: true,
+            message: text,
+            isStream: true,
           },
         }),
       });
@@ -404,281 +359,161 @@ export const api = {
         throw new Error("Failed to fetch audio");
       }
 
-      // Get the binary data
       const arrayBuffer = await response.arrayBuffer();
-      // Create blob from ArrayBuffer
-      const audioBlob = new Blob([arrayBuffer], {
+      return new Blob([arrayBuffer], {
         type: response.headers.get("content-type") || "audio/mp3",
       });
-
-      return audioBlob;
     },
   },
 
   chatroom: {
-    generateFromCharacter: async (characterId: string, session: Session | null): Promise<Chatroom> => {
+    generateFromCharacter: async (characterId: string, address: string): Promise<Chatroom> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/generate_from_character/${characterId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getChatroom: async (chatroomId: string, session: Session | null): Promise<Chatroom> => {
+    getChatroom: async (chatroomId: string): Promise<Chatroom> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/${chatroomId}`,
         method: "GET",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
+        data: { ignoreToken: true },
       });
       return response.data.data;
     },
-    maybeCreateChatroomMessages: async (
-      chatroomId: string,
-      session: Session | null
-    ): Promise<boolean> => {
+    maybeCreateChatroomMessages: async (chatroomId: string, address: string): Promise<boolean> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/create_message/${chatroomId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data["is_created"];
     },
-    getChatroomMessages: async (
-      chatroomId: string,
-      session: Session | null
-    ): Promise<ChatroomMessages> => {
+    getChatroomMessages: async (chatroomId: string, address: string): Promise<ChatroomMessages> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/messages/${chatroomId}`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    joinChatroom: async (chatroomId: string, session: Session | null): Promise<null> => {
+    joinChatroom: async (chatroomId: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/join/${chatroomId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    leaveChatroom: async (chatroomId: string, session: Session | null): Promise<null> => {
+    leaveChatroom: async (chatroomId: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/leave/${chatroomId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getHijackCost: async (chatroomId: string, session: Session | null): Promise<any> => {
+    getHijackCost: async (chatroomId: string, address: string): Promise<any> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/hijack_cost/${chatroomId}`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    registerHijack: async (
-      characterId: string,
-      hijackCost: { cost: number },
-      session: Session | null
-    ): Promise<null> => {
+    registerHijack: async (characterId: string, hijackCost: { cost: number }, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/register_hijack/${characterId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
           amount: hijackCost.cost,
         },
       });
       return response.data;
     },
-    hijackChatroom: async (characterId: string, session: Session | null): Promise<null> => {
+    hijackChatroom: async (characterId: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/hijack/${characterId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    chat: async (chatroomId: string, message: string, session: Session | null): Promise<null> => {
+    chat: async (chatroomId: string, message: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/chat/${chatroomId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
           message,
         },
       });
       return response.data.data;
     },
-    regenerateLastMessage: async (chatroomId: string, session: Session | null): Promise<null> => {
+    regenerateLastMessage: async (chatroomId: string, address: string): Promise<null> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/regenerate_last_message/${chatroomId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getMessage: async (messageId: string, session: Session | null): Promise<ChatroomMessages> => {
+    getMessage: async (messageId: string, address: string): Promise<ChatroomMessages> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/message/${messageId}`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getMessageBrief: async (chatroomId: string, session: Session | null): Promise<MessageBrief[]> => {
+    getMessageBrief: async (chatroomId: string, address: string): Promise<MessageBrief[]> => {
       const response = await apiProxy.post("", {
         path: `/chatroom/messages_brief/${chatroomId}`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
   },
+};
 
-  blockchain: {
-    getAddress: async (session: Session | null): Promise<{ sol_address: string, eth_address: string }> => {
-      const response = await apiProxy.post("", {
-        path: "/address",
-        method: "GET",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-
-    getTokenInfo: async (session: Session | null): Promise<TokenInfo> => {
-      const response = await apiProxy.post("", {
-        path: "/token_info",
-        method: "GET",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return TokenInfoSchema.parse(response.data.data);
-    },
-
-    createToken: async (
-      chatroomMessageId: string,
-      deployOnPumpFun: boolean,
-      // deployOnBase: boolean,
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/blockchain/create_token/${chatroomMessageId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-          deploy_on_pumpfun: deployOnPumpFun,
-          // deploy_on_base: deployOnBase,
-        },
-      });
-      return response.data.data;
-    },
-
-    buyToken: async (
-      chatroomMessageId: string,
-      payload: {
-        sol_amount?: number;
-        eth_amount?: number;
-        sol_mint_address?: string;
-        eth_mint_address?: string;
-      },
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/blockchain/buy/${chatroomMessageId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-          ...payload,
-        },
-      });
-      return response.data.data;
-    },
-
-    sellToken: async (
-      chatroomMessageId: string,
-      payload: {
-        sol_token_percentage?: number;
-        eth_token_percentage?: number;
-        sol_mint_address?: string;
-        eth_mint_address?: string;
-      },
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/blockchain/sell/${chatroomMessageId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-          ...payload,
-        },
-      });
-      return response.data.data;
-    },
-
-    withdraw: async (payload: {
-      amount_in_sol?: number;
-      amount_in_eth?: number;
-      withdraw_to_eth_address?: string;
-      withdraw_to_sol_address?: string;
-      },
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: "/blockchain/withdraw",
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-          ...payload,
-        },
-      });
-      return response.data.data;
-    },
-  }
+// Hook to get the current user's address with sei: prefix
+export const useUserId = () => {
+  const { address } = useAccount();
+  return address ? `crypto_wallet:sei:${address}` : null;
 };

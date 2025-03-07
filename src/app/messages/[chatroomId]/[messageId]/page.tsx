@@ -12,7 +12,6 @@ import {
   useUserProfiles,
   useUserPoints,
   useGetMessage,
-  useTelegramInterface,
 } from "@/hooks/api";
 
 import { UserProfilesCache } from "@/lib/userProfilesCache";
@@ -20,8 +19,7 @@ import { ChatContextWithUnknownUser, Message } from "@/lib/chat-context";
 import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
 
 import { User } from "@/lib/validations";
-import { api } from "@/lib/api-client";
-import { isOnTelegram, notificationOccurred } from "@/lib/telegram";
+import { api, useUserId } from "@/lib/api-client";
 
 import { Header } from "@/components/Header";
 import { ChatBubble } from "@/components/ChatBubble";
@@ -30,13 +28,12 @@ import { UsersExpandedView } from "@/components/UsersExpandedView";
 import { Toast } from "@/components/Toast";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
 import { Launched } from '@/components/Launched';
-import { useSession } from "next-auth/react";
+
 export default function ChatroomPage() {
   const params = useParams();
   const chatroomId = params?.chatroomId as string;
   const messageId = params?.messageId as string;
   const router = useRouter();
-  const {data: session} = useSession();
   // Luanch Sequence:
   // 1. get chatroom info
   // 2. get character info
@@ -45,8 +42,8 @@ export default function ChatroomPage() {
   // 5. fetch user profiles from server or cache
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
 
+  const userId = useUserId();
   const { data: chatroom, isLoading: chatroomLoading } = useChatroom(chatroomId);
   const { data: character, isLoading: characterLoading } = useCharacter(chatroom?.character_id);
   const { data: chatroomMessages, isLoading: chatroomMessagesLoading } = useGetMessage(messageId);
@@ -54,7 +51,7 @@ export default function ChatroomPage() {
   const { data: user, isLoading: userLoading } = useUser();
   const { data: userPoints } = useUserPoints();
   const claimStatus = userPoints 
-    ? getNextClaimTime(userPoints.free_claimed_balance_updated_at)
+    ? getNextClaimTime(userPoints.free_balance_claimed_at)
     : { canClaim: false, timeLeft: "Loading..." };
 
   const cache = new UserProfilesCache();
@@ -88,8 +85,7 @@ export default function ChatroomPage() {
       !chatroomMessagesLoading &&
       !userProfilesLoading &&
       !userLoading &&
-      !characterLoading &&
-      !telegramInterfaceLoading
+      !characterLoading
     ) {
       setIsReady(true);
     }
@@ -99,7 +95,6 @@ export default function ChatroomPage() {
     userProfilesLoading,
     userLoading,
     characterLoading,
-    telegramInterfaceLoading,
   ]);
 
   // Populate items
@@ -121,7 +116,7 @@ export default function ChatroomPage() {
 
   const handleClaimPoints = async () => {
     try {
-      await api.user.claimFreePoints(session);
+      await api.user.claimFreePoints(userId as string);
       queryClient.invalidateQueries({ queryKey: ["userPoints"] });
       // Optionally show a success toast
       setToastMessage("Points claimed successfully!");
@@ -140,8 +135,6 @@ export default function ChatroomPage() {
     return <LoadingScreen />;
   }
 
-  notificationOccurred('success');
-
   return (
     <main className="flex flex-col w-full bg-black min-h-screen">
       <div className="fixed inset-0 z-0">
@@ -156,9 +149,7 @@ export default function ChatroomPage() {
       </div>
 
       <div className="relative flex flex-col h-full">
-        <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 ${
-          isOnTelegram() ? 'h-42' : 'h-32'
-        }`}>
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-32">
           <Header
             variant="message"
             name={character?.name as string}
@@ -179,7 +170,7 @@ export default function ChatroomPage() {
         </div>
 
         {/* Messages Container */}
-        <div className={`flex-1 ${isOnTelegram() ? 'pt-48' : 'pt-32'} pb-24`}>
+        <div className="flex-1 pt-32 pb-24">
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">

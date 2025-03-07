@@ -1,12 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { 
   IoPersonCircle, 
   IoChatbubbleEllipsesOutline, 
-  IoWalletOutline,
   IoStarOutline,
 } from 'react-icons/io5';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -15,44 +13,26 @@ import { signOut } from 'next-auth/react';
 import { UserIdentity } from './page';
 
 import { CharacterCard } from '@/components/profiles/CharacterCard';
-import { WalletCard } from '@/components/profiles/WalletCard';
 import { PointsCard } from '@/components/profiles/PointsCard';
 import { PointsSystemGuide } from '@/components/profiles/PointsSystemGuide';
 import { ReferralCampaignCard } from '@/components/profiles/ReferralCampaignCard';
 import { ProfileLayoutProps } from './page';
-import { notificationOccurred } from '@/lib/telegram';
 
-type TabType = 'conversations' | 'wallet' | 'points';
+type TabType = 'conversations' | 'points';
 
 export default function DesktopLayout(props: ProfileLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabType>('conversations');
   const [imageError, setImageError] = useState(false);
-  const [copiedAddress, setCopiedAddress] = useState<'sol' | 'eth' | null>(null);
-  const [expandedCard, setExpandedCard] = useState<'sol' | 'eth' | null>(null);
 
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  useEffect(() => {
-    notificationOccurred('success');
-  }, []);
-
-  useEffect(() => {
+  useEffect(() => { 
     const tab = searchParams.get('tab');
-    if (tab === 'points' || tab === 'wallet' || tab === 'conversations') {
+    if (tab === 'points' || tab === 'conversations') {
       setActiveTab(tab as TabType);
     }
   }, [searchParams]);
-
-  const copyToClipboard = async (text: string, type: 'sol' | 'eth') => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedAddress(type);
-      setTimeout(() => setCopiedAddress(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
 
   const getInitials = (name: string) => {
     return name
@@ -118,17 +98,6 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
               <span>Chats</span>
             </Link>
             <Link 
-              href="/profile?tab=wallet"
-              className={`w-full p-3 rounded-xl flex items-center gap-3 transition-colors backdrop-blur-sm ${
-                activeTab === 'wallet' 
-                  ? 'bg-white/40 text-gray-100' 
-                  : 'text-gray-300 bg-white/10'
-              }`}
-            >
-              <IoWalletOutline className="w-5 h-5" />
-              <span>Wallet</span>
-            </Link>
-            <Link 
               href="/profile?tab=points"
               className={`w-full p-3 rounded-xl flex items-center gap-3 transition-colors backdrop-blur-sm ${
                 activeTab === 'points' 
@@ -170,27 +139,6 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
                 </div>
               )}
             </>
-          ) : activeTab === 'wallet' ? (
-            <div className="space-y-4">
-              <WalletCard 
-                type="sol" 
-                address={props.addresses?.sol_address || ''} 
-                tokenInfo={props.tokenInfo!}
-                expandedCard={expandedCard}
-                setExpandedCard={setExpandedCard}
-                copiedAddress={copiedAddress}
-                onCopy={copyToClipboard}
-              />
-              <WalletCard 
-                type="eth" 
-                address={props.addresses?.eth_address || ''} 
-                tokenInfo={props.tokenInfo!}
-                expandedCard={expandedCard}
-                setExpandedCard={setExpandedCard}
-                copiedAddress={copiedAddress}
-                onCopy={copyToClipboard}
-              />
-            </div>
           ) : (
             <div className="space-y-4">
               {props.userPoints && (

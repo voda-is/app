@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     let response;
     if (method === "GET") {
       const requestUrl = `${API_URL}${path}?${new URLSearchParams(data).toString()}`;
+      console.log("requestUrl", requestUrl);
       response = await fetch(requestUrl, {
         method: method,
         headers: {

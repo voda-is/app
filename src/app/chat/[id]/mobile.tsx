@@ -8,15 +8,15 @@ import { TypingIndicator } from "@/components/TypingIndicator";
 import { InputBar } from "@/components/InputBar";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
 import { getAvailableBalance } from "@/lib/utils";
-import { isOnTelegram } from "@/lib/telegram";
 import { useEffect, useRef } from "react";
 
 export default function MobileLayout(props: ChatLayoutProps) {
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
   if (props.showTypingIndicator) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }
+  
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [props.messages.length]);
@@ -38,9 +38,7 @@ export default function MobileLayout(props: ChatLayoutProps) {
       {/* Content Container */}
       <div className="relative top-0 left-0 z-10 flex flex-col">
         {/* Header */}
-        <div className={`fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 ${
-          isOnTelegram() ? 'h-42' : 'h-32'
-        }`}>
+        <div className="fixed top-0 left-0 right-0 z-20 backdrop-blur-md bg-black/20 h-32">
           <Header
             variant="chat"
             name={props.character?.name as string}
@@ -49,16 +47,12 @@ export default function MobileLayout(props: ChatLayoutProps) {
             canClaim={props.claimStatus.canClaim}
             onPointsClick={() => props.setIsPointsExpanded(true)}
             characterId={props.character?._id}
-            className={`flex-shrink-0 ${
-              isOnTelegram() 
-                ? 'h-16 pt-[var(--tg-content-safe-area-inset-top)]' 
-                : 'h-16'
-            }`}
+            className="flex-shrink-0 h-16"
           />
         </div>
 
         {/* Messages Container */}
-        <div className={`flex-1 ${isOnTelegram() ? 'pt-40' : 'pt-32'} pb-24`}>
+        <div className="flex-1 pt-32 pb-24">
           <div className="flex flex-col space-y-4 p-4">
             {/* Description */}
             <div className="flex justify-center">

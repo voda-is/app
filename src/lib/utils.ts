@@ -43,8 +43,7 @@ export const getCustomModalStyles = (options?: {
 };
 
 export function getAvailableBalance(userPoints: UserPoints): number {
-  const redeemedSum = Object.values(userPoints.redeemed_balance).reduce((sum, value) => sum + value, 0);
-  return userPoints.paid_avaliable_balance + userPoints.free_claimed_balance + redeemedSum;
+  return userPoints.running_purchased_balance + userPoints.running_claimed_balance + userPoints.running_misc_balance;
 }
 
 const DAILY_CLAIM_COOLDOWN = 24 * 60 * 60; // 24 hours in seconds

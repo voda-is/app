@@ -26,14 +26,14 @@ export function PointsCard({ userPoints }: PointsCardProps) {
 
   useEffect(() => {
     const checkClaimStatus = () => {
-      if (!userPoints?.free_claimed_balance_updated_at) {
+      if (!userPoints?.free_balance_claimed_at) {
         setCanClaim(true);
         setNextClaimTime('');
         return;
       }
 
       const now = Math.floor(Date.now() / 1000); // Convert to seconds
-      const lastClaim = userPoints.free_claimed_balance_updated_at;
+      const lastClaim = userPoints.free_balance_claimed_at;
       const timeUntilNextClaim = (lastClaim + 24 * 60 * 60) - now; // 24 hours in seconds
 
       if (timeUntilNextClaim <= 0) {
@@ -51,27 +51,31 @@ export function PointsCard({ userPoints }: PointsCardProps) {
     checkClaimStatus();
     const interval = setInterval(checkClaimStatus, 60000); // Update every minute
     return () => clearInterval(interval);
-  }, [userPoints?.free_claimed_balance_updated_at]);
+  }, [userPoints?.free_balance_claimed_at]);
   
   
   const formatPoints = (points: number) => {
     return new Intl.NumberFormat('en-US').format(points);
   };
 
-  const calculateLevel = (burntBalance: number) => {
+  const calculateLevel = (balanceUsage: number) => {
     // Each level requires 100 points
-    return Math.floor(burntBalance / 100) + 1;
+    return Math.floor(balanceUsage / 100) + 1;
   };
 
-  const calculateProgress = (burntBalance: number) => {
+  const calculateProgress = (balanceUsage: number) => {
     // Get the progress within the current level (0-100 points)
-    return burntBalance % 100;
+    return balanceUsage % 100;
   };
 
-  const totalAvailablePoints = getAvailableBalance(userPoints);
+  const totalAvailablePoints = 
+    userPoints.running_claimed_balance + 
+    userPoints.running_purchased_balance + 
+    userPoints.running_misc_balance - 
+    userPoints.balance_usage;
 
-  const level = calculateLevel(userPoints.total_burnt_balance);
-  const progress = calculateProgress(userPoints.total_burnt_balance);
+  const level = calculateLevel(userPoints.balance_usage);
+  const progress = calculateProgress(userPoints.balance_usage);
   const pointsToNextLevel = 100 - progress;
 
   return (

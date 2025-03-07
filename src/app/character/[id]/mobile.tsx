@@ -8,7 +8,6 @@ import { RiMedalLine } from "react-icons/ri";
 import { HiOutlineExternalLink } from "react-icons/hi";
 import { formatDistance } from 'date-fns';
 
-import { isOnTelegram } from "@/lib/telegram";
 import { LayoutProps, TimelineItem } from './page';
 
 export default function MobileLayout(props: LayoutProps) {
@@ -20,7 +19,7 @@ export default function MobileLayout(props: LayoutProps) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className={`relative min-h-screen bg-gray-900 ${isOnTelegram() ? 'pt-32' : 'pt-8'}`}
+        className={`relative min-h-screen bg-gray-900`}
       >
         {/* Copy the entire content from your original file, starting from the background image div */}
         {/* Background Image with Gradient Overlay */}

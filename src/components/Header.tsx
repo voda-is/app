@@ -1,4 +1,3 @@
-import { generateTelegramAppLink } from "@/lib/telegram";
 import { User } from "@/lib/validations";
 import Image from "next/image";
 import { FiAward, FiShare2 } from "react-icons/fi";
@@ -45,14 +44,14 @@ export function Header({
   const handleShare = async () => {
     // Generate the deep link
     const path = `/chatroomMessage/${chatroomId}/${messageId}`;
-    const shareLink = await generateTelegramAppLink("voda_is_bot", path, "chatroom_message");
+    // const shareLink = await generateTelegramAppLink("voda_is_bot", path, "chatroom_message");
     
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      showToast?.("Link copied to clipboard!");
-    } catch (err) {
-      showToast?.("Failed to copy link!");
-    }
+    // try {
+    //   await navigator.clipboard.writeText(shareLink);
+    //   showToast?.("Link copied to clipboard!");
+    // } catch (err) {
+    //   showToast?.("Failed to copy link!");
+    // }
   };
 
   return (

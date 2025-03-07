@@ -6,7 +6,6 @@ import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { notificationOccurred } from "@/lib/telegram";
 import { 
   useCharacter, 
   useCharacterChatHistory, 
@@ -14,7 +13,6 @@ import {
   useCreateConversation, 
   useDeleteConversation, 
   useGetMessageBrief, 
-  useTelegramInterface, 
   useUserProfilesRaw, 
   useGenerateReferralUrl 
 } from "@/hooks/api";
@@ -49,7 +47,6 @@ export default function CharacterPage() {
   const [isSharing, setIsSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
-  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
   const { data: chatHistoryIds, isLoading: historyLoading } = useCharacterChatHistory(id);
   const { data: character, isLoading: characterLoading } = useCharacter(id);
   const { data: chatroom, isLoading: chatroomLoading } = useChatroomWithCharacter(
@@ -87,7 +84,6 @@ export default function CharacterPage() {
       setIsSharing(false);
       navigator.clipboard.writeText(referralUrl);
       setShareSuccess(true);
-      notificationOccurred('success');
       
       setTimeout(() => {
         setShareSuccess(false);
@@ -102,11 +98,13 @@ export default function CharacterPage() {
 
   if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading || isLoading ||
       (character?.metadata.enable_chatroom && (chatroomLoading || messageBriefsLoading || userProfilesLoading)) || 
-      !id || telegramInterfaceLoading) {
+      !id) {
     return <LoadingScreen />;
   }
 
-  if (!character || !chatHistoryIds) {
+  console.log("character", character);
+  console.log("chatHistoryIds", chatHistoryIds);
+  if (!character) {
     return null;
   }
 

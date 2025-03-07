@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { 
   IoPersonCircle, 
   IoChatbubbleEllipsesOutline, 
-  IoWalletOutline,
   IoStarOutline,
 } from 'react-icons/io5';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -15,45 +14,27 @@ import { signOut } from 'next-auth/react';
 
 import { BottomNav } from '@/components/Navigation/BottomNav';
 import { CharacterCard } from '@/components/profiles/CharacterCard';
-import { WalletCard } from '@/components/profiles/WalletCard';
 import { PointsCard } from '@/components/profiles/PointsCard';
 import { PointsSystemGuide } from '@/components/profiles/PointsSystemGuide';
 import { ReferralCampaignCard } from '@/components/profiles/ReferralCampaignCard';
 import { ProfileLayoutProps } from './page';
-import { isOnTelegram, notificationOccurred } from '@/lib/telegram';
 import { UserIdentity } from './page';
 
-type TabType = 'conversations' | 'wallet' | 'points';
+type TabType = 'conversations' | 'points';
 
 export default function MobileLayout(props: ProfileLayoutProps) {
   const [activeTab, setActiveTab] = useState<TabType>('conversations');
   const [imageError, setImageError] = useState(false);
-  const [copiedAddress, setCopiedAddress] = useState<'sol' | 'eth' | null>(null);
-  const [expandedCard, setExpandedCard] = useState<'sol' | 'eth' | null>(null);
 
   const searchParams = useSearchParams();
   const router = useRouter();
 
   useEffect(() => {
-    notificationOccurred('success');
-  }, []);
-
-  useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'points' || tab === 'wallet' || tab === 'conversations') {
+    if (tab === 'points' || tab === 'conversations') {
       setActiveTab(tab as TabType);
     }
   }, [searchParams]);
-
-  const copyToClipboard = async (text: string, type: 'sol' | 'eth') => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedAddress(type);
-      setTimeout(() => setCopiedAddress(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
 
   const getInitials = (name: string) => {
     return name
@@ -72,8 +53,6 @@ export default function MobileLayout(props: ProfileLayoutProps) {
         exit={{ opacity: 0 }}
         className="relative min-h-screen pt-8"
       >
-        {isOnTelegram() && <div className="h-24" />}
-
         {/* Profile Section */}
         <div className="px-4 mb-6">
           <div className="relative w-24 h-24 mb-4 mx-auto">
@@ -126,18 +105,6 @@ export default function MobileLayout(props: ProfileLayoutProps) {
               <span>Chats</span>
             </Link>
             <Link 
-              href="/profile?tab=wallet"
-              className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                activeTab === 'wallet' 
-                  ? 'bg-white/20 text-gray-100' 
-                  : 'text-gray-300 hover:text-gray-100 hover:bg-white/10'
-              }`}
-              onClick={() => setActiveTab('wallet')}
-            >
-              <IoWalletOutline className="w-4 h-4" />
-              <span>Wallet</span>
-            </Link>
-            <Link 
               href="/profile?tab=points"
               className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
                 activeTab === 'points' 
@@ -179,27 +146,6 @@ export default function MobileLayout(props: ProfileLayoutProps) {
                   </div>
                 )}
               </>
-            ) : activeTab === 'wallet' ? (
-              <div className="space-y-3">
-                <WalletCard 
-                  type="sol" 
-                  address={props.addresses?.sol_address || ''} 
-                  tokenInfo={props.tokenInfo!}
-                  expandedCard={expandedCard}
-                  setExpandedCard={setExpandedCard}
-                  copiedAddress={copiedAddress}
-                  onCopy={copyToClipboard}
-                />
-                <WalletCard 
-                  type="eth" 
-                  address={props.addresses?.eth_address || ''} 
-                  tokenInfo={props.tokenInfo!}
-                  expandedCard={expandedCard}
-                  setExpandedCard={setExpandedCard}
-                  copiedAddress={copiedAddress}
-                  onCopy={copyToClipboard}
-                />
-              </div>
             ) : (
               <div className="space-y-3">
                 {props.userPoints && (

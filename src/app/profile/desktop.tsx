@@ -9,14 +9,13 @@ import {
 } from 'react-icons/io5';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { signOut } from 'next-auth/react';
-import { UserIdentity } from './page';
-
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { CharacterCard } from '@/components/profiles/CharacterCard';
 import { PointsCard } from '@/components/profiles/PointsCard';
 import { PointsSystemGuide } from '@/components/profiles/PointsSystemGuide';
 import { ReferralCampaignCard } from '@/components/profiles/ReferralCampaignCard';
 import { ProfileLayoutProps } from './page';
+import { UserIdentity } from './page';
 
 type TabType = 'conversations' | 'points';
 
@@ -51,7 +50,7 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
           {/* Profile Info */}
           <div className="text-center">
             <div className="relative w-32 h-32 mx-auto mb-4">
-              {props.user?.profile_photo && !imageError ? (
+              {props.isWalletConnected && props.user?.profile_photo && !imageError ? (
                 <Image
                   src={props.user.profile_photo}
                   alt="Profile"
@@ -59,29 +58,74 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
                   className="rounded-full object-cover"
                   onError={() => setImageError(true)}
                 />
+              ) : props.isWalletConnected && props.user?.first_name ? (
+                <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl font-semibold">
+                  {getInitials(props.user.first_name)}
+                </div>
               ) : (
-                props.user?.first_name ? (
-                  <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl font-semibold">
-                    {getInitials(props.user.first_name)}
-                  </div>
-                ) : (
-                  <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                    <IoPersonCircle className="w-16 h-16" />
-                  </div>
-                )
+                <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                  <IoPersonCircle className="w-16 h-16" />
+                </div>
               )}
             </div>
             <h1 className="text-2xl font-bold mb-2">
-              {props.user?.first_name || 'Anonymous'}
+              {props.isWalletConnected ? props.user?.first_name || 'Anonymous' : 'Anonymous'}
             </h1>
-            <UserIdentity user={props.user} className="mb-6" />
+            {props.isWalletConnected && <UserIdentity user={props.user} className="mb-6" />}
             
-            <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
-              className="w-full px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors text-sm font-medium"
-            >
-              Sign Out
-            </button>
+            {/* Styled ConnectButton */}
+            <div className="mt-4">
+              <ConnectButton.Custom>
+                {({
+                  account,
+                  chain,
+                  openAccountModal,
+                  openChainModal,
+                  openConnectModal,
+                  mounted,
+                }) => {
+                  const connected = mounted && account && chain;
+                  return (
+                    <div className="w-full">
+                      {!connected ? (
+                        <button
+                          onClick={openConnectModal}
+                          className="w-full py-2.5 px-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg transition-colors text-sm font-medium text-gray-100"
+                        >
+                          Connect Wallet
+                        </button>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={openChainModal}
+                            className="w-full py-2.5 px-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg transition-colors text-sm font-medium text-gray-100 flex items-center justify-center gap-2"
+                          >
+                            {chain.hasIcon && (
+                              <div className="w-4 h-4">
+                                {chain.iconUrl && (
+                                  <img
+                                    alt={chain.name ?? 'Chain icon'}
+                                    src={chain.iconUrl}
+                                    className="w-full h-full"
+                                  />
+                                )}
+                              </div>
+                            )}
+                            {chain.name}
+                          </button>
+                          <button
+                            onClick={openAccountModal}
+                            className="w-full py-2.5 px-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg transition-colors text-sm font-medium text-gray-100 flex items-center justify-center"
+                          >
+                            {account.displayName}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
+              </ConnectButton.Custom>
+            </div>
           </div>
 
           {/* Navigation */}
@@ -114,41 +158,47 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
 
       {/* Main Content */}
       <div className="flex-1 p-8 overflow-y-auto">
-        <div className="max-w-3xl mx-auto space-y-6">
-          {activeTab === 'conversations' ? (
-            <>
-              {props.characterListBrief && props.characterListBrief.length > 0 ? (
-                <div className="grid gap-4">
-                  {props.characterListBrief.map((character) => (
-                    <CharacterCard 
-                      key={character.character_id} 
-                      character={character} 
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
-                  <div className="text-gray-300">No conversations yet</div>
-                  <button
-                    onClick={() => router.push('/')}
-                    className="bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors rounded-lg px-6 py-3 text-sm font-medium text-emerald-400 flex items-center justify-center gap-2 mx-auto"
-                  >
-                    <IoChatbubbleEllipsesOutline className="w-4 h-4" />
-                    Start Your First Chat
-                  </button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="space-y-4">
-              {props.userPoints && (
-                <PointsCard userPoints={props.userPoints} />
-              )}
-              <ReferralCampaignCard />
-              <PointsSystemGuide />
-            </div>
-          )}
-        </div>
+        {!props.isWalletConnected ? (
+          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
+            <div className="text-gray-300">Connect your wallet to view your profile data</div>
+          </div>
+        ) : (
+          <div className="max-w-3xl mx-auto space-y-6">
+            {activeTab === 'conversations' ? (
+              <>
+                {props.characterListBrief && props.characterListBrief.length > 0 ? (
+                  <div className="grid gap-4">
+                    {props.characterListBrief.map((character) => (
+                      <CharacterCard 
+                        key={character.character_id} 
+                        character={character} 
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
+                    <div className="text-gray-300">No conversations yet</div>
+                    <button
+                      onClick={() => router.push('/')}
+                      className="bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors rounded-lg px-6 py-3 text-sm font-medium text-emerald-400 flex items-center justify-center gap-2 mx-auto"
+                    >
+                      <IoChatbubbleEllipsesOutline className="w-4 h-4" />
+                      Start Your First Chat
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-4">
+                {props.userPoints && (
+                  <PointsCard userPoints={props.userPoints} />
+                )}
+                <ReferralCampaignCard />
+                <PointsSystemGuide />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

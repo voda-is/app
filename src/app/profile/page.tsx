@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { useUser, useCharacterListBrief, useUserPoints } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { UserPoints, TokenInfo, CharacterListBrief, User } from '@/lib/validations';
@@ -52,10 +53,12 @@ export interface ProfileLayoutProps {
   characterListBrief: CharacterListBrief[] | null;
   userPoints: UserPoints | null;
   isLoading: boolean;
+  isWalletConnected: boolean;
 }
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { isConnected } = useAccount();
   
   // Data fetching
   const { data: user, isLoading: isLoadingUser } = useUser();
@@ -73,6 +76,7 @@ export default function ProfilePage() {
     characterListBrief: characterListBrief || null,
     userPoints: userPoints || null,
     isLoading,
+    isWalletConnected: isConnected
   };
 
   return (

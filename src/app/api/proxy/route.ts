@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { path, method, data } = body.data;
 
-    console.log("data", body.data);
     let authHeader = {};
     if (!data.ignoreToken) {
       const accessToken = await getAccessToken(data.user_id);
@@ -53,7 +52,6 @@ export async function POST(request: NextRequest) {
     let response;
     if (method === "GET") {
       const requestUrl = `${API_URL}${path}?${new URLSearchParams(data).toString()}`;
-      console.log("requestUrl", requestUrl);
       response = await fetch(requestUrl, {
         method: method,
         headers: {

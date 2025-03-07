@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAccount } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -36,6 +38,7 @@ export interface LayoutProps {
   deleteConversation: (id: string) => void;
   deleteConversationLoading: boolean;
   publicConversations?: any[];
+  isWalletConnected: boolean;
 }
 
 export default function CharacterPage() {
@@ -43,6 +46,8 @@ export default function CharacterPage() {
   const id = params?.id as string;
   const router = useRouter();
   const cache = new UserProfilesCache();
+  
+  const { isConnected } = useAccount();
 
   const [activeTab, setActiveTab] = useState<'about' | 'history' | 'public'>('about');
   const [isLoading, setIsLoading] = useState(false);
@@ -125,7 +130,8 @@ export default function CharacterPage() {
     createConversation,
     deleteConversation,
     deleteConversationLoading,
-    publicConversations: publicConversations || []
+    publicConversations: publicConversations || [],
+    isWalletConnected: isConnected
   };
 
   return (

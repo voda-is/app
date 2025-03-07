@@ -14,7 +14,7 @@ export default function MobileLayout(props: LayoutProps) {
   const router = useRouter();
 
   return (
-    <div className="flex flex-col min-h-screen bg-black text-white">
+    <div className="flex flex-col min-h-screen bg-black text-white pt-12">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -94,23 +94,38 @@ export default function MobileLayout(props: LayoutProps) {
             <div className="bg-black/40 backdrop-blur-md rounded-2xl p-2 flex gap-2">
               <button
                 onClick={() => props.setActiveTab('about')}
-                className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
                   props.activeTab === 'about'
                     ? 'bg-white/10 text-white'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
                 About
               </button>
               <button
                 onClick={() => props.setActiveTab('history')}
-                className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
                   props.activeTab === 'history'
                     ? 'bg-white/10 text-white'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                {props.character.metadata.enable_chatroom ? 'Token Launches' : 'Conversations'}
+                <IoChatbubble className="w-4 h-4" />
+                {props.character.metadata.enable_chatroom ? 'Tokens' : 'Chats'}
+              </button>
+              <button
+                onClick={() => props.setActiveTab('public')}
+                className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  props.activeTab === 'public'
+                    ? 'bg-white/10 text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <IoShare className="w-4 h-4" />
+                Shared
               </button>
             </div>
           </div>
@@ -168,7 +183,7 @@ export default function MobileLayout(props: LayoutProps) {
                   </div>
                 </div>
               </div>
-            ) : (
+            ) : props.activeTab === 'history' ? (
               <div className="p-4 flex flex-col gap-4">
                 {props.character.metadata.enable_chatroom ? (
                   // Token Launches View
@@ -302,6 +317,60 @@ export default function MobileLayout(props: LayoutProps) {
                       <p className="text-gray-400">No conversations yet</p>
                     </div>
                   )
+                )}
+              </div>
+            ) : (
+              // Public Conversations Tab
+              <div className="p-4 flex flex-col gap-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <IoShare className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">Shared Conversations</h2>
+                </div>
+                
+                {props.publicConversations && props.publicConversations.length > 0 ? (
+                  props.publicConversations.map((conversation) => (
+                    <button
+                      key={conversation.id}
+                      onClick={() => router.push(`/shared/${conversation.id}`)}
+                      className="flex flex-col p-5 space-y-3 text-left bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl w-full"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <IoShare className="w-4 h-4 text-blue-400" />
+                          </div>
+                          <h3 className="text-white font-medium text-base">
+                            {conversation.title || "Shared Conversation"}
+                          </h3>
+                        </div>
+                        <div className="bg-blue-500/10 p-2 rounded-full">
+                          <HiOutlineExternalLink className="w-4 h-4 text-blue-400" />
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap items-center gap-2 text-xs pl-12">
+                        <span className="font-medium text-blue-300">
+                          {conversation.sharedBy || "Anonymous"}
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span className="text-gray-300">{formatDistance(new Date(conversation.sharedAt || Date.now()), new Date(), { addSuffix: true })}</span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="text-center py-10 bg-blue-950/20 backdrop-blur-md rounded-xl border border-blue-500/10">
+                    <div className="flex justify-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center">
+                        <IoShare className="w-8 h-8 text-blue-400/60" />
+                      </div>
+                    </div>
+                    <p className="text-white text-base font-medium">No shared conversations yet</p>
+                    <p className="text-gray-300 mt-2 max-w-xs mx-auto text-sm">
+                      When users share their conversations with this character, they will appear here
+                    </p>
+                  </div>
                 )}
               </div>
             )}

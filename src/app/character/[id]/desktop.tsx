@@ -299,6 +299,63 @@ export default function DesktopLayout(props: LayoutProps) {
                   )}
                 </div>
               </div>
+              
+              {/* Public Conversations Section - Completely separate box */}
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 mt-8">
+                <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
+                  <IoShare className="w-6 h-6 text-blue-400" />
+                  Public Conversations
+                </h2>
+                <div className="space-y-4">
+                  {props.publicConversations && props.publicConversations.length > 0 ? (
+                    props.publicConversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className="flex items-center w-full bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl overflow-hidden group"
+                      >
+                        <div 
+                          onClick={() => router.push(`/shared/${conversation.id}`)}
+                          className="flex-1 flex items-center gap-4 p-6 cursor-pointer hover:bg-blue-900/10 transition-colors"
+                        >
+                          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <IoShare className="w-5 h-5 text-blue-400" />
+                          </div>
+                          <div className="text-left">
+                            <h3 className="text-white font-medium text-lg">
+                              {conversation.title || `Shared Conversation`}
+                            </h3>
+                            <div className="flex items-center gap-2 text-gray-400 mt-1">
+                              <span>Shared by {conversation.sharedBy || "Anonymous"}</span>
+                              <span className="text-gray-500">•</span>
+                              <span>{formatDistance(new Date(conversation.sharedAt || Date.now()), new Date(), { addSuffix: true })}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="px-6">
+                          <button
+                            onClick={() => router.push(`/shared/${conversation.id}`)}
+                            className="p-3 w-16 h-16 flex items-center justify-center text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-all rounded-full"
+                          >
+                            <HiOutlineExternalLink className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 bg-blue-950/20 backdrop-blur-md rounded-xl border border-blue-500/10">
+                      <div className="flex justify-center mb-4">
+                        <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center">
+                          <IoShare className="w-8 h-8 text-blue-400/60" />
+                        </div>
+                      </div>
+                      <p className="text-gray-400 text-lg">No public conversations yet</p>
+                      <p className="text-gray-500 mt-2 max-w-md mx-auto">
+                        When users share their conversations with this character, they will appear here
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

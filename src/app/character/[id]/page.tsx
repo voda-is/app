@@ -14,7 +14,8 @@ import {
   useDeleteConversation, 
   useGetMessageBrief, 
   useUserProfilesRaw, 
-  useGenerateReferralUrl 
+  useGenerateReferralUrl, 
+  usePublicConversations
 } from "@/hooks/api";
 import { Character, Chatroom, MessageBrief } from "@/lib/validations";
 import { formatDistance } from "date-fns";
@@ -25,8 +26,8 @@ export interface LayoutProps {
   chatroom?: Chatroom;
   messageBriefs?: MessageBrief[];
   cache: UserProfilesCache;
-  activeTab: 'about' | 'history';
-  setActiveTab: (tab: 'about' | 'history') => void;
+  activeTab: 'about' | 'history' | 'public';
+  setActiveTab: (tab: 'about' | 'history' | 'public') => void;
   isSharing: boolean;
   shareSuccess: boolean;
   isGeneratingUrl: boolean;
@@ -34,6 +35,7 @@ export interface LayoutProps {
   createConversation: () => void;
   deleteConversation: (id: string) => void;
   deleteConversationLoading: boolean;
+  publicConversations?: any[];
 }
 
 export default function CharacterPage() {
@@ -42,13 +44,14 @@ export default function CharacterPage() {
   const router = useRouter();
   const cache = new UserProfilesCache();
 
-  const [activeTab, setActiveTab] = useState<'about' | 'history'>('about');
+  const [activeTab, setActiveTab] = useState<'about' | 'history' | 'public'>('about');
   const [isLoading, setIsLoading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
 
   const { data: chatHistoryIds, isLoading: historyLoading } = useCharacterChatHistory(id);
   const { data: character, isLoading: characterLoading } = useCharacter(id);
+  const { data: publicConversations, isLoading: publicConversationsLoading } = usePublicConversations(id);
   const { data: chatroom, isLoading: chatroomLoading } = useChatroomWithCharacter(
     // @ts-ignore
     character?.metadata.enable_chatroom ? id : null
@@ -98,19 +101,18 @@ export default function CharacterPage() {
 
   if (characterLoading || historyLoading || createConversationLoading || deleteConversationLoading || isLoading ||
       (character?.metadata.enable_chatroom && (chatroomLoading || messageBriefsLoading || userProfilesLoading)) || 
+      publicConversationsLoading ||
       !id) {
     return <LoadingScreen />;
   }
 
-  console.log("character", character);
-  console.log("chatHistoryIds", chatHistoryIds);
   if (!character) {
     return null;
   }
 
   const layoutProps = {
     character,
-    chatHistoryIds,
+    chatHistoryIds: chatHistoryIds || [],
     chatroom,
     messageBriefs,
     cache,
@@ -122,7 +124,8 @@ export default function CharacterPage() {
     handleShare,
     createConversation,
     deleteConversation,
-    deleteConversationLoading
+    deleteConversationLoading,
+    publicConversations: publicConversations || []
   };
 
   return (

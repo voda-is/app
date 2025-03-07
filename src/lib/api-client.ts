@@ -19,6 +19,7 @@ import {
   Url,
   UserPayload,
   OAuthUserSchema,
+  ConversationHistorySchema,
 } from "./validations";
 import { z } from "zod";
 import { UserProfilesCache } from "./userProfilesCache";
@@ -254,6 +255,14 @@ export const api = {
   },
 
   chat: {
+    getPublicConversations: async (characterId: string): Promise<ConversationHistory[]> => {
+      const response = await apiProxy.post("", {
+        path: `/conversations/public/${characterId}`,
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return z.array(ConversationHistorySchema).parse(response.data.data);
+    },
     createConversation: async (characterId: string, address: string): Promise<null> => {
       await apiProxy.post("", {
         path: `/conversations/${characterId}`,
@@ -344,13 +353,16 @@ export const api = {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          path: `/tts/${characterId}`,
-          method: "POST",
           data: {
-            user_id: address,
-            stripUserId: true,
-            message: text,
-            isStream: true,
+            path: `/tts/${characterId}`,
+            method: "POST",
+            data: {
+              user_id: address,
+              stripUserId: true,
+              message: text,
+              isStream: true,
+              ignoreToken: false,
+            }
           },
         }),
       });

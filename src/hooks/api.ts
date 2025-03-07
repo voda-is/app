@@ -11,6 +11,7 @@ import type {
   MessageBrief,
   TokenInfo,
   CharacterListBrief,
+  Url,
 } from "@/lib/validations";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
@@ -102,6 +103,21 @@ export function useCharacterChatHistory(characterId: string) {
       }
     },
     enabled: !!characterId && !!user && !!userId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function usePublicConversations(characterId: string) {
+  return useQuery<ConversationHistory[], Error>({
+    queryKey: ["publicConversations", characterId],
+    queryFn: () => api.chat.getPublicConversations(characterId),
+    enabled: !!characterId,
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,
@@ -307,7 +323,7 @@ export function useChatroom(chatroomId: string) {
   return useQuery<Chatroom>({
     queryKey: ["chatroom", chatroomId],
     queryFn: async () => {
-      const result = await api.chatroom.getChatroom(chatroomId, userId!);
+      const result = await api.chatroom.getChatroom(chatroomId);
       if (!result) throw new Error("Failed to get/create chatroom");
       return result;
     },
@@ -581,5 +597,21 @@ export function useGenerateReferralUrl() {
       const urlId = await api.url.create(path, type, userId!);
       return `${window.location.origin}/url/${urlId}`;
     },
+  });
+}
+
+export function useUrl(urlId: string) {
+  const userId = useUserId();
+  return useQuery<{ url: Url, referral_success: boolean }, Error>({
+    queryKey: ["url", urlId],
+    queryFn: () => api.url.get(urlId, userId!),
+    enabled: !!urlId && !!userId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }

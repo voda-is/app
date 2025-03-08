@@ -345,3 +345,15 @@ export const UrlSchema = z.object({
 
 // Add type inference
 export type Url = z.infer<typeof UrlSchema>;
+
+export const GitcoinGrantSchema = z.object({
+  _id: CryptoHashSchema,
+  name: z.string(),
+  description: z.string(),
+  url: z.string(),
+  twitter: z.string(),
+  recipient_id: z.string(),
+});
+
+// Add type inference
+export type GitcoinGrant = z.infer<typeof GitcoinGrantSchema>;

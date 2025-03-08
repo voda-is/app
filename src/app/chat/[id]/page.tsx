@@ -10,7 +10,8 @@ import {
   useRegenerateLastMessage, 
   useSendMessage, 
   useUser, 
-  useUserPoints 
+  useUserPoints,
+  useGitcoinGrants
 } from '@/hooks/api';
 
 import { LoadingScreen } from "@/components/LoadingScreen";
@@ -21,7 +22,7 @@ import { api, useUserId } from "@/lib/api-client";
 
 import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
-import { Character } from "@/lib/validations";
+import { Character, GitcoinGrant } from "@/lib/validations";
 
 export interface ChatLayoutProps {
   id: string;
@@ -44,6 +45,7 @@ export interface ChatLayoutProps {
   setIsPointsExpanded: (expanded: boolean) => void;
   handleClaimPoints: () => void;
   hasEnoughPoints: () => boolean;
+  gitcoinGrants?: GitcoinGrant[];
 }
 
 export default function ChatPage() {
@@ -81,6 +83,10 @@ export default function ChatPage() {
   const claimStatus = userPoints 
     ? getNextClaimTime(userPoints.free_balance_claimed_at)
     : { canClaim: false, timeLeft: "Loading..." };
+
+  // Add Gitcoin grants query
+  const { data: gitcoinGrants } = useGitcoinGrants();
+  const hasGitcoinTag = character?.tags?.includes("gitcoin") ?? false;
 
   // Data Ready
   useEffect(() => {
@@ -180,6 +186,7 @@ export default function ChatPage() {
     setIsPointsExpanded,
     handleClaimPoints,
     hasEnoughPoints,
+    gitcoinGrants: hasGitcoinTag ? gitcoinGrants : undefined,
   };
 
   return (

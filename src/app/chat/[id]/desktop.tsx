@@ -9,11 +9,14 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { InputBar } from "@/components/InputBar";
 import { getAvailableBalance } from "@/lib/utils";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { GitcoinGrant } from "@/lib/validations";
 
 export default function DesktopLayout(props: ChatLayoutProps) {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [selectedGrant, setSelectedGrant] = useState<string>('');
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   if (props.showTypingIndicator) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -22,7 +25,38 @@ export default function DesktopLayout(props: ChatLayoutProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [props.messages.length]);
+
+  const isGitcoinEnabled = props.gitcoinGrants && props.gitcoinGrants.length > 0;
+
+  console.log(props.messages.length, )
+  const canSendMessage = props.hasEnoughPoints() && (!isGitcoinEnabled || (selectedGrant && props.messages.length > 0));
   
+  const handleGrantSelection = (grantId: string) => {
+    setSelectedGrant(grantId);
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmGrant = () => {
+    const grant = props.gitcoinGrants?.find(g => g._id === selectedGrant);
+    if (!grant) return;
+
+    // Compose the initial message with grant details
+    const initialMessage = `I'd like to discuss the Gitcoin grant: ${grant.name}
+
+Project Details:
+- Name: ${grant.name}
+- Description: ${grant.description}
+- URL: ${grant.url}
+- Twitter: ${grant.twitter}
+- Recipient ID: ${grant.recipient_id}
+
+Please help me evaluate this project.`;
+
+    props.setInputMessage(initialMessage);
+    props.handleSendMessage();
+    setShowConfirmation(false);
+  };
+
   return (
     <main className="flex h-screen overflow-hidden bg-[radial-gradient(#4B5563_1px,transparent_1px)] [background-size:16px_16px]">
       {/* Left Section with Back Button and Points Display */}
@@ -133,6 +167,46 @@ export default function DesktopLayout(props: ChatLayoutProps) {
         <div className="flex-1 flex flex-col h-screen">
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-8 pb-24">
+            {isGitcoinEnabled && props.messages.length <= 1 && (
+              <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                <div className="text-gray-300 text-lg">
+                  Please select a Gitcoin project to discuss
+                </div>
+                <select
+                  value={selectedGrant}
+                  onChange={(e) => handleGrantSelection(e.target.value)}
+                  className="w-full max-w-xl p-3 rounded-xl bg-gray-800/50 backdrop-blur-sm text-white border border-gray-700 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="">Select a project...</option>
+                  {props.gitcoinGrants?.map((grant) => (
+                    <option key={grant._id} value={grant._id}>
+                      {grant.name}
+                    </option>
+                  ))}
+                </select>
+                {selectedGrant && showConfirmation && (
+                  <div className="w-full max-w-xl space-y-4">
+                    <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-4 text-gray-300">
+                      {props.gitcoinGrants?.find(g => g._id === selectedGrant)?.description}
+                    </div>
+                    <div className="flex justify-center gap-4">
+                      <button
+                        onClick={() => setShowConfirmation(false)}
+                        className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleConfirmGrant}
+                        className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+                      >
+                        Confirm Selection
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex flex-col space-y-6 py-8 max-w-4xl mx-auto w-full">
               {props.messages.map((message) => (
                 <ChatBubble
@@ -160,8 +234,14 @@ export default function DesktopLayout(props: ChatLayoutProps) {
                 message={props.inputMessage}
                 onChange={props.setInputMessage}
                 onSend={props.handleSendMessage}
-                placeholder={props.hasEnoughPoints() ? `Message ${props.character?.name}` : "Claim points to Chat"}
-                disabled={props.disableActions || !props.hasEnoughPoints()}
+                placeholder={
+                  !canSendMessage
+                    ? isGitcoinEnabled && !selectedGrant
+                      ? "Please select a project first"
+                      : "Claim points to Chat"
+                    : `Message ${props.character?.name}`
+                }
+                disabled={props.disableActions || !canSendMessage}
               />
             </div>
           </div>

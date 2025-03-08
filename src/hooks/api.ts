@@ -12,6 +12,7 @@ import type {
   TokenInfo,
   CharacterListBrief,
   Url,
+  GitcoinGrant,
 } from "@/lib/validations";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
@@ -606,6 +607,34 @@ export function useUrl(urlId: string) {
     queryKey: ["url", urlId],
     queryFn: () => api.url.get(urlId, userId!),
     enabled: !!urlId && !!userId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function useGitcoinGrants() {
+  return useQuery<GitcoinGrant[], Error>({
+    queryKey: ["gitcoinGrants"],
+    queryFn: () => api.gitcoin.getGrants(),
+    enabled: true,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+  });
+}
+
+export function useGitcoinGrant(grantId: string) {
+  return useQuery<GitcoinGrant, Error>({
+    queryKey: ["gitcoinGrant", grantId],
+    queryFn: () => api.gitcoin.getGrant(grantId),
+    enabled: !!grantId, 
     retry: 1,
     refetchInterval: false,
     staleTime: Infinity,

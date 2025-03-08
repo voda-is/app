@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { 
@@ -22,12 +22,51 @@ import { UserIdentity } from './page';
 
 type TabType = 'conversations' | 'points';
 
-export default function MobileLayout(props: ProfileLayoutProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('conversations');
-  const [imageError, setImageError] = useState(false);
+// Create a separate component for the tab-dependent content
+function TabContent({ activeTab, props, router }: { 
+  activeTab: TabType; 
+  props: ProfileLayoutProps;
+  router: ReturnType<typeof useRouter>;
+}) {
+  return activeTab === 'conversations' ? (
+    <>
+      {props.characterListBrief && props.characterListBrief.length > 0 ? (
+        <div className="space-y-4">
+          {props.characterListBrief.map((character) => (
+            <CharacterCard 
+              key={character.character_id} 
+              character={character} 
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
+          <div className="text-gray-300">No conversations yet</div>
+          <button
+            onClick={() => router.push('/')}
+            className="bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors rounded-lg px-6 py-3 text-sm font-medium text-emerald-400 flex items-center justify-center gap-2 mx-auto"
+          >
+            <IoChatbubbleEllipsesOutline className="w-4 h-4" />
+            Start Your First Chat
+          </button>
+        </div>
+      )}
+    </>
+  ) : (
+    <div className="space-y-4">
+      {props.userPoints && (
+        <PointsCard userPoints={props.userPoints} />
+      )}
+      <ReferralCampaignCard />
+      <PointsSystemGuide />
+    </div>
+  );
+}
 
+// Create a wrapper component for the search params logic
+function TabManager({ children }: { children: (activeTab: TabType) => React.ReactNode }) {
+  const [activeTab, setActiveTab] = useState<TabType>('conversations');
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -35,6 +74,13 @@ export default function MobileLayout(props: ProfileLayoutProps) {
       setActiveTab(tab as TabType);
     }
   }, [searchParams]);
+
+  return <>{children(activeTab)}</>;
+}
+
+export default function MobileLayout(props: ProfileLayoutProps) {
+  const [imageError, setImageError] = useState(false);
+  const router = useRouter();
 
   const getInitials = (name: string) => {
     return name
@@ -89,71 +135,53 @@ export default function MobileLayout(props: ProfileLayoutProps) {
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="px-4 mb-4">
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-2 flex gap-2">
-            <Link 
-              href="/profile?tab=conversations"
-              className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                activeTab === 'conversations' 
-                  ? 'bg-white/20 text-gray-100' 
-                  : 'text-gray-300 hover:text-gray-100 hover:bg-white/10'
-              }`}
-              onClick={() => setActiveTab('conversations')}
-            >
-              <IoChatbubbleEllipsesOutline className="w-4 h-4" />
-              <span>Chats</span>
-            </Link>
-            <Link 
-              href="/profile?tab=points"
-              className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                activeTab === 'points' 
-                  ? 'bg-white/20 text-gray-100' 
-                  : 'text-gray-300 hover:text-gray-100 hover:bg-white/10'
-              }`}
-              onClick={() => setActiveTab('points')}
-            >
-              <IoStarOutline className="w-4 h-4" />
-              <span>Points</span>
-            </Link>
-          </div>
-        </div>
+        {/* Navigation */}
+        <Suspense fallback={<div>Loading...</div>}>
+          <TabManager>
+            {(activeTab) => (
+              <nav className="grid grid-cols-2 gap-2 p-4">
+                <Link 
+                  href="/profile?tab=conversations"
+                  className={`p-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
+                    activeTab === 'conversations' 
+                      ? 'bg-white/40 text-gray-100' 
+                      : 'text-gray-300 bg-white/10'
+                  }`}
+                >
+                  <IoChatbubbleEllipsesOutline className="w-5 h-5" />
+                  <span>Chats</span>
+                </Link>
+                <Link 
+                  href="/profile?tab=points"
+                  className={`p-3 rounded-xl flex items-center justify-center gap-2 transition-colors ${
+                    activeTab === 'points' 
+                      ? 'bg-white/40 text-gray-100' 
+                      : 'text-gray-300 bg-white/10'
+                  }`}
+                >
+                  <IoStarOutline className="w-5 h-5" />
+                  <span>Points</span>
+                </Link>
+              </nav>
+            )}
+          </TabManager>
+        </Suspense>
 
         {/* Tab Content */}
         <div className="flex-1 px-4 pb-24">
           <div className="space-y-3">
-            {activeTab === 'conversations' ? (
-              <>
-                {props.characterListBrief && props.characterListBrief.length > 0 ? (
-                  <div className="grid gap-4">
-                    {props.characterListBrief.map((character) => (
-                      <CharacterCard 
-                        key={character.character_id} 
-                        character={character} 
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
-                    <div className="text-gray-300">No conversations yet</div>
-                    <button
-                      onClick={() => router.push('/')}
-                      className="bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors rounded-lg px-6 py-3 text-sm font-medium text-emerald-400 flex items-center justify-center gap-2 mx-auto"
-                    >
-                      <IoChatbubbleEllipsesOutline className="w-4 h-4" />
-                      Start Your First Chat
-                    </button>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="space-y-3">
-                {props.userPoints && (
-                  <PointsCard userPoints={props.userPoints} />
-                )}
-                <ReferralCampaignCard />
-                <PointsSystemGuide />
+            {!props.isWalletConnected ? (
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
+                <div className="text-gray-300">Connect your wallet to view your profile data</div>
               </div>
+            ) : (
+              <Suspense fallback={<div>Loading...</div>}>
+                <TabManager>
+                  {(activeTab) => (
+                    <TabContent activeTab={activeTab} props={props} router={router} />
+                  )}
+                </TabManager>
+              </Suspense>
             )}
           </div>
         </div>

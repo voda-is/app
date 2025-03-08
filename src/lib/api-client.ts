@@ -20,6 +20,8 @@ import {
   UserPayload,
   OAuthUserSchema,
   ConversationHistorySchema,
+  GitcoinGrant,
+  GitcoinGrantSchema,
 } from "./validations";
 import { z } from "zod";
 import { UserProfilesCache } from "./userProfilesCache";
@@ -158,6 +160,24 @@ export const api = {
     },
   },
 
+  gitcoin: {
+    getGrants: async (): Promise<GitcoinGrant[]> => {
+      const response = await apiProxy.post("", {
+        path: "/gitcoin/all",
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return z.array(GitcoinGrantSchema).parse(response.data.data);
+    },
+    getGrant: async (grantId: string): Promise<GitcoinGrant> => {
+      const response = await apiProxy.post("", {
+        path: `/gitcoin/${grantId}`,
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return GitcoinGrantSchema.parse(response.data.data);
+    },
+  },
   user: {
     register: async (address: string) => {
       const cache = new UserProfilesCache();

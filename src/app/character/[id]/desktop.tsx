@@ -47,7 +47,7 @@ export default function DesktopLayout(props: LayoutProps) {
 
           {/* Wallet Connection Banner - Show if wallet not connected */}
           {!isWalletConnected && (
-            <div className="mb-8 p-4 bg-amber-500/20 border border-amber-500/30 rounded-xl">
+            <div className="mb-8 p-6 bg-amber-500/10 backdrop-blur-md border border-amber-500/30 rounded-xl">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-amber-500/20 rounded-full">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -55,8 +55,8 @@ export default function DesktopLayout(props: LayoutProps) {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-amber-300 font-medium">Wallet Connection Required</h3>
-                  <p className="text-amber-200/80 text-sm mt-1">
+                  <h3 className="text-lg font-medium text-white">Wallet Connection Required</h3>
+                  <p className="text-sm text-gray-300 mt-1">
                     Please connect your wallet to interact with this character.
                   </p>
                 </div>
@@ -234,7 +234,7 @@ export default function DesktopLayout(props: LayoutProps) {
                 <div className="space-y-4">
                   {!isWalletConnected ? (
                     // Wallet not connected view
-                    <div className="text-center py-12 bg-black/20 backdrop-blur-md rounded-xl border border-white/10">
+                    <div className="text-center py-12 backdrop-blur-sm rounded-xl">
                       <div className="flex justify-center mb-4">
                         <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-amber-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -242,8 +242,8 @@ export default function DesktopLayout(props: LayoutProps) {
                           </svg>
                         </div>
                       </div>
-                      <p className="text-gray-300 text-lg">Wallet Connection Required</p>
-                      <p className="text-gray-400 mt-2 max-w-md mx-auto">
+                      <p className="text-gray-100 text-lg">Wallet Connection Required</p>
+                      <p className="text-gray-300 mt-2 max-w-md mx-auto">
                         Connect your wallet to start chatting with this character and access all features.
                       </p>
                       <div className="mt-6">
@@ -382,7 +382,7 @@ export default function DesktopLayout(props: LayoutProps) {
                         <IoChatbubble className="w-8 h-8 text-emerald-300 flex-shrink-0" />
                         <div className="text-left">
                           <h3 className="text-emerald-200 font-medium text-lg">Start New Conversation</h3>
-                          <p className="text-emerald-300/80 mt-1">Begin a fresh chat with {props.character.name}</p>
+                          <p className="text-emerald-300/80 mt-1 text-sm">Begin a fresh chat with {props.character.name}</p>
                         </div>
                       </button>
 
@@ -400,7 +400,7 @@ export default function DesktopLayout(props: LayoutProps) {
                               <h3 className="text-white font-medium text-lg">
                                 Conversation #{props.chatHistoryIds.length - index}
                               </h3>
-                              <p className="text-gray-400 mt-1">Resume your conversation with {props.character.name}</p>
+                              <p className="text-gray-400 mt-1 text-sm">Resume your conversation with {props.character.name}</p>
                             </div>
                           </div>
                           <div className="w-[1px] h-[60%] bg-white/10" />

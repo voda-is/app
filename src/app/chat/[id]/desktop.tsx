@@ -9,9 +9,8 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { InputBar } from "@/components/InputBar";
 import { getAvailableBalance } from "@/lib/utils";
-import { useRef, useEffect, useState } from "react";
-import { GitcoinGrant } from "@/lib/validations";
-
+import { useRef, useEffect, useState, useMemo } from "react";
+  
 export default function DesktopLayout(props: ChatLayoutProps) {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -26,11 +25,16 @@ export default function DesktopLayout(props: ChatLayoutProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [props.messages.length]);
 
-  const isGitcoinEnabled = props.gitcoinGrants && props.gitcoinGrants.length > 0;
+  const isGitcoinEnabled = props.gitcoinGrants && props.gitcoinGrants.length > 0;  
+  const canSendMessage = useMemo(() => {
+    return props.hasEnoughPoints() && (!isGitcoinEnabled || selectedGrant || props.messages.length > 0);
+  }, [props.hasEnoughPoints, isGitcoinEnabled, selectedGrant, props.messages.length, props.functionCalls]);
 
-  console.log(props.messages.length, )
-  const canSendMessage = props.hasEnoughPoints() && (!isGitcoinEnabled || (selectedGrant && props.messages.length > 0));
-  
+
+  const isConcluded = useMemo(() => {
+    return props.functionCalls.length > 0;
+  }, [props.functionCalls]);
+
   const handleGrantSelection = (grantId: string) => {
     setSelectedGrant(grantId);
     setShowConfirmation(true);
@@ -230,19 +234,50 @@ Please help me evaluate this project.`;
           {/* Floating input area */}
           <div className="absolute bottom-0 left-0 right-0 px-8 py-6">
             <div className="max-w-4xl mx-auto">
-              <InputBar
-                message={props.inputMessage}
-                onChange={props.setInputMessage}
-                onSend={props.handleSendMessage}
-                placeholder={
-                  !canSendMessage
-                    ? isGitcoinEnabled && !selectedGrant
-                      ? "Please select a project first"
-                      : "Claim points to Chat"
-                    : `Message ${props.character?.name}`
-                }
-                disabled={props.disableActions || !canSendMessage}
-              />
+              {isConcluded ? (
+                <div className="flex flex-col space-y-3 bg-emerald-500/10 text-emerald-400 p-4 rounded-xl backdrop-blur-md">
+                  <div className="flex items-center justify-center gap-2 pb-2 border-b border-emerald-400/20">
+                    <FiAward className="w-5 h-5" />
+                    <span className="font-medium">Grant Allocation Complete</span>
+                  </div>
+                  <div className="space-y-2">
+                    {(() => {
+                      const lastCall = props.functionCalls[props.functionCalls.length - 1];
+                      const args = JSON.parse(lastCall?.arguments || '{}');
+                      return (
+                        <>
+                          <div className="flex gap-2">
+                            <span className="text-emerald-300 min-w-[100px]">Name:</span>
+                            <span className="text-emerald-100">{args.name}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-emerald-300 min-w-[100px]">Recipient:</span>
+                            <span className="text-emerald-100">{args.recepientId}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-emerald-300 min-w-[100px]">Reasoning:</span>
+                            <span className="text-emerald-100">{args.reasoning}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                <InputBar
+                  message={props.inputMessage}
+                  onChange={props.setInputMessage}
+                  onSend={props.handleSendMessage}
+                  placeholder={
+                    !canSendMessage
+                      ? isGitcoinEnabled && !selectedGrant
+                        ? "Please select a project first"
+                        : "Claim points to Chat"
+                      : `Message ${props.character?.name}`
+                  }
+                  disabled={props.disableActions || !canSendMessage}
+                />
+              )}
             </div>
           </div>
         </div>

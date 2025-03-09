@@ -4,14 +4,14 @@ import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 import { WagmiProvider, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { seiTestnet } from 'wagmi/chains';
+import { sei } from 'wagmi/chains';
 
 const config = getDefaultConfig({
   appName: 'Voda AI',
   projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
-  chains: [seiTestnet],
+  chains: [sei],
   transports: {
-    [seiTestnet.id]: http('https://evm-rpc-testnet.sei-apis.com'),
+    [sei.id]: http('https://evm-rpc.sei-apis.com'),
   },
 });
 

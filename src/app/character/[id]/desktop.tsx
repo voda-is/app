@@ -201,6 +201,19 @@ export default function DesktopLayout(props: LayoutProps) {
                 </div>
               </div>
 
+              {/* SEI Balance Section */}
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h2 className="text-xl font-semibold text-white">Funding Wallet Balance</h2>
+                </div>
+                <div className="text-2xl font-medium text-emerald-400">
+                  {props.seiBalance ? `${props.seiBalance} SEI` : 'Loading...'}
+                </div>
+              </div>
+
               {/* Timeline Section */}
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8">
                 <div className="flex items-center gap-2 mb-6">
@@ -434,11 +447,11 @@ export default function DesktopLayout(props: LayoutProps) {
                   {props.publicConversations && props.publicConversations.length > 0 ? (
                     props.publicConversations.map((conversation) => (
                       <div
-                        key={conversation.id}
+                        key={conversation._id}
                         className="flex items-center w-full bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl overflow-hidden group"
                       >
                         <div 
-                          onClick={() => router.push(`/shared/${conversation.id}`)}
+                          onClick={() => router.push(`/chat/${conversation._id}`)}
                           className="flex-1 flex items-center gap-4 p-6 cursor-pointer hover:bg-blue-900/10 transition-colors"
                         >
                           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
@@ -446,18 +459,18 @@ export default function DesktopLayout(props: LayoutProps) {
                           </div>
                           <div className="text-left">
                             <h3 className="text-white font-medium text-lg">
-                              {conversation.title || `Shared Conversation`}
+                              {JSON.parse(conversation.function_calls[0].arguments).name  || `Shared Conversation`}
                             </h3>
                             <div className="flex items-center gap-2 text-gray-400 mt-1">
-                              <span>Shared by {conversation.sharedBy || "Anonymous"}</span>
+                              <span>Shared by {conversation.owner_id.slice(0, 6) + '...' + conversation.owner_id.slice(-4) || "Anonymous"}</span>
                               <span className="text-gray-500">•</span>
-                              <span>{formatDistance(new Date(conversation.sharedAt || Date.now()), new Date(), { addSuffix: true })}</span>
+                              <span>{formatDistance(new Date(conversation.updated_at * 1000 || Date.now()), new Date(), { addSuffix: true })}</span>
                             </div>
                           </div>
                         </div>
                         <div className="px-6">
                           <button
-                            onClick={() => router.push(`/shared/${conversation.id}`)}
+                            onClick={() => router.push(`/chat/${conversation._id}`)}
                             className="p-3 w-16 h-16 flex items-center justify-center text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-all rounded-full"
                           >
                             <HiOutlineExternalLink className="w-5 h-5" />

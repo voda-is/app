@@ -22,7 +22,7 @@ import { api, useUserId } from "@/lib/api-client";
 
 import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
-import { Character, GitcoinGrant } from "@/lib/validations";
+import { Character, FunctionCallArguments, GitcoinGrant } from "@/lib/validations";
 
 export interface ChatLayoutProps {
   id: string;
@@ -46,6 +46,7 @@ export interface ChatLayoutProps {
   handleClaimPoints: () => void;
   hasEnoughPoints: () => boolean;
   gitcoinGrants?: GitcoinGrant[];
+  functionCalls: FunctionCallArguments[];
 }
 
 export default function ChatPage() {
@@ -187,6 +188,7 @@ export default function ChatPage() {
     handleClaimPoints,
     hasEnoughPoints,
     gitcoinGrants: hasGitcoinTag ? gitcoinGrants : undefined,
+    functionCalls: conversation?.function_calls ?? [],
   };
 
   return (

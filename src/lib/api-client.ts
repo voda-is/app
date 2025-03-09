@@ -281,7 +281,7 @@ export const api = {
         method: "GET",
         data: { ignoreToken: true },
       });
-      return z.array(ConversationHistorySchema).parse(response.data.data);
+      return response.data.data as ConversationHistory[];
     },
     createConversation: async (characterId: string, address: string): Promise<null> => {
       await apiProxy.post("", {

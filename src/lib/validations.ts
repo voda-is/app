@@ -78,6 +78,11 @@ export const HistoryMessageSchema = z.object({
 // Update to pair messages together
 export const ChatHistoryPairSchema = z.tuple([HistoryMessageSchema, HistoryMessageSchema]);
 
+export const FunctionCallArgumentsSchema = z.object({
+  name: z.string(),
+  arguments: z.string(), // JSON string containing the arguments
+});
+
 export const ConversationHistorySchema = z.object({
   _id: CryptoHashSchema,
   public: z.boolean(),
@@ -87,6 +92,7 @@ export const ConversationHistorySchema = z.object({
   character_id: CryptoHashSchema,
 
   history: z.array(ChatHistoryPairSchema),
+  function_calls: z.array(FunctionCallArgumentsSchema).optional(),
 
   updated_at: TimestampSchema,
   created_at: TimestampSchema,
@@ -357,3 +363,6 @@ export const GitcoinGrantSchema = z.object({
 
 // Add type inference
 export type GitcoinGrant = z.infer<typeof GitcoinGrantSchema>;
+
+// Add type inference
+export type FunctionCallArguments = z.infer<typeof FunctionCallArgumentsSchema>;

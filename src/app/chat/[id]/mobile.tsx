@@ -8,7 +8,8 @@ import { TypingIndicator } from "@/components/TypingIndicator";
 import { InputBar } from "@/components/InputBar";
 import { PointsExpandedView } from "@/components/PointsExpandedView";
 import { getAvailableBalance } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FiAward } from "react-icons/fi";
 
 export default function MobileLayout(props: ChatLayoutProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -23,8 +24,10 @@ export default function MobileLayout(props: ChatLayoutProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [props.messages.length]);
 
-  const isGitcoinEnabled = props.gitcoinGrants && props.gitcoinGrants.length > 0;
-  const canSendMessage = props.hasEnoughPoints() && (!isGitcoinEnabled || (selectedGrant && props.messages.length > 0));
+  const isGitcoinEnabled = props.gitcoinGrants && props.gitcoinGrants.length > 0;  
+  const canSendMessage = useMemo(() => {
+    return props.hasEnoughPoints() && (!isGitcoinEnabled || selectedGrant || props.messages.length > 0);
+  }, [props.hasEnoughPoints, isGitcoinEnabled, selectedGrant, props.messages.length]);
 
   const handleGrantSelection = (grantId: string) => {
     setSelectedGrant(grantId);
@@ -51,6 +54,8 @@ Please help me evaluate this project.`;
     props.handleSendMessage();
     setShowConfirmation(false);
   };
+
+  const isConcluded = props.functionCalls && props.functionCalls.length > 0;
 
   return (
     <main className="flex flex-col w-full bg-black">
@@ -165,19 +170,51 @@ Please help me evaluate this project.`;
 
         {/* Input Container */}
         <div className="fixed bottom-0 left-0 right-0 z-20 mt-auto bg-gradient-to-t from-black to-transparent">
-          <InputBar
-            message={props.inputMessage}
-            onChange={props.setInputMessage}
-            onSend={props.handleSendMessage}
-            placeholder={
-              !canSendMessage
-                ? isGitcoinEnabled && !selectedGrant
-                  ? "Select a project first"
-                  : "Claim points to Chat"
-                : `Message ${props.character?.name}`
-            }
-            disabled={props.disableActions || !canSendMessage}
-          />
+          {isConcluded ? (
+            <div className="flex flex-col space-y-3 bg-emerald-500/10 text-emerald-400 p-4 m-4 rounded-xl backdrop-blur-md">
+              <div className="flex items-center justify-center gap-2 pb-2 border-b border-emerald-400/20">
+                <FiAward className="w-4 h-4" />
+                <span className="font-medium text-sm">Grant Allocation Complete</span>
+              </div>
+              <div className="space-y-2 text-xs">
+                {(() => {
+                  const lastCall = props.functionCalls[props.functionCalls.length - 1];
+                  const args = JSON.parse(lastCall?.arguments || '{}');
+                  const trimmedId = args.recepientId?.slice(0, 6) + '...' + args.recepientId?.slice(-4);
+                  return (
+                    <>
+                      <div className="flex gap-2">
+                        <span className="text-emerald-300 min-w-[80px]">Name:</span>
+                        <span className="text-emerald-100">{args.name}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-emerald-300 min-w-[80px]">Recipient:</span>
+                        <span className="text-emerald-100">{trimmedId}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-emerald-300 min-w-[80px]">Reasoning:</span>
+                        <span className="text-emerald-100">{args.reasoning}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          ) : (
+            <InputBar
+              message={props.inputMessage}
+              onChange={props.setInputMessage}
+              onSend={props.handleSendMessage}
+              placeholder={
+                !canSendMessage
+                  ? isGitcoinEnabled && !selectedGrant
+                    ? "Select a project first"
+                    : "Claim points to Chat"
+                  : `Message ${props.character?.name}`
+              }
+              disabled={props.disableActions || !canSendMessage}
+            />
+          )}
         </div>
 
         <PointsExpandedView

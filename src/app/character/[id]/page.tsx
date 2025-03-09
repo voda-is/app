@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useAccount } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
@@ -21,6 +21,7 @@ import {
 } from "@/hooks/api";
 import { Character, Chatroom, MessageBrief } from "@/lib/validations";
 import { formatDistance } from "date-fns";
+import { sei } from "wagmi/chains";
 
 export interface LayoutProps {
   character: Character;
@@ -39,6 +40,7 @@ export interface LayoutProps {
   deleteConversationLoading: boolean;
   publicConversations?: any[];
   isWalletConnected: boolean;
+  seiBalance?: string;
 }
 
 export default function CharacterPage() {
@@ -78,6 +80,11 @@ export default function CharacterPage() {
   const { mutate: createConversation, isPending: createConversationLoading, isSuccess: createConversationSuccess } = useCreateConversation(id);
   const { mutate: deleteConversation, isPending: deleteConversationLoading } = useDeleteConversation(id);
 
+  const { data: balanceData } = useBalance({
+    address: '0x31CFd670e0cfc0950435b02961648D355523f6e3',
+    chainId: sei.id,
+  });
+
   useEffect(() => {
     if (createConversationSuccess && !historyLoading) {
       setIsLoading(true);
@@ -115,6 +122,8 @@ export default function CharacterPage() {
     return null;
   }
 
+  console.log(publicConversations)
+
   const layoutProps = {
     character,
     chatHistoryIds: chatHistoryIds || [],
@@ -131,7 +140,8 @@ export default function CharacterPage() {
     deleteConversation,
     deleteConversationLoading,
     publicConversations: publicConversations || [],
-    isWalletConnected: isConnected
+    isWalletConnected: isConnected,
+    seiBalance: balanceData?.formatted,
   };
 
   return (
@@ -154,6 +164,17 @@ export function TimelineItem({ label, timestamp }: { label: string; timestamp: n
       <span className="text-white">
         {formatDistance(timestamp * 1000, new Date(), { addSuffix: true })}
       </span>
+    </div>
+  );
+}
+
+export function BalanceDisplay({ balance }: { balance?: string }) {
+  return (
+    <div className="bg-gray-800 rounded-lg p-4 mt-4">
+      <h3 className="text-white text-lg font-semibold mb-2">SEI Balance</h3>
+      <div className="text-gray-200">
+        {balance ? `${balance} SEI` : 'Loading...'}
+      </div>
     </div>
   );
 }

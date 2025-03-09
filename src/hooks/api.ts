@@ -117,7 +117,11 @@ export function useCharacterChatHistory(characterId: string) {
 export function usePublicConversations(characterId: string) {
   return useQuery<ConversationHistory[], Error>({
     queryKey: ["publicConversations", characterId],
-    queryFn: () => api.chat.getPublicConversations(characterId),
+    queryFn: async() => {
+      const conversations = await api.chat.getPublicConversations(characterId)
+      console.log(conversations)
+      return conversations
+    },
     enabled: !!characterId,
     retry: 1,
     refetchInterval: false,

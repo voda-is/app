@@ -213,6 +213,19 @@ export default function MobileLayout(props: LayoutProps) {
                   </div>
                 </div>
 
+                {/* SEI Balance */}
+                <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h2 className="text-lg font-semibold text-white">Funding Wallet Balance</h2>
+                  </div>
+                  <div className="text-xl font-medium text-emerald-400">
+                    {props.seiBalance ? `${props.seiBalance} SEI` : 'Loading...'}
+                  </div>
+                </div>
+
                 {/* Description */}
                 <div className="bg-black/40 backdrop-blur-md rounded-2xl p-4">
                   <h2 className="text-lg font-semibold text-white mb-3">About</h2>
@@ -446,52 +459,47 @@ export default function MobileLayout(props: LayoutProps) {
             ) : (
               // Public Conversations Tab
               <div className="p-4 flex flex-col gap-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <IoShare className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <h2 className="text-xl font-semibold text-white">Shared Conversations</h2>
-                </div>
-                
                 {props.publicConversations && props.publicConversations.length > 0 ? (
                   props.publicConversations.map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      onClick={() => router.push(`/shared/${conversation.id}`)}
-                      className="flex flex-col p-5 space-y-3 text-left bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl w-full"
+                    <div
+                      key={conversation._id}
+                      className="flex items-center w-full bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl overflow-hidden group"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center">
-                            <IoShare className="w-4 h-4 text-blue-400" />
-                          </div>
-                          <h3 className="text-white font-medium text-base">
-                            {conversation.title || "Shared Conversation"}
+                      <div 
+                        onClick={() => router.push(`/chat/${conversation._id}`)}
+                        className="flex-1 flex items-center gap-4 p-6 cursor-pointer hover:bg-blue-900/10 transition-colors"
+                      >
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                          <IoShare className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="text-left">
+                          <h3 className="text-white font-medium text-lg">
+                            {JSON.parse(conversation.function_calls[0].arguments).name || `Shared Conversation`}
                           </h3>
-                        </div>
-                        <div className="bg-blue-500/10 p-2 rounded-full">
-                          <HiOutlineExternalLink className="w-4 h-4 text-blue-400" />
+                          <div className="flex items-center gap-2 text-gray-400 mt-1">
+                            <span>Shared by {conversation.owner_id.slice(0, 6) + '...' + conversation.owner_id.slice(-4) || "Anonymous"}</span>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="flex flex-wrap items-center gap-2 text-xs pl-12">
-                        <span className="font-medium text-blue-300">
-                          {conversation.sharedBy || "Anonymous"}
-                        </span>
-                        <span className="text-gray-400">•</span>
-                        <span className="text-gray-300">{formatDistance(new Date(conversation.sharedAt || Date.now()), new Date(), { addSuffix: true })}</span>
+                      <div className="px-6">
+                        <button
+                          onClick={() => router.push(`/chat/${conversation._id}`)}
+                          className="p-3 w-16 h-16 flex items-center justify-center text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-all rounded-full"
+                        >
+                          <HiOutlineExternalLink className="w-5 h-5" />
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   ))
                 ) : (
-                  <div className="text-center py-10 bg-blue-950/20 backdrop-blur-md rounded-xl border border-blue-500/10">
+                  <div className="text-center py-12 bg-blue-950/20 backdrop-blur-md rounded-xl border border-blue-500/10">
                     <div className="flex justify-center mb-4">
                       <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center">
                         <IoShare className="w-8 h-8 text-blue-400/60" />
                       </div>
                     </div>
-                    <p className="text-white text-base font-medium">No shared conversations yet</p>
-                    <p className="text-gray-300 mt-2 max-w-xs mx-auto text-sm">
+                    <p className="text-gray-100 text-lg">No public conversations yet</p>
+                    <p className="text-gray-300 mt-2 max-w-md mx-auto">
                       When users share their conversations with this character, they will appear here
                     </p>
                   </div>

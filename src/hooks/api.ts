@@ -648,3 +648,16 @@ export function useGitcoinGrant(grantId: string) {
     refetchOnReconnect: false,
   });
 }
+
+export function usePublicConversation(conversationId: string) {
+  return useQuery<ConversationHistory, Error>({
+    queryKey: ["publicConversation", conversationId],
+    queryFn: () => api.chat.getPublicConversation(conversationId),
+    enabled: !!conversationId,
+    retry: 1,
+    refetchInterval: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnMount: false,
+  });
+}

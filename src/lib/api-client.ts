@@ -283,6 +283,14 @@ export const api = {
       });
       return response.data.data as ConversationHistory[];
     },
+    getPublicConversation: async (conversationId: string): Promise<ConversationHistory> => {
+      const response = await apiProxy.post("", {
+        path: `/conversation/public/${conversationId}`,
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return response.data.data as ConversationHistory;
+    },
     createConversation: async (characterId: string, address: string): Promise<null> => {
       await apiProxy.post("", {
         path: `/conversations/${characterId}`,

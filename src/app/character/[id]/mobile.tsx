@@ -186,8 +186,8 @@ export default function MobileLayout(props: LayoutProps) {
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                <IoShare className="w-4 h-4" />
-                Shared
+                <RiMedalLine className="w-4 h-4" />
+                Donated
               </button>
             </div>
           </div>
@@ -463,11 +463,21 @@ export default function MobileLayout(props: LayoutProps) {
                   props.publicConversations.map((conversation) => (
                     <div
                       key={conversation._id}
-                      className="flex items-center w-full bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl overflow-hidden group"
+                      className={`flex items-center w-full bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl overflow-hidden group ${
+                        !isWalletConnected ? 'opacity-75' : ''
+                      }`}
                     >
                       <div 
-                        onClick={() => router.push(`/chat/${conversation._id}`)}
-                        className="flex-1 flex items-center gap-4 p-6 cursor-pointer hover:bg-blue-900/10 transition-colors"
+                        onClick={() => {
+                          if (!isWalletConnected) {
+                            // Optional: Show a message to connect wallet
+                            return;
+                          }
+                          router.push(`/chat/${conversation._id}`)
+                        }}
+                        className={`flex-1 flex items-center gap-4 p-6 ${
+                          isWalletConnected ? 'cursor-pointer hover:bg-blue-900/10' : 'cursor-not-allowed'
+                        } transition-colors`}
                       >
                         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                           <IoShare className="w-5 h-5 text-blue-400" />
@@ -483,8 +493,19 @@ export default function MobileLayout(props: LayoutProps) {
                       </div>
                       <div className="px-6">
                         <button
-                          onClick={() => router.push(`/chat/${conversation._id}`)}
-                          className="p-3 w-16 h-16 flex items-center justify-center text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-all rounded-full"
+                          onClick={() => {
+                            if (!isWalletConnected) {
+                              // Optional: Show a message to connect wallet
+                              return;
+                            }
+                            router.push(`/chat/${conversation._id}`)
+                          }}
+                          className={`p-3 w-16 h-16 flex items-center justify-center ${
+                            isWalletConnected 
+                              ? 'text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10' 
+                              : 'text-blue-400/40 cursor-not-allowed'
+                          } transition-all rounded-full`}
+                          disabled={!isWalletConnected}
                         >
                           <HiOutlineExternalLink className="w-5 h-5" />
                         </button>

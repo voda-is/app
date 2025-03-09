@@ -440,19 +440,29 @@ export default function DesktopLayout(props: LayoutProps) {
               {/* Public Conversations Section - Completely separate box */}
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 mt-8">
                 <h2 className="text-2xl font-semibold text-white mb-6 flex items-center gap-2">
-                  <IoShare className="w-6 h-6 text-blue-400" />
-                  Public Conversations
+                  <RiMedalLine className="w-6 h-6 text-blue-400" />
+                  Donated Conversations
                 </h2>
                 <div className="space-y-4">
                   {props.publicConversations && props.publicConversations.length > 0 ? (
                     props.publicConversations.map((conversation) => (
                       <div
                         key={conversation._id}
-                        className="flex items-center w-full bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl overflow-hidden group"
+                        className={`flex items-center w-full bg-blue-950/30 backdrop-blur-md border border-blue-500/20 rounded-xl overflow-hidden group ${
+                          !isWalletConnected ? 'opacity-75' : ''
+                        }`}
                       >
                         <div 
-                          onClick={() => router.push(`/chat/${conversation._id}`)}
-                          className="flex-1 flex items-center gap-4 p-6 cursor-pointer hover:bg-blue-900/10 transition-colors"
+                          onClick={() => {
+                            if (!isWalletConnected) {
+                              // Optional: Show a message to connect wallet
+                              return;
+                            }
+                            router.push(`/chat/${conversation._id}`)
+                          }}
+                          className={`flex-1 flex items-center gap-4 p-6 ${
+                            isWalletConnected ? 'cursor-pointer hover:bg-blue-900/10' : 'cursor-not-allowed'
+                          } transition-colors`}
                         >
                           <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                             <IoShare className="w-5 h-5 text-blue-400" />
@@ -470,8 +480,19 @@ export default function DesktopLayout(props: LayoutProps) {
                         </div>
                         <div className="px-6">
                           <button
-                            onClick={() => router.push(`/chat/${conversation._id}`)}
-                            className="p-3 w-16 h-16 flex items-center justify-center text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10 transition-all rounded-full"
+                            onClick={() => {
+                              if (!isWalletConnected) {
+                                // Optional: Show a message to connect wallet
+                                return;
+                              }
+                              router.push(`/chat/${conversation._id}`)
+                            }}
+                            className={`p-3 w-16 h-16 flex items-center justify-center ${
+                              isWalletConnected 
+                                ? 'text-blue-400/70 hover:text-blue-400 hover:bg-blue-400/10' 
+                                : 'text-blue-400/40 cursor-not-allowed'
+                            } transition-all rounded-full`}
+                            disabled={!isWalletConnected}
                           >
                             <HiOutlineExternalLink className="w-5 h-5" />
                           </button>

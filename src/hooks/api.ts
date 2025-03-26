@@ -26,6 +26,10 @@ export const useLocalUserProfile = (): LocalUserProfile | null => {
     : null;
 
   if (status === 'unauthenticated') {
+    if (!address) {
+      return null;
+    }
+
     return {
       id: walletUserId!,
       provider: 'crypto_wallet',

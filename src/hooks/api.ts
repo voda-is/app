@@ -50,6 +50,14 @@ export const useLocalUserProfile = (): LocalUserProfile | null => {
   }
 };
 
+// Add this configuration object to use across your hooks
+const defaultQueryOptions = {
+  retry: false,        // Disable automatic retries
+  refetchOnWindowFocus: false,  // Prevent refetching when window regains focus
+  refetchOnMount: false,        // Prevent refetching when component mounts
+  staleTime: 5 * 60 * 1000,     // Consider data fresh for 5 minutes
+};
+
 // User related hooks
 export function useUser() {
   const localUserProfile = useLocalUserProfile();
@@ -57,6 +65,7 @@ export function useUser() {
     queryKey: ["user"],
     queryFn: () => api.user.register(localUserProfile!),
     enabled: !!localUserProfile,
+    ...defaultQueryOptions,  // Apply the default options
   });
 }
 
@@ -66,6 +75,7 @@ export function useCharacters(limit: number, offset: number) {
     queryKey: ["characters"],
     queryFn: () => api.characters.list(limit, offset),
     enabled: true,
+    ...defaultQueryOptions,
   });
 }
 
@@ -74,6 +84,7 @@ export function useCharacter(id: string | undefined) {
     queryKey: ["characters", id],
     queryFn: () => api.characters.get(id!),
     enabled: !!id,
+    ...defaultQueryOptions,
   });
 }
 
@@ -296,6 +307,7 @@ export function useUrl(urlId: string) {
     queryKey: ["url", urlId],
     queryFn: () => api.url.get(urlId, localUserProfile!.id),
     enabled: !!urlId && !!localUserProfile,
+    ...defaultQueryOptions,
   });
 }
 
@@ -303,6 +315,7 @@ export function useGitcoinGrants() {
   return useQuery<GitcoinGrant[], Error>({
     queryKey: ["gitcoinGrants"],
     queryFn: () => api.gitcoin.getGrants(),
+    ...defaultQueryOptions,
   });
 }
 
@@ -311,6 +324,7 @@ export function useGitcoinGrant(grantId: string) {
     queryKey: ["gitcoinGrant", grantId],
     queryFn: () => api.gitcoin.getGrant(grantId),
     enabled: !!grantId, 
+    ...defaultQueryOptions,
   });
 }
 
@@ -319,6 +333,7 @@ export function usePublicConversation(conversationId: string) {
     queryKey: ["publicConversation", conversationId],
     queryFn: () => api.chat.getPublicConversation(conversationId),
     enabled: !!conversationId,
+    ...defaultQueryOptions,
   });
 }
 
@@ -338,6 +353,7 @@ export function useCharactersWithFilters(
       return studioApi.character.listWithFilters(userId, hasImage, hasRoleplayEnabled, limit, offset);
     },
     enabled: !!userId,
+    ...defaultQueryOptions,
   });
 }
 
@@ -355,6 +371,7 @@ export function useCharactersWithFiltersCount(
       return studioApi.character.countWithFilters(userId, hasImage, hasRoleplayEnabled);
     },
     enabled: !!userId,
+    ...defaultQueryOptions,
   });
 }
 
@@ -369,6 +386,7 @@ export function useSystemConfigs() {
       return studioApi.systemConfig.getAll(userId);
     },
     enabled: !!userId,
+    ...defaultQueryOptions,
   });
 }
 
@@ -389,6 +407,7 @@ export function useCreateSystemConfig() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['systemConfigs'] });
     },
+    ...defaultQueryOptions,
   });
 }
 

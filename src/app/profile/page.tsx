@@ -64,7 +64,7 @@ export default function ProfilePage() {
   }
 
   const layoutProps: ProfileLayoutProps = {
-    user,
+    user: user || null,
     characterListBrief: characterListBrief || null,
   };
 

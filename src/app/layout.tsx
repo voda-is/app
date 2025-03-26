@@ -4,6 +4,7 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import { WalletProvider } from '@/providers/WalletProvider';
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,9 +27,11 @@ export default function RootLayout({
           data-website-id="921b7b12-1961-4bc8-8eb1-bb0cfe1d26a7" 
           strategy="afterInteractive"
         /> */}
-        <WalletProvider>
-          <main>{children}</main>
-        </WalletProvider>
+        <SessionProvider>
+          <WalletProvider>
+            <main>{children}</main>
+          </WalletProvider>
+        </SessionProvider>
       </body>
     </html>
   );

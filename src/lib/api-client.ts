@@ -1,137 +1,28 @@
-import axios, { AxiosError } from "axios";
-import {
-  GenericResponseSchema,
-  UserSchema,
-  UserPayloadSchema,
-  validateResponse,
-  CharacterSchema,
-  ConversationHistory,
-  ChatroomMessages,
-  Chatroom,
-  User,
-  UserPoints,
-  MessageBrief,
-  FunctionCall,
-  TokenInfo,
-  TokenInfoSchema,
-  CharacterListBrief,
-  CharacterListBriefSchema,
-  Url,
-  UserPayload,
-  OAuthUserSchema,
-  ConversationHistorySchema,
-  GitcoinGrant,
-  GitcoinGrantSchema,
-} from "./validations";
 import { z } from "zod";
 import { UserProfilesCache } from "./userProfilesCache";
 import { useAccount } from 'wagmi';
+import { apiProxy } from "./api-proxy";
+import { blake3Hash } from "./blake3";
+import { uint8ArrayToHex } from "./utils";
+import { 
+  CharacterListBrief, CharacterListBriefSchema, 
+  ConversationMemory, GitcoinGrant, GitcoinGrantSchema, 
+  Url, User 
+} from "./types";
 
-class APIError extends Error {
-  constructor(message: string, public status: number, public code: string) {
-    super(message);
-    this.name = "APIError";
-  }
+export interface LocalUserProfile {
+  id: string;
+  provider: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  image: string;
 }
-
-export const apiProxy = axios.create({
-  baseURL: "/api/proxy",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Add telegram user data to every request
-apiProxy.interceptors.request.use((config) => {
-  const originalUrl = config.url;
-  config.url = "";
-  config.data = {
-    path: originalUrl,
-    method: config.method?.toUpperCase(),
-    data: config.data,
-  };
-
-  return config;
-});
-
-// Response validation and error handling
-apiProxy.interceptors.response.use(
-  (response) => {
-    if (!response.data) {
-      throw new Error("No response data");
-    }
-
-    // if response is an array buffer or SSE, return it as is
-    if (
-      response.headers["content-type"]?.includes("audio/") ||
-      response.headers["content-type"]?.includes("text/event-stream")
-    ) {
-      return response;
-    }
-
-    try {
-      const genericResponse = GenericResponseSchema.parse(response.data);
-      if (
-        response.config.url?.includes("/user") &&
-        response.config.method === "GET"
-      ) {
-        response.data = validateResponse(genericResponse, UserSchema);
-      }
-
-      if (
-        response.config.url?.includes("/characters") &&
-        response.config.method === "GET"
-      ) {
-        response.data = validateResponse(
-          genericResponse,
-          z.array(CharacterSchema)
-        );
-      }
-
-      // if status is not 2xx, throw an error
-      if (genericResponse.status < 200 || genericResponse.status >= 300) {
-        throw new APIError(
-          genericResponse.message,
-          genericResponse.status,
-          "API_ERROR"
-        );
-      }
-
-      return response;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new APIError("Invalid response data", 500, "VALIDATION_ERROR");
-      }
-      throw error;
-    }
-  },
-  (error: AxiosError<any>) => {
-    if (error.response?.data) {
-      try {
-        const errorResponse = GenericResponseSchema.parse(error.response.data);
-        console.log("errorResponse", errorResponse);
-        throw new APIError(
-          errorResponse.message,
-          errorResponse.status,
-          "API_ERROR"
-        );
-      } catch {
-        console.log("catch", error);
-        throw new APIError(
-          error.response.data.message || "An error occurred",
-          error.response.status || 500,
-          "UNKNOWN_ERROR"
-        );
-      }
-    }
-    throw error;
-  }
-);
 
 // API interface
 export const api = {
   url: {
-    get: async (urlId: string, address: string): Promise<{
+    get: async (urlId: string, userId: string): Promise<{
       url: Url,
       referral_success: boolean,
     }> => {
@@ -139,20 +30,20 @@ export const api = {
         path: `/url/${urlId}`,
         method: "GET",
         data: {
-          user_id: address,
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    create: async (path: string, urlType: string, address: string): Promise<string> => {
+    create: async (path: string, urlType: string, userId: string): Promise<string> => {
       const response = await apiProxy.post("", {
         path: `/url`,
         method: "POST",
         data: {
           path,
           url_type: urlType,
-          user_id: address,
+          user_id: userId,
           stripUserId: true,
         },
       });
@@ -178,21 +69,21 @@ export const api = {
       return GitcoinGrantSchema.parse(response.data.data);
     },
   },
+
   user: {
-    register: async (address: string) => {
+    register: async (localUserProfile: LocalUserProfile) => {
       const cache = new UserProfilesCache();
       
-      const name = `0x${address.split("0x")[1].slice(0, 4)}`;
       const response = await apiProxy.post("", {
         path: "/user",
         method: "POST",
         data: {
-          user_id: address,
+          user_id: localUserProfile.id,
           network_name: 'sei',
-          username: name,
-          first_name: name,
-          last_name: '',
-          profile_photo: '',
+          username: localUserProfile.username,
+          first_name: localUserProfile.firstName,
+          last_name: localUserProfile.lastName,
+          profile_photo: localUserProfile.image,
         },
       });
 
@@ -200,47 +91,38 @@ export const api = {
         throw new Error("Failed to register user");
       }
 
+      const userIdHash = blake3Hash(new TextEncoder().encode(localUserProfile.id));
+      const userIdHashHex = uint8ArrayToHex(userIdHash);
+
       const userResponse = await apiProxy.post("", {
-        path: "/user",
+        path: `/user/${userIdHashHex}`,
         method: "GET",
-        data: { user_id: address },
+        data: { ignoreToken: true },
       });
 
       cache.addUser(userResponse.data.data);
 
       return userResponse.data.data;
     },
-    getUsers: async (userIds: string[], address: string): Promise<User[]> => {
+    getUsers: async (userIds: string[], userId: string): Promise<User[]> => {
       const response = await apiProxy.post("", {
         path: "/users",
         method: "POST",
         data: {
           user_ids: userIds,
-          user_id: address,
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getUserPoints: async (address: string): Promise<UserPoints> => {
+    claimFreePoints: async (userId: string): Promise<null> => {
+      const userIdHash = blake3Hash(new TextEncoder().encode(userId));
+      const userIdHashHex = uint8ArrayToHex(userIdHash);
       const response = await apiProxy.post("", {
-        path: "/user/points",
-        method: "GET",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    claimFreePoints: async (address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: "/user/points/free",
+        path: `/user/claim_points/${userIdHashHex}`,
         method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
+        data: { ignoreToken: true, },
       });
       return response.data.data;
     },
@@ -252,10 +134,7 @@ export const api = {
         path: "/characters",
         method: "GET",
         data: {
-          limit,
-          offset,
-          only_roleplay: true,
-          only_chatroom: true,
+          limit, offset,
           ignoreToken: true,
         },
       });
@@ -275,25 +154,25 @@ export const api = {
   },
 
   chat: {
-    getPublicConversations: async (characterId: string): Promise<ConversationHistory[]> => {
+    getPublicConversations: async (characterId: string): Promise<ConversationMemory[]> => {
       const response = await apiProxy.post("", {
-        path: `/conversations/public/${characterId}`,
+        path: `/memories/public/${characterId}`,
         method: "GET",
         data: { ignoreToken: true },
       });
-      return response.data.data as ConversationHistory[];
+      return response.data.data as ConversationMemory[];
     },
-    getPublicConversation: async (conversationId: string): Promise<ConversationHistory> => {
+    getPublicConversation: async (conversationId: string): Promise<ConversationMemory> => {
       const response = await apiProxy.post("", {
-        path: `/conversation/public/${conversationId}`,
+        path: `/memory/public/${conversationId}`,
         method: "GET",
         data: { ignoreToken: true },
       });
-      return response.data.data as ConversationHistory;
+      return response.data.data as ConversationMemory;
     },
     createConversation: async (characterId: string, address: string): Promise<null> => {
       await apiProxy.post("", {
-        path: `/conversations/${characterId}`,
+        path: `/memories/${characterId}`,
         method: "POST",
         data: {
           user_id: address,
@@ -305,7 +184,7 @@ export const api = {
     },
     getCharacterListBrief: async (address: string): Promise<CharacterListBrief[]> => {
       const response = await apiProxy.post("", {
-        path: "/conversations/character_list",
+        path: "/memories/character_list",
         method: "GET",
         data: {
           user_id: address,
@@ -314,67 +193,43 @@ export const api = {
       });
       return z.array(CharacterListBriefSchema).parse(response.data.data);
     },
-    deleteConversation: async (conversationId: string, address: string): Promise<null> => {
+    deleteConversation: async (conversationId: string, userId: string): Promise<null> => {
       const response = await apiProxy.post("", {
-        path: `/conversation/${conversationId}`,
+        path: `/memory/${conversationId}`,
         method: "DELETE",
         data: {
-          user_id: address,
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getConversationHistoryIdOnly: async (characterId: string, address: string): Promise<string[]> => {
+    getConversation: async (conversationId: string, userId: string): Promise<ConversationMemory> => {
       const response = await apiProxy.post("", {
-        path: `/conversations/id_only/${characterId}`,
+        path: `/memory/${conversationId}`,
         method: "GET",
         data: {
-          user_id: address,
-          stripUserId: true,
-          limit: 10,
-        },
-      });
-      return response.data.data["conversation_ids"];
-    },
-    getConversation: async (conversationId: string, address: string): Promise<ConversationHistory> => {
-      const response = await apiProxy.post("", {
-        path: `/conversation/${conversationId}`,
-        method: "GET",
-        data: {
-          user_id: address,
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    sendMessage: async (conversationId: string, text: string, address: string): Promise<null> => {
+    getConversations: async (characterId: string, userId: string): Promise<ConversationMemory[]> => {
       const response = await apiProxy.post("", {
-        path: `/chat/${conversationId}`,
-        method: "POST",
+        path: `/memories/${characterId}`,
+        method: "GET",
         data: {
-          message: text,
-          user_id: address,
+          user_id: userId,
           stripUserId: true,
         },
       });
-      return null;
-    },
-    regenerateLastMessage: async (conversationId: string, address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/regenerate_last_message/${conversationId}`,
-        method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return null;
+      return response.data.data;
     },
   },
 
   tts: {
-    generateSpeech: async (text: string, characterId: string, address: string): Promise<Blob> => {
+    generateSpeech: async (text: string, characterId: string, userId: string): Promise<Blob> => {
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: {
@@ -385,7 +240,7 @@ export const api = {
             path: `/tts/${characterId}`,
             method: "POST",
             data: {
-              user_id: address,
+              user_id: userId,
               stripUserId: true,
               message: text,
               isStream: true,
@@ -406,154 +261,27 @@ export const api = {
     },
   },
 
-  chatroom: {
-    generateFromCharacter: async (characterId: string, address: string): Promise<Chatroom> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/generate_from_character/${characterId}`,
+  runtime: {
+    sendMessage: async (conversationId: string, text: string, userId: string) => {
+      await apiProxy.post("", {
+        path: `/runtime/chat/${conversationId}`,
         method: "POST",
         data: {
-          user_id: address,
+          message: text,
+          user_id: userId,
           stripUserId: true,
         },
       });
-      return response.data.data;
     },
-    getChatroom: async (chatroomId: string): Promise<Chatroom> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/${chatroomId}`,
-        method: "GET",
-        data: { ignoreToken: true },
-      });
-      return response.data.data;
-    },
-    maybeCreateChatroomMessages: async (chatroomId: string, address: string): Promise<boolean> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/create_message/${chatroomId}`,
+    regenerateLastMessage: async (conversationId: string, userId: string) => {
+      await apiProxy.post("", {
+        path: `/runtime/regenerate_last_message/${conversationId}`,
         method: "POST",
         data: {
-          user_id: address,
+          user_id: userId,
           stripUserId: true,
         },
       });
-      return response.data.data["is_created"];
     },
-    getChatroomMessages: async (chatroomId: string, address: string): Promise<ChatroomMessages> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/messages/${chatroomId}`,
-        method: "GET",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    joinChatroom: async (chatroomId: string, address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/join/${chatroomId}`,
-        method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    leaveChatroom: async (chatroomId: string, address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/leave/${chatroomId}`,
-        method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    getHijackCost: async (chatroomId: string, address: string): Promise<any> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/hijack_cost/${chatroomId}`,
-        method: "GET",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    registerHijack: async (characterId: string, hijackCost: { cost: number }, address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/register_hijack/${characterId}`,
-        method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-          amount: hijackCost.cost,
-        },
-      });
-      return response.data;
-    },
-    hijackChatroom: async (characterId: string, address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/hijack/${characterId}`,
-        method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    chat: async (chatroomId: string, message: string, address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/chat/${chatroomId}`,
-        method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-          message,
-        },
-      });
-      return response.data.data;
-    },
-    regenerateLastMessage: async (chatroomId: string, address: string): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/regenerate_last_message/${chatroomId}`,
-        method: "POST",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    getMessage: async (messageId: string, address: string): Promise<ChatroomMessages> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/message/${messageId}`,
-        method: "GET",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    getMessageBrief: async (chatroomId: string, address: string): Promise<MessageBrief[]> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/messages_brief/${chatroomId}`,
-        method: "GET",
-        data: {
-          user_id: address,
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-  },
-};
-
-// Hook to get the current user's address with sei: prefix
-export const useUserId = () => {
-  const { address } = useAccount();
-  return address ? `crypto_wallet:sei:${address}` : null;
+  }
 };

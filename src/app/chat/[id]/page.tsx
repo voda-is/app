@@ -1,59 +1,61 @@
 'use client';
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
+import { useState, useEffect, useMemo } from "react";
 
 import { 
   useCharacter, 
+  useClaimFreePoints, 
   useConversation, 
   useRegenerateLastMessage, 
   useSendMessage, 
-  useUser, 
-  useUserPoints,
-  useGitcoinGrants
+  useUser,
 } from '@/hooks/api';
 
 import { LoadingScreen } from "@/components/LoadingScreen";
 
 import { ChatContext, Message } from "@/lib/chat-context";
+import { Character, ConversationMemory } from "@/lib/types";
 import { getAvailableBalance, getNextClaimTime } from "@/lib/utils";
-import { api, useUserId } from "@/lib/api-client";
 
 import MobileLayout from "./mobile";
 import DesktopLayout from "./desktop";
-import { Character, FunctionCallArguments, GitcoinGrant } from "@/lib/validations";
 
 export interface ChatLayoutProps {
+
+  // basic proprs
   id: string;
   user: any;
   character: Character;
-  conversation: any;
-  messages: any[];
-  setMessages: (messages: any[]) => void;
+  conversation: ConversationMemory;
+
+  // states
+  messages: Message[];
+  setMessages: (messages: Message[]) => void;
+
   inputMessage: string;
   setInputMessage: (message: string) => void;
-  showTypingIndicator: boolean;
-  disableActions: boolean;
+
+  isPointsExpanded: boolean;
+  setIsPointsExpanded: (expanded: boolean) => void;
+
+  // react query actions
   handleSendMessage: () => void;
   handleRegenerate: () => void;
   handleRetry: () => void;
   handleRate: (rating: number) => void;
-  userPoints: any;
+  claimFreePoints: () => void;
+
+  // memo
   claimStatus: { canClaim: boolean; timeLeft: string };
-  isPointsExpanded: boolean;
-  setIsPointsExpanded: (expanded: boolean) => void;
-  handleClaimPoints: () => void;
-  hasEnoughPoints: () => boolean;
-  gitcoinGrants?: GitcoinGrant[];
-  functionCalls: FunctionCallArguments[];
+  hasEnoughPoints: boolean;
+  showTypingIndicator: boolean;
+  disableActions: boolean;
 }
 
 export default function ChatPage() {
   const params = useParams();
   const id = params?.id as string;
-  const userId = useUserId();
-  const queryClient = useQueryClient();
 
   // Fetch initial data
   const { data: user, isLoading: userLoading } = useUser();
@@ -62,6 +64,27 @@ export default function ChatPage() {
   const { data: character, isLoading: characterLoading } = useCharacter(characterId);
 
   const chatContext = new ChatContext(character!, user!);
+  const [inputMessage, setInputMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  // Points related state and data
+  const [isPointsExpanded, setIsPointsExpanded] = useState(false);
+
+  const isReady = useMemo(() => {
+    return !userLoading && !characterLoading && !historyLoading;
+  }, [userLoading, characterLoading, historyLoading]);
+
+  const hasEnoughPoints = useMemo(() => {
+    return isReady && user!.points && getAvailableBalance(user!.points) >= 1;
+  }, [user, isReady]);
+
+  const claimStatus = useMemo(() => {
+    return isReady && user!.points 
+      ? getNextClaimTime(user!.points.free_balance_claimed_at)
+      : { canClaim: false, timeLeft: "Loading..." };
+  }, [user, isReady]);
+
+  /* Set set messages related */
   const { mutate: sendMessage, isPending: sendMessagePending, isSuccess: sendMessageSuccess } = useSendMessage(id, (error) => {
     console.error('Failed to send message:', error);
     setMessages(chatContext.markLastMessageAsError(messages));
@@ -71,55 +94,14 @@ export default function ChatPage() {
     console.error('Failed to regenerate message:', error);
     setMessages(chatContext.markLastMessageAsError(messages));
   });
-
-  const [isReady, setIsReady] = useState(false);
-  const [showTypingIndicator, setShowTypingIndicator] = useState(false);
-  const [inputMessage, setInputMessage] = useState("");
-  const [disableActions, setDisableActions] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
-
-  // Points related state and data
-  const [isPointsExpanded, setIsPointsExpanded] = useState(false);
-  const { data: userPoints } = useUserPoints();
-  const claimStatus = userPoints 
-    ? getNextClaimTime(userPoints.free_balance_claimed_at)
-    : { canClaim: false, timeLeft: "Loading..." };
-
-  // Add Gitcoin grants query
-  const { data: gitcoinGrants } = useGitcoinGrants();
-  const hasGitcoinTag = character?.tags?.includes("gitcoin") ?? false;
-
-  // Data Ready
-  useEffect(() => {
-    if (!userLoading && !characterLoading && !historyLoading) {
-      setIsReady(true);
-    }
-  }, [userLoading, characterLoading, historyLoading]);
-
-
-  // Set initial messages when conversation loads
   useEffect(() => {
     if (isReady && conversation) {
       setMessages(chatContext.injectHistoryMessages(conversation.history, conversation.created_at));
     }
   }, [conversation, isReady]);
- 
-  useEffect(() => {
-    if (sendMessagePending || regenerateLastMessagePending) {
-      setShowTypingIndicator(true);
-      setDisableActions(true);
-    } else {
-      setShowTypingIndicator(false);
-      setDisableActions(false);
-    }
-  }, [sendMessagePending, regenerateLastMessagePending]);
-
-  // Handle Send Message
   const handleSendMessage = async () => {    
-    if (!hasEnoughPoints()) {
-      return;
-    }
-    
+    if (!hasEnoughPoints) { return; }
+
     const trimmedMessage = inputMessage.trim();
     if (!trimmedMessage) return;
 
@@ -129,9 +111,7 @@ export default function ChatPage() {
   };
 
   const handleRegenerate = async () => {
-    if (!hasEnoughPoints()) {
-      return;
-    }
+    if (!hasEnoughPoints) { return; }
 
     setInputMessage("");    
     setMessages(chatContext.popLastMessage(messages));
@@ -144,51 +124,51 @@ export default function ChatPage() {
     sendMessage(lastMessage.message);
   };
 
+  /* Set show typing indicator related */
+  const showTypingIndicator = useMemo(() => {
+    return sendMessagePending || regenerateLastMessagePending;
+  }, [sendMessagePending, regenerateLastMessagePending]);
+
+  const disableActions = useMemo(() => {
+    return sendMessagePending || regenerateLastMessagePending;
+  }, [sendMessagePending, regenerateLastMessagePending]);
+
+  
   const handleRate = (rating: number) => {
     console.log(`Rated: ${rating} stars`);
     // Handle rating logic
   };
-
-  const handleClaimPoints = async () => {
-    try {
-      await api.user.claimFreePoints(userId as string);
-      queryClient.invalidateQueries({ queryKey: ["userPoints"] });
-    } catch (error) {
-      console.error("Failed to claim points:", error);
-    }
-  };
-
-  const hasEnoughPoints = () => {
-    return userPoints!! && getAvailableBalance(userPoints) >= 1;
-  };
+  
+  const { mutate: claimFreePoints } = useClaimFreePoints();
 
   if (!isReady) {
     return <LoadingScreen />;
   }
 
+  /* !DATA ALL LOADED! */
   const layoutProps: ChatLayoutProps = {
     id,
     user,
     character: character as Character,
-    conversation,
+    conversation: conversation as ConversationMemory,
+
     messages,
     setMessages,
     inputMessage,
     setInputMessage,
-    showTypingIndicator,
-    disableActions,
+    isPointsExpanded,
+    setIsPointsExpanded,
+
     handleSendMessage,
     handleRegenerate,
     handleRetry,
     handleRate,
-    userPoints,
+    claimFreePoints,
+
     claimStatus,
-    isPointsExpanded,
-    setIsPointsExpanded,
-    handleClaimPoints,
     hasEnoughPoints,
-    gitcoinGrants: hasGitcoinTag ? gitcoinGrants : undefined,
-    functionCalls: conversation?.function_calls ?? [],
+    showTypingIndicator,
+    disableActions,
   };
 
   return (

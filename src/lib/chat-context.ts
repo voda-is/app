@@ -1,6 +1,6 @@
 import { replacePlaceholders } from "./formatText";
 import { UserProfilesCache } from "./userProfilesCache";
-import { Character, ChatHistoryPair, User } from "./validations";
+import { Character, HistoryMessagePair, User } from "./types";
 
 export interface Message {
   message: string;
@@ -14,10 +14,9 @@ export interface Message {
   enableVoice: boolean;
 
   isLatestReply: boolean;
-  evaluation?: string;
   response?: string;
 }
-// TODO: maybe we can merge these two classes
+
 export class ChatContext {
   private character: Character;
   private user: User;
@@ -29,7 +28,7 @@ export class ChatContext {
 
   private injectFirstMessage(createdAt: number): Message {
     return {
-      message: replacePlaceholders(this.character.prompts.first_message, this.character.name, this.user.first_name),
+      message: replacePlaceholders(this.character.prompts.first_message, this.character.name, this.user.profile.first_name),
       createdAt,
 
       user: this.user,
@@ -41,11 +40,11 @@ export class ChatContext {
     };
   }
 
-  public injectHistoryMessages(messages: ChatHistoryPair[], createdAt: number) {
+  public injectHistoryMessages(messages: HistoryMessagePair[], createdAt: number) {
     let m = [this.injectFirstMessage(createdAt)];
     messages.forEach((pair) => {
       m.push({
-        message: pair[0].text,
+        message: pair[0].content,
         createdAt: pair[0].created_at,
 
         user: this.user,
@@ -57,15 +56,14 @@ export class ChatContext {
         isLatestReply: false,
       });
 
-      const parsed = parseResponse(pair[1].text);
       m.push({
-        message: parsed.response || pair[1].text,
-        evaluation: parsed.evaluation,
+        message: pair[1].content,
         createdAt: pair[1].created_at,
 
         user: this.user,
         character: this.character,
         role: "assistant",
+
         status: "success",
         enableVoice: this.character.metadata.enable_voice,
         isLatestReply: false,
@@ -80,7 +78,7 @@ export class ChatContext {
     const m = [...pastMessage];
     m.push({
       message,
-      createdAt: Date.now() * 1000, // unix timestamp in seconds
+      createdAt: Date.now() / 1000, // unix timestamp in seconds
 
       user: this.user,
       character: this.character,
@@ -103,144 +101,5 @@ export class ChatContext {
   public markLastMessageAsError(messages: Message[]) {
     messages[messages.length - 1].status = "error";
     return messages;
-  }
-}
-
-export class ChatContextWithUnknownUser {
-  private character: Character;
-  private userCache: UserProfilesCache;
-  private defaultUserId: string;
-
-  constructor(character: Character, defaultUserId: string) {
-    this.character = character;
-    this.defaultUserId = defaultUserId;
-
-    // ASSUME usercahce is ensured
-    this.userCache = new UserProfilesCache();
-  }
-
-  public injectFirstMessage(userId: string, createdAt: number): Message {
-    const user = this.userCache.getUser(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    return {
-      message: replacePlaceholders(this.character.prompts.first_message, this.character.name, user.first_name),
-      createdAt,
-
-      user: user,
-      character: this.character,
-      role: "assistant",
-      status: "success",
-      enableVoice: this.character.metadata.enable_voice,
-      isLatestReply: false,
-    };
-  }
-
-  public injectHistoryMessages(messages: ChatHistoryPair[], createdAt: number): Message[] {
-    let m: Message[] = [];
-    if (messages.length) {
-      m = [this.injectFirstMessage(messages[0][0].user_id, createdAt)];
-    } else {
-      m = [this.injectFirstMessage(this.defaultUserId, createdAt)];
-    }
-
-    messages.forEach((pair) => {
-      const userId = pair[0].user_id;
-      const user = this.userCache.getUser(userId);
-      if (!user) {
-        throw new Error("User not found");
-      }
-
-      m.push({
-        message: pair[0].text,
-        createdAt: pair[0].created_at,
-
-        user: user,
-        character: this.character,
-        role: "user",
-        status: "success",
-        enableVoice: this.character.metadata.enable_voice,
-        isLatestReply: false,
-      });
-
-      const parsed = parseResponse(pair[1].text);
-      m.push({
-        message: parsed.response || pair[1].text,
-        evaluation: parsed.evaluation,
-        createdAt: pair[1].created_at,
-
-        user: user,
-        character: this.character,
-        role: "assistant",
-        status: "success",
-        enableVoice: this.character.metadata.enable_voice,
-        isLatestReply: false,
-      });
-    });
-
-    m[m.length - 1].isLatestReply = true;
-    return m;
-  }
-
-  public newUserMessage(pastMessage: Message[], message: string, userId: string): Message[] {
-    const m = [...pastMessage];
-    const user = this.userCache.getUser(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    m.push({
-      message,
-      createdAt: Date.now() * 1000, // unix timestamp in seconds
-
-      user: user,
-      character: this.character,
-      role: "user",
-      status: "pending",
-      enableVoice: this.character.metadata.enable_voice,
-      isLatestReply: false,
-    });
-
-    return m;
-  }
-
-  public popLastMessage(messages: Message[]): Message[] {
-    const m = [...messages];
-    m.pop();
-    return m;
-  }
-
-  public markLastMessageAsError(messages: Message[]): Message[] {
-    messages[messages.length - 1].status = "error";
-    return messages;
-  }
-}
-
-function parseResponse(text: string): { evaluation?: string; response?: string } {
-  try {
-    const evaluationMatch = text.match(/<pitch_analysis>([\s\S]*?)<\/pitch_analysis>/);
-    const responseMatch = text.match(/<response>([\s\S]*?)<\/response>/);
-
-    // If neither tag is found, return the original text as the response
-    if (!evaluationMatch && !responseMatch) {
-      return {
-        response: text,
-        evaluation: undefined
-      };
-    }
-
-    return {
-      evaluation: evaluationMatch ? evaluationMatch[1].trim() : undefined,
-      response: responseMatch ? responseMatch[1].trim() : undefined
-    };
-  } catch (error) {
-    console.warn('Failed to parse response format:', error);
-    // Fallback to treating the entire text as the response
-    return {
-      response: text,
-      evaluation: undefined
-    };
   }
 }

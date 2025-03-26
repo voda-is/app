@@ -1,4 +1,4 @@
-import { UserPoints } from './validations';
+import { UserPoints } from './types';
 
 export async function hashText(text: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -69,4 +69,34 @@ export function getNextClaimTime(lastClaimTime: number): {
     canClaim: false,
     timeLeft: `${hours}h ${minutes}m`,
   };
+}
+
+/**
+ * Converts a Uint8Array to a hexadecimal string
+ * @param bytes The Uint8Array to convert
+ * @returns A hexadecimal string representation
+ */
+export function uint8ArrayToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
+ * Converts a hexadecimal string to a Uint8Array
+ * @param hex The hexadecimal string to convert
+ * @returns A Uint8Array representation
+ */
+export function hexToUint8Array(hex: string): Uint8Array {
+  // Ensure even length
+  if (hex.length % 2 !== 0) {
+    hex = '0' + hex;
+  }
+  
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  
+  return bytes;
 }

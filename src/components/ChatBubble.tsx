@@ -10,8 +10,6 @@ import { extractText } from "@/lib/formatText";
 import { ProgressBarButton } from "./ProgressBarButton";
 import Image from "next/image";
 import { Message } from "@/lib/chat-context";
-import { FiChevronDown } from 'react-icons/fi';
-import ReactMarkdown from 'react-markdown';
 
 interface ChatBubbleProps {
   message: Message;
@@ -155,7 +153,7 @@ export function ChatBubble({
             <div className="relative w-6 h-6 md:w-8 md:h-8 flex-shrink-0">
               <Image
                 src={
-                  (isUser ? message.user.profile_photo : message.character.avatar_image_url) || "/bg2.png"
+                  (isUser ? message.user.profile.avatar : message.character.avatar_image_url) || "/bg2.png"
                 }
                 alt={isUser ? "User" : "Assistant"}
                 fill
@@ -257,43 +255,6 @@ export function ChatBubble({
               )}
             </div>
           </div>
-
-          {/* Evaluation Section */}
-          {message.evaluation && !isUser && (
-            <div className="w-full border-t border-white/10 pt-2 mt-2">
-              <button
-                onClick={() => setIsEvaluationExpanded(!isEvaluationExpanded)}
-                className="w-full flex items-center gap-1 text-xs text-white/70 hover:text-white transition-colors"
-              >
-                <FiChevronDown 
-                  className={`w-4 h-4 transition-transform duration-300 ${
-                    isEvaluationExpanded ? 'rotate-180' : ''
-                  }`}
-                />
-                {isEvaluationExpanded ? 'Hide Evaluation' : 'Show Evaluation'}
-              </button>
-              
-              <AnimatePresence>
-                {isEvaluationExpanded && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-2">
-                      <div className="prose prose-sm max-w-none text-white prose-headings:text-white prose-headings:font-semibold prose-headings:mt-0 prose-p:my-1 prose-li:my-0 prose-strong:text-white/90">
-                        <ReactMarkdown className={`whitespace-pre-wrap overflow-hidden`}>
-                          {message.evaluation}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
 
           {/* Action Buttons - Separate Section */}
           {!isUser && message.status === "success" && message.isLatestReply && (

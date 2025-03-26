@@ -51,8 +51,8 @@ function TabContent({ activeTab, props, router }: {
     </>
   ) : (
     <div className="space-y-4">
-      {props.userPoints && (
-        <PointsCard userPoints={props.userPoints} />
+      {props.user?.points && (
+        <PointsCard userPoints={props.user?.points} />
       )}
       <ReferralCampaignCard />
       <PointsSystemGuide />
@@ -96,17 +96,17 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
           {/* Profile Info */}
           <div className="text-center">
             <div className="relative w-32 h-32 mx-auto mb-4">
-              {props.isWalletConnected && props.user?.profile_photo && !imageError ? (
+              {props.user?.profile.avatar && !imageError ? (
                 <Image
-                  src={props.user.profile_photo}
+                  src={props.user.profile.avatar}
                   alt="Profile"
                   fill
                   className="rounded-full object-cover"
                   onError={() => setImageError(true)}
                 />
-              ) : props.isWalletConnected && props.user?.first_name ? (
+              ) : props.user?.profile.first_name ? (
                 <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-3xl font-semibold">
-                  {getInitials(props.user.first_name)}
+                  {getInitials(props.user.profile.first_name)}
                 </div>
               ) : (
                 <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center">
@@ -115,9 +115,9 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
               )}
             </div>
             <h1 className="text-2xl font-bold mb-2">
-              {props.isWalletConnected ? props.user?.first_name || 'Anonymous' : 'Anonymous'}
+              {props.user?.profile.first_name || 'Anonymous'}
             </h1>
-            {props.isWalletConnected && <UserIdentity user={props.user} className="mb-6" />}
+            {props.user?.profile.first_name && <UserIdentity user={props.user} className="mb-6" />}
             
             {/* Styled ConnectButton */}
             <div className="mt-4">
@@ -210,11 +210,7 @@ export default function DesktopLayout(props: ProfileLayoutProps) {
 
       {/* Main Content */}
       <div className="flex-1 p-8 overflow-y-auto">
-        {!props.isWalletConnected ? (
-          <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 text-center space-y-4">
-            <div className="text-gray-300">Connect your wallet to view your profile data</div>
-          </div>
-        ) : (
+        {props.user && (
           <div className="max-w-3xl mx-auto space-y-6">
             <Suspense fallback={<div>Loading...</div>}>
               <TabManager>

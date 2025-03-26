@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { User } from "@/lib/validations";
+import { User } from "@/lib/types";
 
 type Props = {
   isExpanded: boolean;
@@ -56,8 +56,8 @@ export function UsersExpandedView({
                 >
                   <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white/10">
                     <Image
-                      src={user.profile_photo || "/bg2.png"}
-                      alt={user.first_name}
+                      src={user.profile.avatar || "/bg2.png"}
+                      alt={user.profile.first_name}
                       fill
                       className="object-cover"
                       sizes="64px"
@@ -67,7 +67,7 @@ export function UsersExpandedView({
                     )}
                   </div>
                   <span className="text-white/90 text-sm text-center font-medium truncate max-w-full px-2">
-                    {user.first_name}
+                    {user.profile.first_name}
                   </span>
                   {user._id === userOnStageId && (
                     <span className="text-xs text-pink-500">Speaking</span>

@@ -1,10 +1,10 @@
 'use client';
 
+import type { UserPoints } from '@/lib/types';
+
 import { motion } from 'framer-motion';
 import { IoStarOutline, IoTrendingUpOutline } from 'react-icons/io5';
 import { FiClock } from 'react-icons/fi';
-import type { UserPoints } from '@/lib/validations';
-import { getAvailableBalance } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useClaimFreePoints } from '@/hooks/api';
 

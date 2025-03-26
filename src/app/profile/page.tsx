@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
-import { useUser, useCharacterListBrief, useUserPoints } from '@/hooks/api';
+import { useUser, useCharacterListBrief } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { UserPoints, TokenInfo, CharacterListBrief, User } from '@/lib/validations';
+import { CharacterListBrief, User } from '@/lib/types';
 import { FaTelegram } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { FaXTwitter } from 'react-icons/fa6';
@@ -33,11 +33,11 @@ export function UserIdentity({ user, className = "" }: UserIdentityProps) {
   };
 
   const formatUsername = () => {
-    if (!user?.username) return 'anonymous';
+    if (!user?.profile.username) return 'anonymous';
     if (user?.provider === 'google') {
-      return user.username;
+      return user.profile.username;
     }
-    return `@${user.username}`;
+    return `@${user.profile.username}`;
   };
 
   return (
@@ -49,11 +49,8 @@ export function UserIdentity({ user, className = "" }: UserIdentityProps) {
 }
 
 export interface ProfileLayoutProps {
-  user: any;
+  user: User | null;
   characterListBrief: CharacterListBrief[] | null;
-  userPoints: UserPoints | null;
-  isLoading: boolean;
-  isWalletConnected: boolean;
 }
 
 export default function ProfilePage() {
@@ -63,20 +60,18 @@ export default function ProfilePage() {
   // Data fetching
   const { data: user, isLoading: isLoadingUser } = useUser();
   const { data: characterListBrief, isLoading: isLoadingCharacterListBrief } = useCharacterListBrief();
-  const { data: userPoints, isLoading: isLoadingUserPoints } = useUserPoints();
 
-  const isLoading = isLoadingUser || isLoadingCharacterListBrief || isLoadingUserPoints;
+  const isReady = useMemo(() => {
+    return !isLoadingUser && !isLoadingCharacterListBrief;
+  }, [isLoadingUser, isLoadingCharacterListBrief]);
 
-  if (isLoading) {
+  if (!isReady) {
     return <LoadingScreen />;
   }
 
   const layoutProps: ProfileLayoutProps = {
     user,
     characterListBrief: characterListBrief || null,
-    userPoints: userPoints || null,
-    isLoading,
-    isWalletConnected: isConnected
   };
 
   return (

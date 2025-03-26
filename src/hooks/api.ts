@@ -64,7 +64,7 @@ export function useUser() {
   return useQuery<User, Error>({
     queryKey: ["user"],
     queryFn: () => api.user.register(localUserProfile!),
-    enabled: !!localUserProfile,
+    enabled: !!localUserProfile && localUserProfile.id !== null,
   });
 }
 

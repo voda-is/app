@@ -1,21 +1,22 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useMemo, Suspense } from 'react';
 import { useUser } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { User, UserRole } from '@/lib/types';
+import { useSearchParams } from 'next/navigation';
 
 import DesktopStudio from './desktop';
 
 export interface StudioLayoutProps {
   user: User | null | undefined;
   isAdmin: boolean;
+  searchParams: URLSearchParams;
 }
 
-export default function StudioPage() {
+function StudioContent() {
   const { data: user, isLoading: isLoadingUser } = useUser();
+  const searchParams = useSearchParams();
 
   const isAdmin = useMemo(() => {
     return user?.role === UserRole.Admin;
@@ -31,8 +32,17 @@ export default function StudioPage() {
 
   const layoutProps: StudioLayoutProps = {
     user,
-    isAdmin
+    isAdmin,
+    searchParams
   };
 
   return <DesktopStudio {...layoutProps} />;
+}
+
+export default function StudioPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <StudioContent />
+    </Suspense>
+  );
 } 

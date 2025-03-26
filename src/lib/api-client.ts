@@ -7,7 +7,8 @@ import { uint8ArrayToHex } from "./utils";
 import { 
   CharacterListBrief, CharacterListBriefSchema, 
   ConversationMemory, GitcoinGrant, GitcoinGrantSchema, 
-  Url, User 
+  Url, User, SystemConfig, SystemConfigSchema, CharacterSchema, 
+  Character
 } from "./types";
 
 export interface LocalUserProfile {
@@ -277,6 +278,173 @@ export const api = {
       await apiProxy.post("", {
         path: `/runtime/regenerate_last_message/${conversationId}`,
         method: "POST",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+        },
+      });
+    },
+  }
+};
+
+export const studioApi = {
+  character: {
+    listWithFilters: async (
+      userId: string,
+      hasImage?: boolean,
+      hasRoleplayEnabled?: boolean,
+      limit?: number,
+      offset?: number
+    ): Promise<Character[]> => {
+      const queryParams = new URLSearchParams();
+      
+      if (hasImage !== undefined) {
+        queryParams.append('has_image', hasImage.toString());
+      }
+      
+      if (hasRoleplayEnabled !== undefined) {
+        queryParams.append('has_roleplay_enabled', hasRoleplayEnabled.toString());
+      }
+      
+      if (limit !== undefined) {
+        queryParams.append('limit', limit.toString());
+      }
+      
+      if (offset !== undefined) {
+        queryParams.append('offset', offset.toString());
+      }
+      
+      const response = await apiProxy.post("", {
+        path: `/characters/with_filters`,
+        method: "GET",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+          has_image: hasImage,
+          has_roleplay_enabled: hasRoleplayEnabled,
+          limit: limit,
+          offset: offset,
+        },
+      });
+
+      try {
+        const parsedData = z.array(CharacterSchema).parse(response.data.data);
+        console.log("parsedData", parsedData);
+        return parsedData;
+      } catch (error) {
+        console.error("Error parsing characters:", error);
+        throw error;
+      }
+    },
+    
+    countWithFilters: async (
+      userId: string,
+      hasImage?: boolean,
+      hasRoleplayEnabled?: boolean
+    ): Promise<number> => {
+      const queryParams = new URLSearchParams();
+      
+      if (hasImage !== undefined) {
+        queryParams.append('has_image', hasImage.toString());
+      }
+      
+      if (hasRoleplayEnabled !== undefined) {
+        queryParams.append('has_roleplay_enabled', hasRoleplayEnabled.toString());
+      }
+      
+      const response = await apiProxy.post("", {
+        path: `/characters/with_filters/count`,
+        method: "GET",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+          has_image: hasImage,
+          has_roleplay_enabled: hasRoleplayEnabled,
+        },
+      });
+      
+      return z.number().parse(response.data.data["count"]);
+    },
+
+    create: async (character: Character, userId: string) => {
+      await apiProxy.post("", {
+        path: "/character",
+        method: "POST",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+          ...character,
+        },
+      });
+    },
+
+    update: async (character: Character, userId: string) => {
+      await apiProxy.post("", {
+        path: `/character/${character._id}`,
+        method: "PUT",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+          ...character,
+        },
+      });
+    },
+
+    delete: async (characterId: string, userId: string) => {
+      await apiProxy.post("", { 
+        path: `/character/${characterId}`,
+        method: "DELETE",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+        },
+      });
+    },
+  },
+  
+  systemConfig: {
+    getAll: async (userId: string): Promise<SystemConfig[]> => {
+      const response = await apiProxy.post("", {
+        path: "/system_config",
+        method: "GET",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+        },
+      });
+      return z.array(SystemConfigSchema).parse(response.data.data);
+    },
+    
+    create: async (config: Omit<SystemConfig, '_id' | 'updated_at'>, userId: string): Promise<SystemConfig> => {
+      const response = await apiProxy.post("", {
+        path: "/system_config",
+        method: "POST",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+          ...config,
+        },
+      });
+      return SystemConfigSchema.parse(response.data.data);
+    },
+    
+    update: async (config: SystemConfig, userId: string): Promise<SystemConfig> => {
+      const response = await apiProxy.post("", {
+        path: "/system_config",
+        method: "PUT",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+          ...config,
+        },
+      });
+      return SystemConfigSchema.parse(response.data.data);
+    },
+    
+    delete: async (configId: string, userId: string): Promise<void> => {
+      await apiProxy.post("", {
+        path: `/system_config/${configId}`,
+        method: "DELETE",
         data: {
           user_id: userId,
           stripUserId: true,

@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useMemo } from 'react';
 import { useUser, useCharacterListBrief } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { CharacterListBrief, User } from '@/lib/types';
@@ -54,10 +52,6 @@ export interface ProfileLayoutProps {
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { isConnected } = useAccount();
-  
-  // Data fetching
   const { data: user, isLoading: isLoadingUser } = useUser();
   const { data: characterListBrief, isLoading: isLoadingCharacterListBrief } = useCharacterListBrief();
 

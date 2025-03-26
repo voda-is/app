@@ -11,7 +11,7 @@ export const TimestampSchema = z.number().int().positive();
 // Character related schemas
 export const CharacterMetadataSchema = z.object({
   creator: z.string(),
-  version: z.string(),
+  version: z.number(),
   enable_voice: z.boolean(),
   enable_roleplay: z.boolean().default(false),
 });
@@ -30,9 +30,9 @@ export const CharacterSchema = z.object({
   metadata: CharacterMetadataSchema,
   prompts: CharacterPromptsSchema,
   tags: z.array(z.string()),
-  background_image_url: z.string().optional(),
-  avatar_image_url: z.string().optional(),
-  voice_model_id: z.string().optional(),
+  background_image_url: z.string().nullable(),
+  avatar_image_url: z.string().nullable(),
+  voice_model_id: z.string().nullable(),
   created_at: TimestampSchema,
   updated_at: TimestampSchema,
   published_at: TimestampSchema,
@@ -198,6 +198,27 @@ export const GitcoinGrantSchema = z.object({
   recipient_id: z.string(),
 });
 
+// Function object schema
+export const FunctionObjectSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  parameters: z.record(z.unknown()),
+});
+
+// System config schema
+export const SystemConfigSchema = z.object({
+  _id: CryptoHashSchema,
+  name: z.string(),
+  system_prompt: z.string(),
+  system_prompt_version: z.number().int().nonnegative(),
+  openai_base_url: z.string().url(),
+  openai_model: z.string(),
+  openai_temperature: z.number().min(0).max(2),
+  openai_max_tokens: z.number().int().positive(),
+  functions: z.array(FunctionObjectSchema),
+  updated_at: TimestampSchema,
+});
+
 export type CharacterMetadata = z.infer<typeof CharacterMetadataSchema>;
 export type CharacterPrompts = z.infer<typeof CharacterPromptsSchema>;
 export type Character = z.infer<typeof CharacterSchema>;
@@ -214,6 +235,8 @@ export type CharacterListBrief = z.infer<typeof CharacterListBriefSchema>;
 export type Url = z.infer<typeof UrlSchema>;
 export type GitcoinGrant = z.infer<typeof GitcoinGrantSchema>;
 
+export type FunctionObject = z.infer<typeof FunctionObjectSchema>;
+export type SystemConfig = z.infer<typeof SystemConfigSchema>;
 
 ///// Misc types /////
 

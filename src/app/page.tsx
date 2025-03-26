@@ -10,7 +10,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { BottomNav } from '@/components/Navigation/BottomNav';
 
 import { useCharacters, useUser } from '@/hooks/api';
-import { Character } from '@/lib/validations';
+import { Character } from '@/lib/types';
 
 type FilterType = 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp';
 

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, LocalUserProfile } from "@/lib/api-client";
+import { api, LocalUserProfile, studioApi } from "@/lib/api-client";
 import type {
   Character,
   ConversationMemory,
@@ -8,6 +8,7 @@ import type {
   CharacterListBrief,
   Url,
   GitcoinGrant,
+  SystemConfig,
 } from "@/lib/types";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
@@ -314,5 +315,176 @@ export function usePublicConversation(conversationId: string) {
     queryKey: ["publicConversation", conversationId],
     queryFn: () => api.chat.getPublicConversation(conversationId),
     enabled: !!conversationId,
+  });
+}
+
+export function useCharactersWithFilters(
+  hasImage?: boolean,
+  hasRoleplayEnabled?: boolean,
+  limit: number = 20,
+  offset: number = 0
+) {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  
+  return useQuery<Character[], Error>({
+    queryKey: ['charactersWithFilters', hasImage, hasRoleplayEnabled, limit, offset],
+    queryFn: async () => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.character.listWithFilters(userId, hasImage, hasRoleplayEnabled, limit, offset);
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useCharactersWithFiltersCount(
+  hasImage?: boolean,
+  hasRoleplayEnabled?: boolean
+) {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  
+  return useQuery<number, Error>({
+    queryKey: ['charactersWithFiltersCount', hasImage, hasRoleplayEnabled],
+    queryFn: async () => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.character.countWithFilters(userId, hasImage, hasRoleplayEnabled);
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useSystemConfigs() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  
+  return useQuery<SystemConfig[], Error>({
+    queryKey: ['systemConfigs'],
+    queryFn: async () => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.getAll(userId);
+    },
+    enabled: !!userId,
+  });
+}
+
+export function useCreateSystemConfig() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+  
+  return useMutation<
+    SystemConfig,
+    Error,
+    Omit<SystemConfig, '_id' | 'updated_at'>
+  >({
+    mutationFn: async (config) => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.create(config, userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['systemConfigs'] });
+    },
+  });
+}
+
+export function useUpdateSystemConfig() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+  
+  return useMutation<SystemConfig, Error, SystemConfig>({
+    mutationFn: async (config) => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.update(config, userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['systemConfigs'] });
+    },
+  });
+}
+
+export function useDeleteSystemConfig() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+  
+  return useMutation<void, Error, string>({
+    mutationFn: async (configId) => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.delete(configId, userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['systemConfigs'] });
+    },
+  });
+}
+
+export function useCreateCharacter() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, Character>({
+    mutationFn: (character) => studioApi.character.create(character, userId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['characters'] });
+    },
+  });
+}
+
+export function useUpdateCharacter() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, Character>({
+    mutationFn: (character) => studioApi.character.update(character, userId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['characters'] });
+    },
+  });
+}
+
+export function useDeleteCharacter() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string>({
+    mutationFn: (characterId) => studioApi.character.delete(characterId, userId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['characters'] });
+    },
+  });
+}
+
+export function useUpload() {  
+  return useMutation<
+    { success: boolean; url: string; filename: string },
+    Error,
+    { file: File; filename?: string }
+  >({
+    mutationFn: async ({ file, filename }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Use the original filename if none provided
+      const finalFilename = filename || file.name;
+      formData.append('filename', finalFilename);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => { },
   });
 }

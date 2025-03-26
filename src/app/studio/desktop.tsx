@@ -1,13 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { IoPersonCircle, IoSettingsOutline, IoGridOutline } from 'react-icons/io5';
 import { StudioLayoutProps } from './page';
 import { CharactersTab } from './characters-tab';
 import { ConfigTab } from './config-tab';
-import { ConnectWalletButton } from '@/components/ConnectWalletButton';
 
 type TabType = 'characters' | 'config';
 

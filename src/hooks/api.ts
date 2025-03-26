@@ -65,7 +65,6 @@ export function useUser() {
     queryKey: ["user"],
     queryFn: () => api.user.register(localUserProfile!),
     enabled: !!localUserProfile,
-    ...defaultQueryOptions,  // Apply the default options
   });
 }
 

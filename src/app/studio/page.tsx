@@ -15,7 +15,6 @@ export interface StudioLayoutProps {
 }
 
 export default function StudioPage() {
-  const router = useRouter();
   const { data: user, isLoading: isLoadingUser } = useUser();
 
   const isAdmin = useMemo(() => {
@@ -25,13 +24,6 @@ export default function StudioPage() {
   const isReady = useMemo(() => {
     return user !== null && !isLoadingUser;
   }, [user, isLoadingUser]);
-
-  console.log(isReady, isAdmin)
-  useEffect(() => {
-    if (isReady && !isAdmin) {
-    //   router.push('/');
-    }
-  }, [isReady, isAdmin, router]);
 
   if (!isReady) {
     return <LoadingScreen />;

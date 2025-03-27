@@ -1,145 +1,29 @@
-import axios, { AxiosError } from "axios";
-import {
-  GenericResponseSchema,
-  UserSchema,
-  UserPayloadSchema,
-  validateResponse,
-  CharacterSchema,
-  ConversationHistory,
-  ChatroomMessages,
-  Chatroom,
-  User,
-  UserPoints,
-  MessageBrief,
-  FunctionCall,
-  TokenInfo,
-  TokenInfoSchema,
-  CharacterListBrief,
-  CharacterListBriefSchema,
-  Url,
-  UserPayload,
-  OAuthUserSchema,
-} from "./validations";
 import { z } from "zod";
-import { getTelegramUser } from "@/lib/telegram";
 import { UserProfilesCache } from "./userProfilesCache";
-import { Session } from "next-auth";
+import { useAccount } from 'wagmi';
+import { apiProxy } from "./api-proxy";
+import { blake3Hash } from "./blake3";
+import { uint8ArrayToHex } from "./utils";
+import { 
+  CharacterListBrief, CharacterListBriefSchema, 
+  ConversationMemory, GitcoinGrant, GitcoinGrantSchema, 
+  Url, User, SystemConfig, SystemConfigSchema, CharacterSchema, 
+  Character
+} from "./types";
 
-class APIError extends Error {
-  constructor(message: string, public status: number, public code: string) {
-    super(message);
-    this.name = "APIError";
-  }
-}
-
-export const apiProxy = axios.create({
-  baseURL: "/api/proxy",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Add telegram user data to every request
-apiProxy.interceptors.request.use((config) => {
-  const originalUrl = config.url;
-  config.url = "";
-  config.data = {
-    path: originalUrl,
-    method: config.method?.toUpperCase(),
-    data: config.data,
-  };
-
-  return config;
-});
-
-// Response validation and error handling
-apiProxy.interceptors.response.use(
-  (response) => {
-    if (!response.data) {
-      throw new Error("No response data");
-    }
-
-    // if response is an array buffer or SSE, return it as is
-    if (
-      response.headers["content-type"]?.includes("audio/") ||
-      response.headers["content-type"]?.includes("text/event-stream")
-    ) {
-      return response;
-    }
-
-    try {
-      const genericResponse = GenericResponseSchema.parse(response.data);
-      if (
-        response.config.url?.includes("/user") &&
-        response.config.method === "GET"
-      ) {
-        response.data = validateResponse(genericResponse, UserSchema);
-      }
-
-      if (
-        response.config.url?.includes("/characters") &&
-        response.config.method === "GET"
-      ) {
-        response.data = validateResponse(
-          genericResponse,
-          z.array(CharacterSchema)
-        );
-      }
-
-      // if status is not 2xx, throw an error
-      if (genericResponse.status < 200 || genericResponse.status >= 300) {
-        throw new APIError(
-          genericResponse.message,
-          genericResponse.status,
-          "API_ERROR"
-        );
-      }
-
-      return response;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw new APIError("Invalid response data", 500, "VALIDATION_ERROR");
-      }
-      throw error;
-    }
-  },
-  (error: AxiosError<any>) => {
-    if (error.response?.data) {
-      try {
-        const errorResponse = GenericResponseSchema.parse(error.response.data);
-        console.log("errorResponse", errorResponse);
-        throw new APIError(
-          errorResponse.message,
-          errorResponse.status,
-          "API_ERROR"
-        );
-      } catch {
-        console.log("catch", error);
-        throw new APIError(
-          error.response.data.message || "An error occurred",
-          error.response.status || 500,
-          "UNKNOWN_ERROR"
-        );
-      }
-    }
-    throw error;
-  }
-);
-
-export const getUserId = (session: Session | null): string => {
-  const maybeTelegramUser = getTelegramUser();
-  if (maybeTelegramUser.id !== 111111) {
-    return `telegram:${maybeTelegramUser.id}`;
-  }
-
-  const oauthUser = OAuthUserSchema.parse(session?.user);
-  return `${oauthUser.provider}:${oauthUser.id}`;
+export interface LocalUserProfile {
+  id: string;
+  provider: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  image: string;
 }
 
 // API interface
 export const api = {
   url: {
-    get: async (urlId: string, session: Session | null): Promise<{
+    get: async (urlId: string, userId: string): Promise<{
       url: Url,
       referral_success: boolean,
     }> => {
@@ -147,20 +31,20 @@ export const api = {
         path: `/url/${urlId}`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    create: async (path: string, urlType: string, session: Session | null): Promise<string> => {
+    create: async (path: string, urlType: string, userId: string): Promise<string> => {
       const response = await apiProxy.post("", {
         path: `/url`,
         method: "POST",
         data: {
           path,
           url_type: urlType,
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
@@ -168,108 +52,97 @@ export const api = {
     },
   },
 
+  gitcoin: {
+    getGrants: async (): Promise<GitcoinGrant[]> => {
+      const response = await apiProxy.post("", {
+        path: "/gitcoin/all",
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return z.array(GitcoinGrantSchema).parse(response.data.data);
+    },
+    getGrant: async (grantId: string): Promise<GitcoinGrant> => {
+      const response = await apiProxy.post("", {
+        path: `/gitcoin/${grantId}`,
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return GitcoinGrantSchema.parse(response.data.data);
+    },
+  },
+
   user: {
-    register: async (session: Session | null) => {
+    register: async (localUserProfile: LocalUserProfile) => {
       const cache = new UserProfilesCache();
-      const telegramUser = getTelegramUser();
-      const userId = getUserId(session);
-      let payload: UserPayload;
-      if (telegramUser.id !== 111111) {
-        payload = UserPayloadSchema.parse({
-          user_id: userId,
-          user_provider: 'telegram',
-          username: telegramUser.username,
-          first_name: telegramUser.first_name,
-          last_name: telegramUser.last_name,
-          profile_photo: telegramUser.photo_url,
-        });
-      } else {
-        const oauthUser = OAuthUserSchema.parse(session?.user);
-
-        payload = UserPayloadSchema.parse({
-          user_id: userId,
-          user_provider: oauthUser.provider,
-          username: oauthUser.username,
-          first_name: oauthUser.firstName,
-          last_name: oauthUser.lastName,
-          profile_photo: oauthUser.image,
-        });
-      }
-
+      
       const response = await apiProxy.post("", {
         path: "/user",
         method: "POST",
-        data: payload,
+        data: {
+          user_id: localUserProfile.id,
+          network_name: 'sei',
+          username: localUserProfile.username,
+          first_name: localUserProfile.firstName,
+          last_name: localUserProfile.lastName,
+          profile_photo: localUserProfile.image,
+        },
       });
 
-      // throw if response is not ok
       if (response.status !== 200) {
         throw new Error("Failed to register user");
       }
 
+      const userIdHash = blake3Hash(new TextEncoder().encode(localUserProfile.id));
+      const userIdHashHex = uint8ArrayToHex(userIdHash);
+
       const userResponse = await apiProxy.post("", {
-        path: "/user",
+        path: `/user/${userIdHashHex}`,
         method: "GET",
-        data: { user_id: getUserId(session) },
+        data: { ignoreToken: true },
       });
 
       cache.addUser(userResponse.data.data);
 
       return userResponse.data.data;
     },
-    getUsers: async (userIds: string[], session: Session | null): Promise<User[]> => {
+    getUsers: async (userIds: string[], userId: string): Promise<User[]> => {
       const response = await apiProxy.post("", {
         path: "/users",
         method: "POST",
         data: {
           user_ids: userIds,
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getUserPoints: async (session: Session | null): Promise<UserPoints> => {
+    claimFreePoints: async (userId: string): Promise<null> => {
+      const userIdHash = blake3Hash(new TextEncoder().encode(userId));
+      const userIdHashHex = uint8ArrayToHex(userIdHash);
       const response = await apiProxy.post("", {
-        path: "/user/points",
-        method: "GET",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    claimFreePoints: async (session: Session | null): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: "/user/points/free",
+        path: `/user/claim_points/${userIdHashHex}`,
         method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
+        data: { ignoreToken: true, },
       });
       return response.data.data;
     },
   },
 
   characters: {
-    list: async (limit: number, offset: number, session: Session | null) => {
+    list: async (limit: number, offset: number) => {
       const response = await apiProxy.post("", {
         path: "/characters",
         method: "GET",
         data: {
-          limit,
-          offset,
-          only_roleplay: true,
-          only_chatroom: true,
+          limit, offset,
           ignoreToken: true,
         },
       });
       return response.data.data;
     },
 
-    get: async (id: string, session: Session | null) => {
+    get: async (id: string) => {
       const response = await apiProxy.post("", {
         path: `/character/${id}`,
         method: "GET",
@@ -282,105 +155,82 @@ export const api = {
   },
 
   chat: {
-    createConversation: async (characterId: string, session: Session | null): Promise<null> => {
+    getPublicConversations: async (characterId: string): Promise<ConversationMemory[]> => {
+      const response = await apiProxy.post("", {
+        path: `/memories/public/${characterId}`,
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return response.data.data as ConversationMemory[];
+    },
+    getPublicConversation: async (conversationId: string): Promise<ConversationMemory> => {
+      const response = await apiProxy.post("", {
+        path: `/memory/public/${conversationId}`,
+        method: "GET",
+        data: { ignoreToken: true },
+      });
+      return response.data.data as ConversationMemory;
+    },
+    createConversation: async (characterId: string, address: string): Promise<null> => {
       await apiProxy.post("", {
-        path: `/conversations/${characterId}`,
+        path: `/memories/${characterId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
           is_public: false,
         },
       });
       return null;
     },
-    getCharacterListBrief: async (session: Session | null): Promise<CharacterListBrief[]> => {
+    getCharacterListBrief: async (address: string): Promise<CharacterListBrief[]> => {
       const response = await apiProxy.post("", {
-        path: "/conversations/character_list",
+        path: "/memories/character_list",
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: address,
           stripUserId: true,
         },
       });
       return z.array(CharacterListBriefSchema).parse(response.data.data);
     },
-    deleteConversation: async (conversationId: string, session: Session | null): Promise<null> => {
+    deleteConversation: async (conversationId: string, userId: string): Promise<null> => {
       const response = await apiProxy.post("", {
-        path: `/conversation/${conversationId}`,
+        path: `/memory/${conversationId}`,
         method: "DELETE",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    getConversationHistoryIdOnly: async (
-      characterId: string,
-      session: Session | null
-    ): Promise<string[]> => {
+    getConversation: async (conversationId: string, userId: string): Promise<ConversationMemory> => {
       const response = await apiProxy.post("", {
-        path: `/conversations/id_only/${characterId}`,
+        path: `/memory/${conversationId}`,
         method: "GET",
         data: {
-          limit: 10,
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data["conversation_ids"];
-    },
-    getConversation: async (
-      conversationId: string,
-      session: Session | null
-    ): Promise<ConversationHistory> => {
-      const response = await apiProxy.post("", {
-        path: `/conversation/${conversationId}`,
-        method: "GET",
-        data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
       return response.data.data;
     },
-    sendMessage: async (
-      conversationId: string,
-      text: string,
-      session: Session | null
-    ): Promise<null> => {
+    getConversations: async (characterId: string, userId: string): Promise<ConversationMemory[]> => {
       const response = await apiProxy.post("", {
-        path: `/chat/${conversationId}`,
-        method: "POST",
+        path: `/memories/${characterId}`,
+        method: "GET",
         data: {
-          message: text,
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
-      return null;
-    },
-    regenerateLastMessage: async (conversationId: string, session: Session | null): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/regenerate_last_message/${conversationId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return null;
+      return response.data.data;
     },
   },
 
   tts: {
-    generateSpeech: async (
-      message: string,
-      characterId: string,
-      session: Session | null
-    ): Promise<Blob> => {
-      // Use fetch directly instead of axios for better binary handling
+    generateSpeech: async (text: string, characterId: string, userId: string): Promise<Blob> => {
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: {
@@ -391,11 +241,12 @@ export const api = {
             path: `/tts/${characterId}`,
             method: "POST",
             data: {
-              user_id: getUserId(session),
+              user_id: userId,
               stripUserId: true,
-              message,
+              message: text,
               isStream: true,
-            },
+              ignoreToken: false,
+            }
           },
         }),
       });
@@ -404,281 +255,201 @@ export const api = {
         throw new Error("Failed to fetch audio");
       }
 
-      // Get the binary data
       const arrayBuffer = await response.arrayBuffer();
-      // Create blob from ArrayBuffer
-      const audioBlob = new Blob([arrayBuffer], {
+      return new Blob([arrayBuffer], {
         type: response.headers.get("content-type") || "audio/mp3",
       });
-
-      return audioBlob;
     },
   },
 
-  chatroom: {
-    generateFromCharacter: async (characterId: string, session: Session | null): Promise<Chatroom> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/generate_from_character/${characterId}`,
+  runtime: {
+    sendMessage: async (conversationId: string, text: string, userId: string) => {
+      await apiProxy.post("", {
+        path: `/runtime/chat/${conversationId}`,
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          message: text,
+          user_id: userId,
           stripUserId: true,
         },
       });
-      return response.data.data;
     },
-    getChatroom: async (chatroomId: string, session: Session | null): Promise<Chatroom> => {
+    regenerateLastMessage: async (conversationId: string, userId: string) => {
+      await apiProxy.post("", {
+        path: `/runtime/regenerate_last_message/${conversationId}`,
+        method: "POST",
+        data: {
+          user_id: userId,
+          stripUserId: true,
+        },
+      });
+    },
+  }
+};
+
+export const studioApi = {
+  character: {
+    listWithFilters: async (
+      userId: string,
+      hasImage?: boolean,
+      hasRoleplayEnabled?: boolean,
+      limit?: number,
+      offset?: number
+    ): Promise<Character[]> => {
+      const queryParams = new URLSearchParams();
+      
+      if (hasImage !== undefined) {
+        queryParams.append('has_image', hasImage.toString());
+      }
+      
+      if (hasRoleplayEnabled !== undefined) {
+        queryParams.append('has_roleplay_enabled', hasRoleplayEnabled.toString());
+      }
+      
+      if (limit !== undefined) {
+        queryParams.append('limit', limit.toString());
+      }
+      
+      if (offset !== undefined) {
+        queryParams.append('offset', offset.toString());
+      }
+      
       const response = await apiProxy.post("", {
-        path: `/chatroom/${chatroomId}`,
+        path: `/characters/with_filters`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
+          has_image: hasImage,
+          has_roleplay_enabled: hasRoleplayEnabled,
+          limit: limit,
+          offset: offset,
         },
       });
-      return response.data.data;
+
+      try {
+        const parsedData = z.array(CharacterSchema).parse(response.data.data);
+        console.log("parsedData", parsedData);
+        return parsedData;
+      } catch (error) {
+        console.error("Error parsing characters:", error);
+        throw error;
+      }
     },
-    maybeCreateChatroomMessages: async (
-      chatroomId: string,
-      session: Session | null
-    ): Promise<boolean> => {
+    
+    countWithFilters: async (
+      userId: string,
+      hasImage?: boolean,
+      hasRoleplayEnabled?: boolean
+    ): Promise<number> => {
+      const queryParams = new URLSearchParams();
+      
+      if (hasImage !== undefined) {
+        queryParams.append('has_image', hasImage.toString());
+      }
+      
+      if (hasRoleplayEnabled !== undefined) {
+        queryParams.append('has_roleplay_enabled', hasRoleplayEnabled.toString());
+      }
+      
       const response = await apiProxy.post("", {
-        path: `/chatroom/create_message/${chatroomId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data["is_created"];
-    },
-    getChatroomMessages: async (
-      chatroomId: string,
-      session: Session | null
-    ): Promise<ChatroomMessages> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/messages/${chatroomId}`,
+        path: `/characters/with_filters/count`,
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
+          has_image: hasImage,
+          has_roleplay_enabled: hasRoleplayEnabled,
         },
       });
-      return response.data.data;
+      
+      return z.number().parse(response.data.data["count"]);
     },
-    joinChatroom: async (chatroomId: string, session: Session | null): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/join/${chatroomId}`,
+
+    create: async (character: Character, userId: string) => {
+      await apiProxy.post("", {
+        path: "/character",
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
+          ...character,
         },
       });
-      return response.data.data;
     },
-    leaveChatroom: async (chatroomId: string, session: Session | null): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/leave/${chatroomId}`,
-        method: "POST",
+
+    update: async (character: Character, userId: string) => {
+      await apiProxy.post("", {
+        path: `/character/${character._id}`,
+        method: "PUT",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
+          ...character,
         },
       });
-      return response.data.data;
     },
-    getHijackCost: async (chatroomId: string, session: Session | null): Promise<any> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/hijack_cost/${chatroomId}`,
-        method: "GET",
+
+    delete: async (characterId: string, userId: string) => {
+      await apiProxy.post("", { 
+        path: `/character/${characterId}`,
+        method: "DELETE",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
-      return response.data.data;
-    },
-    registerHijack: async (
-      characterId: string,
-      hijackCost: { cost: number },
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/register_hijack/${characterId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-          amount: hijackCost.cost,
-        },
-      });
-      return response.data;
-    },
-    hijackChatroom: async (characterId: string, session: Session | null): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/hijack/${characterId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    chat: async (chatroomId: string, message: string, session: Session | null): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/chat/${chatroomId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-          message,
-        },
-      });
-      return response.data.data;
-    },
-    regenerateLastMessage: async (chatroomId: string, session: Session | null): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/regenerate_last_message/${chatroomId}`,
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    getMessage: async (messageId: string, session: Session | null): Promise<ChatroomMessages> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/message/${messageId}`,
-        method: "GET",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
-    },
-    getMessageBrief: async (chatroomId: string, session: Session | null): Promise<MessageBrief[]> => {
-      const response = await apiProxy.post("", {
-        path: `/chatroom/messages_brief/${chatroomId}`,
-        method: "GET",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return response.data.data;
     },
   },
-
-  blockchain: {
-    getAddress: async (session: Session | null): Promise<{ sol_address: string, eth_address: string }> => {
+  
+  systemConfig: {
+    getAll: async (userId: string): Promise<SystemConfig[]> => {
       const response = await apiProxy.post("", {
-        path: "/address",
+        path: "/system_config",
         method: "GET",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
         },
       });
-      return response.data.data;
+      return z.array(SystemConfigSchema).parse(response.data.data);
     },
-
-    getTokenInfo: async (session: Session | null): Promise<TokenInfo> => {
+    
+    create: async (config: Omit<SystemConfig, '_id' | 'updated_at'>, userId: string): Promise<SystemConfig> => {
       const response = await apiProxy.post("", {
-        path: "/token_info",
-        method: "GET",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-        },
-      });
-      return TokenInfoSchema.parse(response.data.data);
-    },
-
-    createToken: async (
-      chatroomMessageId: string,
-      deployOnPumpFun: boolean,
-      // deployOnBase: boolean,
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/blockchain/create_token/${chatroomMessageId}`,
+        path: "/system_config",
         method: "POST",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
-          deploy_on_pumpfun: deployOnPumpFun,
-          // deploy_on_base: deployOnBase,
+          ...config,
         },
       });
-      return response.data.data;
+      return SystemConfigSchema.parse(response.data.data);
     },
-
-    buyToken: async (
-      chatroomMessageId: string,
-      payload: {
-        sol_amount?: number;
-        eth_amount?: number;
-        sol_mint_address?: string;
-        eth_mint_address?: string;
-      },
-      session: Session | null
-    ): Promise<null> => {
+    
+    update: async (config: SystemConfig, userId: string): Promise<SystemConfig> => {
       const response = await apiProxy.post("", {
-        path: `/blockchain/buy/${chatroomMessageId}`,
-        method: "POST",
+        path: "/system_config",
+        method: "PUT",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
-          ...payload,
+          ...config,
         },
       });
-      return response.data.data;
+      return SystemConfigSchema.parse(response.data.data);
     },
-
-    sellToken: async (
-      chatroomMessageId: string,
-      payload: {
-        sol_token_percentage?: number;
-        eth_token_percentage?: number;
-        sol_mint_address?: string;
-        eth_mint_address?: string;
-      },
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: `/blockchain/sell/${chatroomMessageId}`,
-        method: "POST",
+    
+    delete: async (configId: string, userId: string): Promise<void> => {
+      await apiProxy.post("", {
+        path: `/system_config/${configId}`,
+        method: "DELETE",
         data: {
-          user_id: getUserId(session),
+          user_id: userId,
           stripUserId: true,
-          ...payload,
         },
       });
-      return response.data.data;
-    },
-
-    withdraw: async (payload: {
-      amount_in_sol?: number;
-      amount_in_eth?: number;
-      withdraw_to_eth_address?: string;
-      withdraw_to_sol_address?: string;
-      },
-      session: Session | null
-    ): Promise<null> => {
-      const response = await apiProxy.post("", {
-        path: "/blockchain/withdraw",
-        method: "POST",
-        data: {
-          user_id: getUserId(session),
-          stripUserId: true,
-          ...payload,
-        },
-      });
-      return response.data.data;
     },
   }
 };

@@ -1,4 +1,4 @@
-import { Character } from '@/lib/validations';
+import { Character } from '@/lib/types';
 import { motion } from 'framer-motion';
 import Image from "next/image";
 import { IoBag } from "react-icons/io5";

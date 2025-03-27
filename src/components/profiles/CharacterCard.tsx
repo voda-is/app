@@ -1,10 +1,11 @@
 'use client';
 
+import type { CharacterListBrief } from '@/lib/types';
+
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { IoPersonCircle, IoChatbubble } from 'react-icons/io5';
-import type { CharacterListBrief } from '@/lib/validations';
 
 interface CharacterCardProps {
   character: CharacterListBrief;

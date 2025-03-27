@@ -10,7 +10,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 import { BottomNav } from '@/components/Navigation/BottomNav';
 
 import { useCharacters, useUser } from '@/hooks/api';
-import { Character } from '@/lib/validations';
+import { Character } from '@/lib/types';
 
 type FilterType = 'all' | 'male' | 'female' | 'zh' | 'en' | 'kr' | 'jp';
 
@@ -38,8 +38,6 @@ export default function Home() {
     return <LoadingScreen />;
   }
 
-  console.log("user", user);
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -49,7 +47,7 @@ export default function Home() {
     >
       <TopNav activeTab={activeFilter} onTabChange={setActiveFilter} />
       
-      <main className="max-w-7xl mx-auto px-4">
+      <main className="max-w-7xl mx-auto px-4 sm:px-4 pt-8 sm:pt-0">
         <div className="pt-36 pb-32">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {filteredCharacters.map((character, index) => (

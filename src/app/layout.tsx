@@ -2,14 +2,9 @@
 import "./globals.css";
 
 import { Inter } from "next/font/google";
-import { Providers } from "./providers";
 import Script from "next/script";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { SessionProvider } from "next-auth/react"
-
-import { setupTelegramInterface } from "@/lib/telegram";
-import { useUser } from "@/hooks/api";
+import { WalletProvider } from '@/providers/WalletProvider';
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,12 +13,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    setupTelegramInterface(router);
-  }, []);
-
   return (
     <html lang="en">
       <head>
@@ -33,20 +22,15 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} bg-gray-800 text-white`}>
-        <Script
-          src="https://telegram.org/js/telegram-web-app.js"
-          strategy="beforeInteractive"
-        />
-        <Script
+        {/* <Script
           src="https://analytics.fine.wtf/script.js" 
           data-website-id="921b7b12-1961-4bc8-8eb1-bb0cfe1d26a7" 
           strategy="afterInteractive"
-        />
+        /> */}
         <SessionProvider>
-          <Providers>
+          <WalletProvider>
             <main>{children}</main>
-            {/* <TelegramDebug /> */}
-          </Providers>
+          </WalletProvider>
         </SessionProvider>
       </body>
     </html>

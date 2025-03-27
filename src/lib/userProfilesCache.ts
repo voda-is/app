@@ -13,11 +13,11 @@ export class UserProfilesCache {
     }
   };
 
-  async ensureUserProfiles(userIds: string[]) {
+  async ensureUserProfiles(userIds: string[], userId: string) {
     console.log("ensureUserProfiles", userIds);
     const missingIds = userIds.filter((id) => !this.hasUser(id));
     if (missingIds.length > 0) {
-      const users = await api.user.getUsers(missingIds);
+      const users = await api.user.getUsers(missingIds, userId);
       this.addUsers(users);
     }
     return this.getAllUsers();

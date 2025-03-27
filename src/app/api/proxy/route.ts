@@ -1,30 +1,7 @@
+import { createAuthToken } from "@/lib/authToken";
 import { NextRequest, NextResponse } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-
-if (!ADMIN_TOKEN) {
-  throw new Error("ADMIN_TOKEN environment variable is not set");
-}
-
-async function getAccessToken(user_id: string): Promise<string> {
-  const response = await fetch(`${API_URL}/token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${ADMIN_TOKEN}`,
-    },
-    body: JSON.stringify(user_id),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to get access token");
-  }
-
-  const data = await response.json();
-  return data.data;
-}
-
+const API_URL = process.env.API_BASE_URL;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -32,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     let authHeader = {};
     if (!data.ignoreToken) {
-      const accessToken = await getAccessToken(data.user_id);
+      const accessToken = createAuthToken(data.user_id);
       authHeader = {
         Authorization: `Bearer ${accessToken}`,
       };

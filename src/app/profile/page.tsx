@@ -1,11 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useUser, useGetAddress, useGetTokenInfo, useCharacterListBrief, useUserPoints, useTelegramInterface } from '@/hooks/api';
+import { useMemo } from 'react';
+import { useUser, useCharacterListBrief } from '@/hooks/api';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { UserPoints, TokenInfo, CharacterListBrief, User } from '@/lib/validations';
-import { notificationOccurred } from '@/lib/telegram';
+import { CharacterListBrief, User } from '@/lib/types';
 import { FaTelegram } from 'react-icons/fa';
 import { FcGoogle } from 'react-icons/fc';
 import { FaXTwitter } from 'react-icons/fa6';
@@ -28,16 +26,16 @@ export function UserIdentity({ user, className = "" }: UserIdentityProps) {
     }
     if (user?.provider === 'x') {
       return <FaXTwitter className="w-4 h-4" />;
-    }
+    } 
     return null;
   };
 
   const formatUsername = () => {
-    if (!user?.username) return 'anonymous';
+    if (!user?.profile.username) return 'anonymous';
     if (user?.provider === 'google') {
-      return user.username;
+      return user.profile.username;
     }
-    return `@${user.username}`;
+    return `@${user.profile.username}`;
   };
 
   return (
@@ -49,42 +47,25 @@ export function UserIdentity({ user, className = "" }: UserIdentityProps) {
 }
 
 export interface ProfileLayoutProps {
-  user: any;
-  addresses: {
-    sol_address: string;
-    eth_address: string;
-  } | null;
-  tokenInfo: TokenInfo | null;
+  user: User | null;
   characterListBrief: CharacterListBrief[] | null;
-  userPoints: UserPoints | null;
-  isLoading: boolean;
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
-  
-  // Data fetching
   const { data: user, isLoading: isLoadingUser } = useUser();
-  const { data: addresses, isLoading: isLoadingAddresses } = useGetAddress();
-  const { data: tokenInfo, isLoading: isLoadingTokenInfo } = useGetTokenInfo();
   const { data: characterListBrief, isLoading: isLoadingCharacterListBrief } = useCharacterListBrief();
-  const { data: userPoints, isLoading: isLoadingUserPoints } = useUserPoints();
-  const { data: _tgInterface, isLoading: telegramInterfaceLoading } = useTelegramInterface(router);
 
-  const isLoading = isLoadingUser || isLoadingAddresses || isLoadingTokenInfo || 
-                   isLoadingCharacterListBrief || isLoadingUserPoints || telegramInterfaceLoading;
+  const isReady = useMemo(() => {
+    return !isLoadingUser && !isLoadingCharacterListBrief;
+  }, [isLoadingUser, isLoadingCharacterListBrief]);
 
-  if (isLoading) {
+  if (!isReady) {
     return <LoadingScreen />;
   }
 
   const layoutProps: ProfileLayoutProps = {
-    user,
-    addresses: addresses || null,
-    tokenInfo: tokenInfo || null,
+    user: user || null,
     characterListBrief: characterListBrief || null,
-    userPoints: userPoints || null,
-    isLoading,
   };
 
   return (

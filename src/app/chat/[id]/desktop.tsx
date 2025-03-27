@@ -9,8 +9,8 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { InputBar } from "@/components/InputBar";
 import { getAvailableBalance } from "@/lib/utils";
-import { useRef, useEffect } from "react";
-
+import { useRef, useEffect, useState, useMemo } from "react";
+  
 export default function DesktopLayout(props: ChatLayoutProps) {
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -22,7 +22,11 @@ export default function DesktopLayout(props: ChatLayoutProps) {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [props.messages.length]);
-  
+
+  const canSendMessage = useMemo(() => {
+    return props.hasEnoughPoints;
+  }, [props.hasEnoughPoints]);
+
   return (
     <main className="flex h-screen overflow-hidden bg-[radial-gradient(#4B5563_1px,transparent_1px)] [background-size:16px_16px]">
       {/* Left Section with Back Button and Points Display */}
@@ -44,13 +48,13 @@ export default function DesktopLayout(props: ChatLayoutProps) {
                 <div className="flex flex-col">
                   <span className="text-gray-400 text-sm">Available Points</span>
                   <span className="text-gray-200 font-medium">
-                    {props.userPoints ? getAvailableBalance(props.userPoints) : 0}
+                    {props.user?.points ? getAvailableBalance(props.user.points) : 0}
                   </span>
                 </div>
               </div>
             </div>
             <button 
-              onClick={props.handleClaimPoints}
+              onClick={props.claimFreePoints}
               disabled={!props.claimStatus.canClaim}
               className={`h-[64px] px-4 rounded-xl ${
                 props.claimStatus.canClaim 
@@ -160,8 +164,12 @@ export default function DesktopLayout(props: ChatLayoutProps) {
                 message={props.inputMessage}
                 onChange={props.setInputMessage}
                 onSend={props.handleSendMessage}
-                placeholder={props.hasEnoughPoints() ? `Message ${props.character?.name}` : "Claim points to Chat"}
-                disabled={props.disableActions || !props.hasEnoughPoints()}
+                placeholder={
+                  !canSendMessage
+                    ? "Claim points to Chat"
+                    : `Message ${props.character?.name}`
+                }
+                disabled={props.disableActions || !canSendMessage}
               />
             </div>
           </div>

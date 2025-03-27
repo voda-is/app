@@ -21,7 +21,8 @@ export type OAuthUser = z.infer<typeof OAuthUserSchema>;
 export const UserSchema = z.object({
   _id: CryptoHashSchema,
   user_id: z.string(),
-  provider: z.enum(['google', 'x', 'telegram']),
+  provider: z.enum(['google', 'x', 'telegram', 'crypto_wallet']),
+  network_name: z.string().optional(),
   username: z.string().optional(),
   first_name: z.string(),
   last_name: z.string().optional(),
@@ -77,6 +78,11 @@ export const HistoryMessageSchema = z.object({
 // Update to pair messages together
 export const ChatHistoryPairSchema = z.tuple([HistoryMessageSchema, HistoryMessageSchema]);
 
+export const FunctionCallArgumentsSchema = z.object({
+  name: z.string(),
+  arguments: z.string(), // JSON string containing the arguments
+});
+
 export const ConversationHistorySchema = z.object({
   _id: CryptoHashSchema,
   public: z.boolean(),
@@ -86,6 +92,7 @@ export const ConversationHistorySchema = z.object({
   character_id: CryptoHashSchema,
 
   history: z.array(ChatHistoryPairSchema),
+  function_calls: z.array(FunctionCallArgumentsSchema).optional(),
 
   updated_at: TimestampSchema,
   created_at: TimestampSchema,
@@ -209,16 +216,14 @@ export type ChatroomMessages = z.infer<typeof ChatroomMessagesSchema>;
 export const UserPointsSchema = z.object({
   _id: CryptoHashSchema,
   
-  paid_avaliable_balance: z.number().int().nonnegative(),
-  paid_pending_balance: z.number().int().nonnegative(),
-  
-  free_claimed_balance: z.number().int().nonnegative(),
-  redeemed_balance: z.record(CryptoHashSchema, z.number().int().nonnegative()),
-  total_burnt_balance: z.number().int().nonnegative(),
+  running_claimed_balance: z.number().int().nonnegative(),
+  running_purchased_balance: z.number().int().nonnegative(),
+  running_misc_balance: z.number().int().nonnegative(),
 
-  paid_balance_updated_at: TimestampSchema,
-  free_claimed_balance_updated_at: TimestampSchema,
-  redeemed_balance_updated_at: TimestampSchema,
+  balance_usage: z.number().int().nonnegative(),
+
+  free_balance_claimed_at: TimestampSchema,
+  last_balance_deduction_at: TimestampSchema,
 });
 
 // Type inference
@@ -346,3 +351,18 @@ export const UrlSchema = z.object({
 
 // Add type inference
 export type Url = z.infer<typeof UrlSchema>;
+
+export const GitcoinGrantSchema = z.object({
+  _id: CryptoHashSchema,
+  name: z.string(),
+  description: z.string(),
+  url: z.string(),
+  twitter: z.string(),
+  recipient_id: z.string(),
+});
+
+// Add type inference
+export type GitcoinGrant = z.infer<typeof GitcoinGrantSchema>;
+
+// Add type inference
+export type FunctionCallArguments = z.infer<typeof FunctionCallArgumentsSchema>;

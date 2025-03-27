@@ -1,4 +1,4 @@
-import { User } from "@/lib/validations";
+import { User } from "@/lib/types";
 import { FiAward, FiClock, FiInfo } from "react-icons/fi";
 import Image from "next/image";
 import Link from "next/link";
@@ -68,8 +68,8 @@ export function PointsExpandedView({
             >
               <div className="relative w-20 h-20 mb-3">
                 <Image
-                  src={user.profile_photo || "/bg2.png"}
-                  alt={user.first_name}
+                  src={user.profile.avatar || "/bg2.png"}
+                  alt={user.profile.first_name}
                   fill
                   className="object-cover rounded-full border-2 border-white/10 group-hover:border-emerald-300/50 transition-all"
                 />
@@ -85,7 +85,7 @@ export function PointsExpandedView({
                 </div>
               </div>
               <span className="text-white text-xl font-medium group-hover:text-emerald-300 transition-colors">
-                {user.first_name}
+                {user.profile.first_name}
               </span>
             </button>
           )}

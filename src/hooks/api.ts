@@ -1,118 +1,104 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api-client";
+import { api, LocalUserProfile, studioApi } from "@/lib/api-client";
 import type {
   Character,
-  ConversationHistory,
+  ConversationMemory,
   User,
   TTSEntry,
-  ChatroomMessages,
-  Chatroom,
-  UserPoints,
-  MessageBrief,
-  TokenInfo,
   CharacterListBrief,
-} from "@/lib/validations";
+  Url,
+  GitcoinGrant,
+  SystemConfig,
+} from "@/lib/types";
 import { hashText } from "@/lib/utils";
 import { TTSContext } from "./context";
-import { UserProfilesCache } from "@/lib/userProfilesCache";
-import { generateTelegramAppLink, setupTelegramInterface } from "@/lib/telegram";
-import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { useAccount } from "wagmi";
 import { useSession } from "next-auth/react";
+
+export const useLocalUserProfile = (): LocalUserProfile | null => {
+  const { data: session, status } = useSession();
+  const { address, chain } = useAccount();
+  const chainSymbol = chain?.nativeCurrency.symbol;
+
+  const walletUserId = address ? `crypto_wallet:${chainSymbol}:${address}` : null;
+  const sessionUserId = session?.user?.id && session?.user?.provider 
+    ? `${session.user.provider}:${session.user.id}`
+    : null;
+
+  if (status === 'unauthenticated') {
+    if (!address) {
+      return null;
+    }
+
+    return {
+      id: walletUserId!,
+      provider: 'crypto_wallet',
+      username: `0x${address!.split("0x")[1].slice(0, 4)}`,
+      firstName: '',
+      lastName: '',
+      image: '',
+    };
+  } else {
+    return {
+      id: sessionUserId!,
+      provider: session?.user?.provider!,
+      username: session?.user?.username!,
+      firstName: session?.user?.firstName!,
+      lastName: session?.user?.lastName!,
+      image: session?.user?.image!,
+    };
+  }
+};
+
+// Add this configuration object to use across your hooks
+const defaultQueryOptions = {
+  retry: false,        // Disable automatic retries
+  refetchOnWindowFocus: false,  // Prevent refetching when window regains focus
+  refetchOnMount: false,        // Prevent refetching when component mounts
+  staleTime: 5 * 60 * 1000,     // Consider data fresh for 5 minutes
+};
 
 // User related hooks
 export function useUser() {
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
   return useQuery<User, Error>({
     queryKey: ["user"],
-    queryFn: () => api.user.register(session),
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useTelegramInterface(router: AppRouterInstance) {
-  const { data: session } = useSession();
-  return useQuery<null, Error>({
-    queryKey: ["telegramInterface"],
-    queryFn: () => setupTelegramInterface(router, session),
-    enabled: !!router,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-}
-
-// User points related hooks
-export function useUserPoints() {
-  const { data: session } = useSession();
-  return useQuery<UserPoints, Error>({
-    queryKey: ["userPoints"],
-    queryFn: () => api.user.getUserPoints(session),
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    queryFn: () => api.user.register(localUserProfile!),
+    enabled: !!localUserProfile && localUserProfile.id !== null,
   });
 }
 
 // Character related hooks
 export function useCharacters(limit: number, offset: number) {
-  const { data: session } = useSession();
   return useQuery<Character[], Error>({
     queryKey: ["characters"],
-    queryFn: () => api.characters.list(limit, offset, session),
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    queryFn: () => api.characters.list(limit, offset),
+    enabled: true,
+    ...defaultQueryOptions,
   });
 }
 
 export function useCharacter(id: string | undefined) {
-  const { data: session } = useSession();
   return useQuery<Character, Error>({
     queryKey: ["characters", id],
-    queryFn: () => api.characters.get(id!, session),
+    queryFn: () => api.characters.get(id!),
     enabled: !!id,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    ...defaultQueryOptions,
   });
 }
 
 export function useCharacterChatHistory(characterId: string) {
+  const localUserProfile = useLocalUserProfile();
   const { data: character } = useCharacter(characterId);
-  const { data: user } = useUser();
-  const { data: session } = useSession(); 
 
-  return useQuery<string[], Error>({
+  return useQuery<ConversationMemory[], Error>({
     queryKey: ["characterChatHistory", characterId],
     queryFn: async () => {
       if (character) {
-        const history = await api.chat.getConversationHistoryIdOnly(
-          characterId,
-          session
-        );
-        console.log(history)
+        const history = await api.chat.getConversations(characterId, localUserProfile!.id);
         if (history.length === 0) {
-          await api.chat.createConversation(characterId, session);
-          return await api.chat.getConversationHistoryIdOnly(characterId, session);
+          await api.chat.createConversation(characterId, localUserProfile!.id);
+          return await api.chat.getConversations(characterId, localUserProfile!.id);
         } else {
           return history;
         }
@@ -120,51 +106,46 @@ export function useCharacterChatHistory(characterId: string) {
         throw new Error("Unable to fetch chat history");
       }
     },
-    enabled: !!characterId && !!user,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    enabled: !!characterId && !!localUserProfile,
+  });
+}
+
+export function usePublicConversations(characterId: string) {
+  return useQuery<ConversationMemory[], Error>({
+    queryKey: ["publicConversations", characterId],
+    queryFn: async() => {
+      const conversations = await api.chat.getPublicConversations(characterId)
+      console.log(conversations)
+      return conversations
+    },
+    enabled: !!characterId,
   });
 }
 
 export function useConversation(conversationId: string) {
-  const { data: session } = useSession();
-  return useQuery<ConversationHistory, Error>({
+  const localUserProfile = useLocalUserProfile();
+  return useQuery<ConversationMemory, Error>({
     queryKey: ["conversation", conversationId],
-    queryFn: () => api.chat.getConversation(conversationId, session),
-    enabled: !!conversationId,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
+    queryFn: () => api.chat.getConversation(conversationId, localUserProfile!.id),
+    enabled: !!conversationId && !!localUserProfile,
   });
 }
 
 export function useCharacterListBrief() {
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
   return useQuery<CharacterListBrief[]>({
     queryKey: ["characterListBrief"],
-    queryFn: () => api.chat.getCharacterListBrief(session),
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    queryFn: () => api.chat.getCharacterListBrief(localUserProfile!.id),
+    enabled: !!localUserProfile,
   });
 }
 
 export function useCreateConversation(characterId: string) {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
 
   return useMutation<null, Error, void>({
-    mutationFn: () => api.chat.createConversation(characterId, session  ),
+    mutationFn: () => api.chat.createConversation(characterId, localUserProfile!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["characterChatHistory", characterId],
@@ -175,10 +156,10 @@ export function useCreateConversation(characterId: string) {
 
 export function useDeleteConversation(characterId: string) {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
 
   return useMutation<null, Error, string>({
-    mutationFn: (conversationId: string) => api.chat.deleteConversation(conversationId, session ),
+    mutationFn: (conversationId: string) => api.chat.deleteConversation(conversationId, localUserProfile!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["characterChatHistory", characterId],
@@ -192,10 +173,10 @@ export function useSendMessage(
   isError: (error: Error) => void
 ) {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
 
-  return useMutation<null, Error, string>({
-    mutationFn: (text: string) => api.chat.sendMessage(conversationId, text, session),
+  return useMutation<void, Error, string>({
+    mutationFn: (text: string) => api.runtime.sendMessage(conversationId, text, localUserProfile!.id),
     onMutate: () => {
       queryClient.invalidateQueries({
         queryKey: ["userPoints"],
@@ -218,10 +199,10 @@ export function useRegenerateLastMessage(
   isError: (error: Error) => void
 ) {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
 
-  return useMutation<null, Error, void>({
-    mutationFn: () => api.chat.regenerateLastMessage(conversationId, session  ),
+  return useMutation<void, Error, void>({
+    mutationFn: () => api.runtime.regenerateLastMessage(conversationId, localUserProfile!.id),
     onMutate: () => {
       queryClient.invalidateQueries({
         queryKey: ["userPoints"],
@@ -242,7 +223,7 @@ export function useRegenerateLastMessage(
 // TTS related hooks
 export function useTTS() {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
 
   return useMutation<
     TTSEntry,
@@ -252,20 +233,12 @@ export function useTTS() {
   >({
     mutationFn: async ({ text, characterId }) => {
       const hash = await hashText(text);
-
-      // Check cache first
       const cached = queryClient.getQueryData<TTSEntry>(["tts", hash]);
-      if (cached) {
-        return cached;
-      }
+      if (cached) return cached;
 
-      // Generate new audio if not cached
-      const audioBlob = await api.tts.generateSpeech(text, characterId, session);
+      const audioBlob = await api.tts.generateSpeech(text, characterId, localUserProfile!.id);
       const result = { text, audioBlob, status: "complete" as const };
-
-      // Cache the result
       queryClient.setQueryData(["tts", hash], result);
-
       return result;
     },
     onMutate: async ({ text }) => {
@@ -306,323 +279,11 @@ export function useTTS() {
   });
 }
 
-// Chatroom related hooks
-export function useChatroomWithCharacter(characterId: string) {
-  const { data: session } = useSession();
-  return useQuery<Chatroom>({
-    queryKey: ["chatroomCharacter", characterId],
-    queryFn: async () => {
-      if (!characterId) throw new Error("Invalid character ID");
-      const result = await api.chatroom.generateFromCharacter(characterId, session);
-      if (!result) throw new Error("Failed to get/create chatroom");
-      return result;
-    },
-    enabled: !!characterId,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useChatroom(chatroomId: string) {
-  const { data: session } = useSession();
-  return useQuery<Chatroom>({
-    queryKey: ["chatroom", chatroomId],
-    queryFn: async () => {
-      const result = await api.chatroom.getChatroom(chatroomId, session);
-      if (!result) throw new Error("Failed to get/create chatroom");
-      return result;
-    },
-    enabled: !!chatroomId,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useChatroomMessages(chatroomId: string) {
-  const { data: session } = useSession();
-  return useQuery<ChatroomMessages | null>({
-    queryKey: ["chatroomMessages", chatroomId],
-    queryFn: () => api.chatroom.getChatroomMessages(chatroomId, session),
-    enabled: !!chatroomId,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useHijackCost(chatroomId: string) {
-  const { data: session } = useSession();
-  return useQuery<{ cost: number }>({
-    queryKey: ["hijackCost", chatroomId],
-    queryFn: () => api.chatroom.getHijackCost(chatroomId, session),
-    enabled: !!chatroomId,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useUserProfiles(
-  chatroom: Chatroom,
-  chatroomMessages: ChatroomMessages
-) {
-  return useQuery<User[]>({
-    queryKey: ["userProfiles"],
-    queryFn: () => {
-      const cache = new UserProfilesCache();
-      const userIds = new Set<string>();
-      chatroom.current_audience.forEach((id) => userIds.add(id));
-
-      chatroomMessages.history.forEach((pair) => {
-        pair.forEach((msg) => {
-          if (msg.user_id) {
-            userIds.add(msg.user_id);
-          }
-        });
-      });
-
-      userIds.add(chatroom.user_on_stage);
-      const uniqueUserIds = Array.from(userIds);
-      return cache.ensureUserProfiles(uniqueUserIds);
-    },
-    enabled: !!chatroom && !!chatroomMessages,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useUserProfilesRaw(messageBriefs: MessageBrief[]) {
-  return useQuery<null>({
-    queryKey: ["userProfilesRaw", messageBriefs],
-    queryFn: async () => {
-      const userIds = messageBriefs.map(brief => brief.wrapped_by);
-      const cache = new UserProfilesCache();
-      await cache.ensureUserProfiles(userIds);
-      return null;
-    },
-    enabled: !!messageBriefs && messageBriefs.length > 0,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useJoinChatroom(chatroomId: string | undefined) {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-
-  return useMutation<null, Error, void>({
-    mutationFn: () => {
-      if (!chatroomId) throw new Error("Invalid chatroom ID");
-      return api.chatroom.joinChatroom(chatroomId, session  );
-    },
-    onSuccess: () => {
-      if (chatroomId) {
-        queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
-      }
-    },
-  });
-}
-
-export function useLeaveChatroom(chatroomId: string | undefined) {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-
-  return useMutation<null, Error, void>({
-    mutationFn: () => {
-      if (!chatroomId) throw new Error("Invalid chatroom ID");
-      return api.chatroom.leaveChatroom(chatroomId, session  );
-    },
-    onSuccess: () => {
-      if (chatroomId) {
-        queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
-      }
-    },
-  });
-}
-
-export function useStartNewConversation(chatroomId: string) {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-
-  return useMutation<boolean, Error, void>({
-    mutationFn: () => {
-      if (!chatroomId) throw new Error("Invalid chatroom ID");
-      return api.chatroom.maybeCreateChatroomMessages(chatroomId, session  );
-    },
-    onSuccess: () => {
-      if (chatroomId) {
-        queryClient.invalidateQueries({ queryKey: ["chatroom", chatroomId] });
-        queryClient.invalidateQueries({
-          queryKey: ["chatroomMessages", chatroomId],
-        });
-      }
-    },
-  });
-}
-
-export function useSendMessageToChatroom(
-  chatroomId: string,
-  isError: (error: Error) => void
-) {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-
-  return useMutation<null, Error, string>({
-    mutationFn: (text: string) => api.chatroom.chat(chatroomId, text, session   ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["chatroomMessages", chatroomId],
-      });
-    },
-    onError: isError,
-  });
-}
-
-export function useRegenerateLastMessageToChatroom(chatroomId: string, isError: (error: Error) => void) {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-
-  return useMutation<null, Error, void>({
-    mutationFn: () => {
-      return api.chatroom.regenerateLastMessage(chatroomId, session   );
-    },
-    onSuccess: () => {
-      if (chatroomId) {
-        queryClient.invalidateQueries({ queryKey: ['chatroomMessages', chatroomId] });
-      }
-    },
-    onError: isError,
-  });
-}
-
-export function useRegisterHijack(chatroomId: string) {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-  return useMutation<null, Error, { cost: number }>({
-    mutationFn: (hijackCost: { cost: number }) => api.chatroom.registerHijack(chatroomId, hijackCost, session  ),
-    onMutate: () => {
-      queryClient.invalidateQueries({ queryKey: ['userPoints'] });
-      queryClient.invalidateQueries({ queryKey: ['hijackCost'] });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
-    },
-  });
-}
-
-export function useHijackChatroom(chatroomId: string) {
-  const queryClient = useQueryClient();
-  const { data: session } = useSession();
-  return useMutation<null, Error, void>({
-    mutationFn: () => {
-      return api.chatroom.hijackChatroom(chatroomId, session    );
-    },
-    onMutate: () => {
-      queryClient.invalidateQueries({ queryKey: ['userPoints'] });
-      queryClient.invalidateQueries({ queryKey: ['hijackCost'] });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chatroom', chatroomId] });
-    },
-  });
-}
-
-export function useGetMessage(messageId: string) {
-  const { data: session } = useSession();
-  return useQuery<ChatroomMessages>({
-    queryKey: ["chatroomMessage", messageId],
-    queryFn: () => api.chatroom.getMessage(messageId, session),
-    enabled: !!messageId,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useGetMessageBrief(chatroomId: string) {
-  const { data: session } = useSession();
-  return useQuery<MessageBrief[]>({
-    queryKey: ["messageBrief", chatroomId],
-    queryFn: () => api.chatroom.getMessageBrief(chatroomId, session),
-    enabled: !!chatroomId,
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-// Blockchain related hooks
-export function useGetAddress() {
-  const { data: session } = useSession();
-  return useQuery<{ sol_address: string, eth_address: string }>({
-    queryKey: ["address"],
-    queryFn: () => api.blockchain.getAddress(session),
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
-export function useGetTokenInfo() {
-  const { data: session } = useSession();
-  return useQuery<TokenInfo>({
-    queryKey: ["tokenInfo"],
-    queryFn: () => api.blockchain.getTokenInfo(session),
-    retry: 1,
-    refetchInterval: false,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-}
-
 export function useClaimFreePoints() {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
   return useMutation<null, Error, void>({
-    mutationFn: () => api.user.claimFreePoints(session),
+    mutationFn: () => api.user.claimFreePoints(localUserProfile!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userPoints"] });
     },
@@ -630,28 +291,222 @@ export function useClaimFreePoints() {
 }
 
 export function useGenerateReferralUrl() {
-  const { data: session } = useSession();
+  const localUserProfile = useLocalUserProfile();
   return useMutation<string, Error, { path: string, type: string }>({
     mutationFn: async ({ path, type }: { path: string, type: string }) => {
-      const url = await generateTelegramAppLink("voda_is_bot", path, type, session);
-      return url;
+      const urlId = await api.url.create(path, type, localUserProfile!.id);
+      return `${window.location.origin}/url/${urlId}`;
     },
   });
 }
 
-interface LaunchTokenParams {
-  messageId: string;
-  deployOnPumpFun: boolean;
-  // deployOnBase: boolean;
+export function useUrl(urlId: string) {
+  const localUserProfile = useLocalUserProfile();
+  return useQuery<{ url: Url, referral_success: boolean }, Error>({
+    queryKey: ["url", urlId],
+    queryFn: () => api.url.get(urlId, localUserProfile!.id),
+    enabled: !!urlId && !!localUserProfile,
+    ...defaultQueryOptions,
+  });
 }
 
-export function useLaunchToken(onSuccess: () => void) {
-  const { data: session } = useSession();
-  return useMutation({
-    mutationFn: async ({ messageId, deployOnPumpFun }: LaunchTokenParams) => {
-      const response = await api.blockchain.createToken(messageId, deployOnPumpFun, session);
-      return response;
+export function useGitcoinGrants() {
+  return useQuery<GitcoinGrant[], Error>({
+    queryKey: ["gitcoinGrants"],
+    queryFn: () => api.gitcoin.getGrants(),
+    ...defaultQueryOptions,
+  });
+}
+
+export function useGitcoinGrant(grantId: string) {
+  return useQuery<GitcoinGrant, Error>({
+    queryKey: ["gitcoinGrant", grantId],
+    queryFn: () => api.gitcoin.getGrant(grantId),
+    enabled: !!grantId, 
+    ...defaultQueryOptions,
+  });
+}
+
+export function usePublicConversation(conversationId: string) {
+  return useQuery<ConversationMemory, Error>({
+    queryKey: ["publicConversation", conversationId],
+    queryFn: () => api.chat.getPublicConversation(conversationId),
+    enabled: !!conversationId,
+    ...defaultQueryOptions,
+  });
+}
+
+export function useCharactersWithFilters(
+  hasImage?: boolean,
+  hasRoleplayEnabled?: boolean,
+  limit: number = 20,
+  offset: number = 0
+) {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  
+  return useQuery<Character[], Error>({
+    queryKey: ['charactersWithFilters', hasImage, hasRoleplayEnabled, limit, offset],
+    queryFn: async () => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.character.listWithFilters(userId, hasImage, hasRoleplayEnabled, limit, offset);
     },
-    onSuccess: onSuccess,
+    enabled: !!userId,
+    ...defaultQueryOptions,
+  });
+}
+
+export function useCharactersWithFiltersCount(
+  hasImage?: boolean,
+  hasRoleplayEnabled?: boolean
+) {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  
+  return useQuery<number, Error>({
+    queryKey: ['charactersWithFiltersCount', hasImage, hasRoleplayEnabled],
+    queryFn: async () => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.character.countWithFilters(userId, hasImage, hasRoleplayEnabled);
+    },
+    enabled: !!userId,
+    ...defaultQueryOptions,
+  });
+}
+
+export function useSystemConfigs() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  
+  return useQuery<SystemConfig[], Error>({
+    queryKey: ['systemConfigs'],
+    queryFn: async () => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.getAll(userId);
+    },
+    enabled: !!userId,
+    ...defaultQueryOptions,
+  });
+}
+
+export function useCreateSystemConfig() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+  
+  return useMutation<
+    SystemConfig,
+    Error,
+    Omit<SystemConfig, '_id' | 'updated_at'>
+  >({
+    mutationFn: async (config) => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.create(config, userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['systemConfigs'] });
+    },
+    ...defaultQueryOptions,
+  });
+}
+
+export function useUpdateSystemConfig() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+  
+  return useMutation<SystemConfig, Error, SystemConfig>({
+    mutationFn: async (config) => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.update(config, userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['systemConfigs'] });
+    },
+  });
+}
+
+export function useDeleteSystemConfig() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+  
+  return useMutation<void, Error, string>({
+    mutationFn: async (configId) => {
+      if (!userId) throw new Error('User not authenticated');
+      return studioApi.systemConfig.delete(configId, userId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['systemConfigs'] });
+    },
+  });
+}
+
+export function useCreateCharacter() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, Character>({
+    mutationFn: (character) => studioApi.character.create(character, userId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['characters'] });
+    },
+  });
+}
+
+export function useUpdateCharacter() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, Character>({
+    mutationFn: (character) => studioApi.character.update(character, userId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['characters'] });
+    },
+  });
+}
+
+export function useDeleteCharacter() {
+  const { data: user } = useUser();
+  const userId = user?.user_id;
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string>({
+    mutationFn: (characterId) => studioApi.character.delete(characterId, userId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['characters'] });
+    },
+  });
+}
+
+export function useUpload() {  
+  return useMutation<
+    { success: boolean; url: string; filename: string },
+    Error,
+    { file: File; filename?: string }
+  >({
+    mutationFn: async ({ file, filename }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Use the original filename if none provided
+      const finalFilename = filename || file.name;
+      formData.append('filename', finalFilename);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => { },
   });
 }

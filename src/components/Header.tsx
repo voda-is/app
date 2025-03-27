@@ -1,5 +1,4 @@
-import { generateTelegramAppLink } from "@/lib/telegram";
-import { User } from "@/lib/validations";
+import { User } from "@/lib/types";
 import Image from "next/image";
 import { FiAward, FiShare2 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
@@ -45,14 +44,14 @@ export function Header({
   const handleShare = async () => {
     // Generate the deep link
     const path = `/chatroomMessage/${chatroomId}/${messageId}`;
-    const shareLink = await generateTelegramAppLink("voda_is_bot", path, "chatroom_message");
+    // const shareLink = await generateTelegramAppLink("voda_is_bot", path, "chatroom_message");
     
-    try {
-      await navigator.clipboard.writeText(shareLink);
-      showToast?.("Link copied to clipboard!");
-    } catch (err) {
-      showToast?.("Failed to copy link!");
-    }
+    // try {
+    //   await navigator.clipboard.writeText(shareLink);
+    //   showToast?.("Link copied to clipboard!");
+    // } catch (err) {
+    //   showToast?.("Failed to copy link!");
+    // }
   };
 
   return (
@@ -101,8 +100,8 @@ export function Header({
                 className="relative w-6 h-6 rounded-full border-2 border-black/50 backdrop-blur-sm"
               >
                 <Image
-                  src={user.profile_photo || "/bg2.png"}
-                  alt={user.first_name}
+                  src={user.profile.avatar || "/bg2.png"}
+                  alt={user.profile.first_name}
                   fill
                   className="object-cover rounded-full"
                 />

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Character } from '@/lib/types';
+import { CharacterSchema, type Character } from '@/lib/types';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -156,15 +156,15 @@ export default function CreateCharacterPage() {
     
     try {
       // Prepare character data
-      const characterData: Character = {
-        _id: '', // Will be assigned by the server
+      const characterData = CharacterSchema.parse({
+        _id: '0000000000000000000000000000000000000000000000000000000000000000', // Will be assigned by the server
         name,
         description,
         tags,
         avatar_image_url: avatarUrl || '', // Use the uploaded avatar URL
         background_image_url: backgroundUrl || '', // Use the uploaded background URL
         metadata: {
-          creator: user.user_id,
+          creator: "0000000000000000000000000000000000000000000000000000000000000000",
           version: 1,
           enable_voice: enableVoice,
           enable_roleplay: enableRoleplay,
@@ -178,9 +178,9 @@ export default function CreateCharacterPage() {
         voice_model_id: null,
         created_at: Date.now(),
         updated_at: Date.now(),
-        published_at: 0
-          
-      };
+        published_at: 1
+      });
+      console.log(characterData);
       
       // Create the character
       createCharacter(characterData, {

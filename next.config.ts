@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '*.twimg.com',
       },
+      {
+        protocol: 'https',
+        hostname: '*.voda.is',
+      },
     ],
   },
   eslint: {

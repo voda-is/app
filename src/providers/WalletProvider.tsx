@@ -27,4 +27,4 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       </QueryClientProvider>
     </WagmiProvider>
   );
-} 
+}
